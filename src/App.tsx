@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import {useState} from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
@@ -31,7 +31,9 @@ function App() {
       </p>
       Jesper was here
       <SlLogo className={""} />
-      test
+      <div className="text-4xl font-bold font-mono">
+        test
+      </div>
     </>
   )
 }
