@@ -1,5 +1,3 @@
-import "./sl-logo.scss"
-
 type Props = {
   className?: string,
 }
