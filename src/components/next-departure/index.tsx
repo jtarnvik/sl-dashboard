@@ -5,6 +5,7 @@ import {DateTime, Duration} from "luxon";
 import {shortSwedishHumanizer} from "../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../util/sorters.ts";
 import {Departure} from "./departure.tsx";
+import {useVisibility} from "../../hook/use-visibility.ts";
 
 export interface TrainScheduleHandle {
   manualUpdate: () => void;
@@ -19,7 +20,7 @@ export function NextDeparture({performManualUpdate}: Props) {
   const [lastUpdated, setLastUpdated] = useState<DateTime | undefined>(undefined);
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
 
-  const updateDiffsInceLatUpdated = useCallback(() => {
+  const updateDiffSinceLatUpdated = useCallback(() => {
     console.log("Diff updaterad")
     setDiffSinceLastUpdated(lastUpdated?.diffNow())
   }, [lastUpdated]);
@@ -44,6 +45,8 @@ export function NextDeparture({performManualUpdate}: Props) {
       });
   }, []);
 
+  useVisibility({onVisible: updateDepartures});
+
   function manualUpdate() {
     updateDepartures();
   }
@@ -55,9 +58,9 @@ export function NextDeparture({performManualUpdate}: Props) {
   }, [updateDepartures]);
 
   useEffect(() => {
-    const intervalId = setInterval(updateDiffsInceLatUpdated, 5 * 1000);
+    const intervalId = setInterval(updateDiffSinceLatUpdated, 5 * 1000);
     return () => clearInterval(intervalId);
-  }, [updateDiffsInceLatUpdated]);
+  }, [updateDiffSinceLatUpdated]);
 
   useImperativeHandle(performManualUpdate, () => ({
     manualUpdate: manualUpdate,
