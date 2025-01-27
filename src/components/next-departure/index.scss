@@ -1,0 +1,19 @@
+.departures-grid {
+  display: grid;
+  grid-template-columns: 1fr 3fr 2fr;
+  grid-template-rows: auto;
+  grid-template-areas:
+    "gline gname gtime";
+}
+
+.grid-line {
+  grid-area: gline;
+}
+
+.grid-name {
+  grid-area: gname;
+}
+
+.grid-time {
+  grid-area: gtime;
+}

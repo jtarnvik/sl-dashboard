@@ -4,8 +4,8 @@ import {SITE_SKOGSLOPARVAGEN_4_CHAR, URL_GET_DEPARTURES_FROM_SITE} from "../../c
 import {DateTime, Duration} from "luxon";
 import {shortSwedishHumanizer} from "../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../util/sorters.ts";
-import {Departure} from "./departure.tsx";
 import {useVisibility} from "../../hook/use-visibility.ts";
+import "./index.scss"
 
 export interface TrainScheduleHandle {
   manualUpdate: () => void;
@@ -70,15 +70,26 @@ export function NextDeparture({performManualUpdate}: Props) {
 
   return (
     <div>
-      <strong>Next Departure</strong>
-      <div>DepartureHeader</div>
-      {departurePres.length > 0 &&
-        departurePres.map(departure => <Departure departure={departure} />)
-      }
+      <div className="block max-w p-4 mx-2 bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm">
+        <h5 className="mb-2 text-xl font-bold tracking-tight text-gray-900 ">Avgångar Skogslöparvägen</h5>
+        <div className="font-normal text-gray-700 ">
+          Table header
+          {departurePres.length > 0 &&
+            departurePres.map((departure, index) =>
+              <div key={index}
+              className="departures-grid">
+                <div className="grid-line" >{departure.line.designation}</div>
+                <div className="grid-name">{departure.destination}</div>
+                <div className="grid-time justify-self-end">{departure.display}</div>
+              </div>
+            )}
+        </div>
+      </div>
       <div>
         <p>Number of Departures: {departurePres.length}</p>
         <p>Last updated: {lastUpdated?.toISOTime()}</p>
-        <p>Time since last update {((diffSinceLastUpdated) ? shortSwedishHumanizer(diffSinceLastUpdated?.toMillis()) : "-")}</p>
+        <p>Time since last
+          update {((diffSinceLastUpdated) ? shortSwedishHumanizer(diffSinceLastUpdated?.toMillis()) : "-")}</p>
       </div>
     </div>
   )
