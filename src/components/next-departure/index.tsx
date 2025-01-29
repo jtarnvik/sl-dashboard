@@ -6,6 +6,7 @@ import {shortSwedishHumanizer} from "../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../util/sorters.ts";
 import {useVisibility} from "../../hook/use-visibility.ts";
 import "./index.scss"
+import {Line} from "./line.tsx";
 
 export interface TrainScheduleHandle {
   manualUpdate: () => void;
@@ -53,7 +54,7 @@ export function NextDeparture({performManualUpdate}: Props) {
 
   useEffect(() => {
     updateDepartures();
-    const intervalId = setInterval(updateDepartures, 600 * 1000);
+    const intervalId = setInterval(updateDepartures, 60 * 1000);
     return () => clearInterval(intervalId);
   }, [updateDepartures]);
 
@@ -70,6 +71,7 @@ export function NextDeparture({performManualUpdate}: Props) {
 
   return (
     <div>
+      {/* TODO: create a separate component for the card */}
       <div className="block max-w p-4 mx-2 bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm">
         <h5 className="mb-2 text-xl font-bold tracking-tight text-gray-900 ">Avgångar Skogslöparvägen</h5>
         <div className="font-normal text-gray-700 ">
@@ -78,7 +80,7 @@ export function NextDeparture({performManualUpdate}: Props) {
             departurePres.map((departure, index) =>
               <div key={index}
               className="departures-grid">
-                <div className="grid-line" >{departure.line.designation}</div>
+                <Line line={departure.line} />
                 <div className="grid-name">{departure.destination}</div>
                 <div className="grid-time justify-self-end">{departure.display}</div>
               </div>

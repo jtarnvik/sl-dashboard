@@ -16,7 +16,7 @@ function App() {
       setNavbarHeight(navbar.offsetHeight);
     }
   }, []);
-  
+
   function onManualUpdate() {
     if (performManualUpdateRef.current) {
       performManualUpdateRef.current.manualUpdate();
@@ -27,9 +27,12 @@ function App() {
     <ErrorContext.Provider value={{error, setError}}>
       <div>
         <Navbar onManualUpdate={onManualUpdate} />
-        <main style={{paddingTop: `${navbarHeight}px`}}>
-          <ErrorHandler></ErrorHandler>
-          <NextDeparture performManualUpdate={performManualUpdateRef}></NextDeparture>
+        <main>
+          <div className="flex flex-col space-y-2">
+            <div style={{minHeight: `${navbarHeight}px`}} />
+            <ErrorHandler></ErrorHandler>
+            <NextDeparture performManualUpdate={performManualUpdateRef}></NextDeparture>
+          </div>
         </main>
       </div>
     </ErrorContext.Provider>
