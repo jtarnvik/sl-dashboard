@@ -34,6 +34,7 @@ function App() {
             <NextDeparture performManualUpdate={performManualUpdateRef}></NextDeparture>
           </div>
         </main>
+        Continued
       </div>
     </ErrorContext.Provider>
   )
