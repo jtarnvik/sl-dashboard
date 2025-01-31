@@ -28,7 +28,7 @@ function App() {
       <div>
         <Navbar onManualUpdate={onManualUpdate} />
         <main>
-          <div className="flex flex-col space-y-2">
+          <div className="flex flex-col space-y-2 px-2">
             <div style={{minHeight: `${navbarHeight}px`}} />
             <ErrorHandler></ErrorHandler>
             <NextDeparture performManualUpdate={performManualUpdateRef}></NextDeparture>

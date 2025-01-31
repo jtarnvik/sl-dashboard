@@ -72,14 +72,14 @@ export function NextDeparture({performManualUpdate}: Props) {
   return (
     <div>
       {/* TODO: create a separate component for the card */}
-      <div className="block max-w p-4 mx-2 bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm">
+      <div className="block max-w p-4 bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm">
         <h5 className="mb-2 text-xl font-bold tracking-tight text-gray-900 ">Avgångar Skogslöparvägen</h5>
         <div className="font-normal text-gray-700 ">
           Table header
           {departurePres.length > 0 &&
             departurePres.map((departure, index) =>
               <div key={index}
-              className="departures-grid">
+                   className="departures-grid">
                 <Line line={departure.line} />
                 <div className="grid-name">{departure.destination}</div>
                 <div className="grid-time justify-self-end">{departure.display}</div>
