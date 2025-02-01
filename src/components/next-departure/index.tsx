@@ -85,7 +85,7 @@ export function NextDeparture({performManualUpdate}: Props) {
                 <div className="grid-line justify-self-start">
                   <Line line={departure.line} />
                 </div>
-                <div className="grid-name no-link">{departure.destination}</div>
+                <div className="grid-name">{departure.destination}</div>
                 <div className="grid-time justify-self-end">{departure.display}</div>
               </div>
             )}
