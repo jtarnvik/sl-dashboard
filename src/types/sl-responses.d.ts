@@ -21,7 +21,7 @@ interface StopPoint {
 interface Line {
   id: number;
   designation: string; // e.g., "13X", "17"
-  transport_mode: string; // e.g., "BUS", "METRO"
+  transport_mode: string; // BUS, TRAM, METRO, TRAIN, FERRY, SHIP, TAXI
   group_of_lines?: string; // Optional, e.g., "Tunnelbanans gröna linje"
 }
 
