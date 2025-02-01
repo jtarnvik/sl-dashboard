@@ -71,12 +71,12 @@ export function NextDeparture({performManualUpdate}: Props) {
   return (
     <div>
       {/* TODO: create a separate component for the card */}
-      <div className="block max-w px-4 py-1 bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm">
+      <div className="block max-w px-4 py-1 bg-[#F1F2F3] border border-gray-200 rounded-lg shadow">
         {/*<h5 className="mb-2 text-xl font-bold tracking-tight text-gray-900 ">Avgångar</h5>*/}
-        <div className="font-normal text-gray-700 ">
+        <div className="font-normal text-gray-800">
           <div className="flex justify-between">
             <div>Uppdaterad {((diffSinceLastUpdated) ? shortSwedishHumanizer(diffSinceLastUpdated?.toMillis()) : "-")}</div>
-            <div>Avgångstid</div>
+            <div>Avgår</div>
           </div>
           {departurePres.length > 0 &&
             departurePres.map((departure, index) =>
