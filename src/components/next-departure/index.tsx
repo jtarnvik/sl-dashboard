@@ -5,9 +5,10 @@ import {DateTime, Duration} from "luxon";
 import {shortSwedishHumanizer} from "../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../util/sorters.ts";
 import {useVisibility} from "../../hook/use-visibility.ts";
-import "./index.scss"
 import {Line} from "../common/line";
 import {Card} from "../common/card";
+
+import "./index.css"
 
 export interface TrainScheduleHandle {
   manualUpdate: () => void;
