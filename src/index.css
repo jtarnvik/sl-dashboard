@@ -41,3 +41,8 @@ body {
   /*min-height: 100vh;*/
 }
 
+.no-link {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
