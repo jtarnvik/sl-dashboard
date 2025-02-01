@@ -1,4 +1,4 @@
-import {SlLogo} from "../sl-logo";
+import {SlLogo} from "./sl-logo";
 import {ReloadButton} from "../reload-button";
 
 type Props = {

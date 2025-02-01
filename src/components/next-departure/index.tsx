@@ -6,7 +6,7 @@ import {shortSwedishHumanizer} from "../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../util/sorters.ts";
 import {useVisibility} from "../../hook/use-visibility.ts";
 import "./index.scss"
-import {Line} from "./line.tsx";
+import {Line} from "../common/line";
 
 export interface TrainScheduleHandle {
   manualUpdate: () => void;
@@ -88,7 +88,6 @@ export function NextDeparture({performManualUpdate}: Props) {
         </div>
       </div>
       <div>
-        <p>Number of Departures: {departurePres.length}</p>
         <p>Last updated: {lastUpdated?.toISOTime()}</p>
         <p>Time since last
           update {((diffSinceLastUpdated) ? shortSwedishHumanizer(diffSinceLastUpdated?.toMillis()) : "-")}</p>
