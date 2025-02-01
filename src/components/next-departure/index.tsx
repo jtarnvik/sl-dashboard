@@ -7,6 +7,7 @@ import {sortDeparturesByDestination} from "../../util/sorters.ts";
 import {useVisibility} from "../../hook/use-visibility.ts";
 import "./index.scss"
 import {Line} from "../common/line";
+import {Card} from "../common/card";
 
 export interface TrainScheduleHandle {
   manualUpdate: () => void;
@@ -69,28 +70,22 @@ export function NextDeparture({performManualUpdate}: Props) {
   const departurePres: Departure[] = sortDeparturesByDestination(departures?.departures);
 
   return (
-    <div>
-      {/* TODO: create a separate component for the card */}
-      <div className="block max-w px-4 py-1 bg-[#F1F2F3] border border-gray-200 rounded-lg shadow">
-        {/*<h5 className="mb-2 text-xl font-bold tracking-tight text-gray-900 ">Avgångar</h5>*/}
-        <div className="font-normal text-gray-800">
-          <div className="flex justify-between">
-            <div>Uppdaterad {((diffSinceLastUpdated) ? shortSwedishHumanizer(diffSinceLastUpdated?.toMillis()) : "-")}</div>
-            <div>Avgår</div>
-          </div>
-          {departurePres.length > 0 &&
-            departurePres.map((departure, index) =>
-              <div key={index}
-                   className="departures-grid">
-                <div className="grid-line justify-self-start">
-                  <Line line={departure.line} />
-                </div>
-                <div className="grid-name">{departure.destination}</div>
-                <div className="grid-time justify-self-end">{departure.display}</div>
-              </div>
-            )}
-        </div>
+    <Card>
+      <div className="flex justify-between">
+        <div>Uppdaterad {((diffSinceLastUpdated) ? shortSwedishHumanizer(diffSinceLastUpdated?.toMillis()) : "-")}</div>
+        <div>Avgår</div>
       </div>
-    </div>
+      {departurePres.length > 0 &&
+        departurePres.map((departure, index) =>
+          <div key={index}
+               className="departures-grid">
+            <div className="grid-line justify-self-start">
+              <Line line={departure.line} />
+            </div>
+            <div className="grid-name">{departure.destination}</div>
+            <div className="grid-time justify-self-end">{departure.display}</div>
+          </div>
+        )}
+    </Card>
   )
 }
