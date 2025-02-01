@@ -8,6 +8,7 @@ export default {
     extend: {
       fontFamily: {
         signage: ['Bitter', 'serif'],
+        sans: ['Roboto', 'Arial', 'Helvetica Neue', 'sans-serif'],
       },
     },
   },
