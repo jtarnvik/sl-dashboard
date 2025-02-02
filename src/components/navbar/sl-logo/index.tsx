@@ -28,3 +28,4 @@ export function SlLogo({className}: Props) {
     // </svg>
   );
 }
+
