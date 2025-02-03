@@ -1,0 +1,3 @@
+interface ScheduleOperations {
+  manualUpdate: () => void;
+}

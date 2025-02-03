@@ -1,12 +1,14 @@
 import {useEffect, useRef, useState} from 'react'
 import './App.css'
 import ErrorContext from "./contexts/error-context.ts";
-import {NextDeparture, TrainScheduleHandle} from "./components/next-departure";
+import {NextDeparture} from "./components/next-departure";
 import {ErrorHandler} from "./components/error-handler";
 import {Navbar} from "./components/navbar";
+import {NextCity} from "./components/next-city";
 
 function App() {
-  const performManualUpdateRef = useRef<TrainScheduleHandle>(null);
+  const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
+  const performManualUpdateNextCityRef = useRef<ScheduleOperations>(null);
   const [error, setError] = useState<string>("");
   const [navbarHeight, setNavbarHeight] = useState(0);
 
@@ -18,8 +20,11 @@ function App() {
   }, []);
 
   function onManualUpdate() {
-    if (performManualUpdateRef.current) {
-      performManualUpdateRef.current.manualUpdate();
+    if (performManualUpdateNextDepartureRef.current) {
+      performManualUpdateNextDepartureRef.current.manualUpdate();
+    }
+    if (performManualUpdateNextCityRef.current) {
+      performManualUpdateNextCityRef.current.manualUpdate();
     }
   }
 
@@ -31,7 +36,8 @@ function App() {
           <div className="flex flex-col space-y-2 px-2">
             <div style={{minHeight: `${navbarHeight}px`}} />
             <ErrorHandler></ErrorHandler>
-            <NextDeparture performManualUpdate={performManualUpdateRef}></NextDeparture>
+            <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} />
+            <NextCity performManualUpdate={performManualUpdateNextCityRef} />
           </div>
         </main>
       </div>

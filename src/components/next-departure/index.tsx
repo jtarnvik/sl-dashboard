@@ -10,12 +10,8 @@ import {Card} from "../common/card";
 
 import "./index.css"
 
-export interface TrainScheduleHandle {
-  manualUpdate: () => void;
-}
-
 type Props = {
-  performManualUpdate?: React.Ref<TrainScheduleHandle>;
+  performManualUpdate?: React.Ref<ScheduleOperations>;
 }
 
 export function NextDeparture({performManualUpdate}: Props) {
@@ -35,7 +31,7 @@ export function NextDeparture({performManualUpdate}: Props) {
         setLastUpdated(DateTime.now());
         setDiffSinceLastUpdated(DateTime.now().diffNow())
 
-        console.log(response);
+        // console.log(response);
       })
       .catch(function (error) {
         // TODO: Log error
