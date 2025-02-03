@@ -39,7 +39,7 @@ export function Line({line}: Props) {
     <div className="flex space-x-1">
       <TransportationIcon line={line} />
       <div
-        className="font-signage bg-black text-white font-extrabold px-[3px] leading-[12px] pt-[2px] mt-[4px]">
+        className="font-signage bg-black text-white font-extrabold px-[3px] leading-[12px] pt-[3px] mt-[4px]">
         {line.designation}
       </div>
     </div>
