@@ -19,7 +19,7 @@ export function ModalDialog({onClose, isOpen, title, children}:Props) {
             <DialogTitle className="font-bold">{title}</DialogTitle>
             {children}
             <div className="w-full flex justify-end">
-              <SLButton onClick={onClose} thin>Stäng</SLButton>
+              <SLButton onClick={onClose}>Stäng</SLButton>
             </div>
           </DialogPanel>
         </div>
