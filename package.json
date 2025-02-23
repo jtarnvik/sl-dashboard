@@ -12,6 +12,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "axios": "^1.7.9",
+    "classnames": "^2.5.1",
     "humanize-duration": "^3.32.1",
     "luxon": "^3.5.0",
     "react": "19.0.0",

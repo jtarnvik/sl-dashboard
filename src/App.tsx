@@ -36,6 +36,7 @@ function App() {
             <div style={{minHeight: `${navbarHeight}px`}} />
             <ErrorHandler></ErrorHandler>
             <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} />
+            {/*<NextCity performManualUpdate={performManualUpdateNextCityRef} />*/}
           </div>
         </main>
       </div>

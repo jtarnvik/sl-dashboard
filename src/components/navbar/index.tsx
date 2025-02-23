@@ -1,5 +1,5 @@
 import {SlLogo} from "./sl-logo";
-import {ReloadButton} from "../reload-button";
+import {ReloadButton} from "./reload-button";
 
 type Props = {
   onManualUpdate: () => void
