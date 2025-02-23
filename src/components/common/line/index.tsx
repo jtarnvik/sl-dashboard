@@ -1,4 +1,5 @@
 import {TbBus} from "react-icons/tb";
+import { TbBusStop } from "react-icons/tb";
 import {TbTrain} from "react-icons/tb";
 import {PiSubway} from "react-icons/pi";
 import {PiTram} from "react-icons/pi";
@@ -8,12 +9,17 @@ import {TbUfo} from "react-icons/tb";
 import classNames from "classnames";
 
 type TIProps = {
-  line: Line
+  line: Line,
+  journey: Journey
 }
 
-function TransportationIcon({line}: TIProps) {
+function TransportationIcon({line, journey}: TIProps) {
   if (line.transport_mode === "BUS") {
-    return (<TbBus className="mt-[4px] ms-[0px]" />);
+    if (journey?.state === "ATORIGIN") {
+      return (<TbBusStop className="mt-[4px] ms-[0px]" />);
+    } else {
+      return (<TbBus className="mt-[4px] ms-[0px]" />);
+    }
   } else if (line.transport_mode === "METRO") {
     return (<PiSubway className="mt-[4px]" />);
   } else if (line.transport_mode === "TRAIN") {
@@ -68,7 +74,7 @@ export function Line({line, journey}: Props) {
             />
           );})}
         </div>
-        <TransportationIcon line={line} />
+        <TransportationIcon line={line} journey={journey}/>
       </div>
       <div
         className="font-signage bg-black text-white font-extrabold px-[3px] leading-[12px] pt-[2px] mt-[4px]">

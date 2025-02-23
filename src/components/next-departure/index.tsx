@@ -128,6 +128,11 @@ export function NextDeparture({performManualUpdate}: Props) {
                     line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
       legend: <div>Hög fart</div>
     },
+    {
+      symbol: <Line journey={{id: 177, state: "ATORIGIN"}}
+                    line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
+      legend: <div>Avgångsstation</div>
+    },
   ];
   const destinations: { symbol: React.ReactNode; legend: React.ReactNode; }[] = [
     {
