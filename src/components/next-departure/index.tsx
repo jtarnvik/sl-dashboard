@@ -12,39 +12,8 @@ import "./index.css"
 import {Destination} from "./destination.tsx";
 import {SLButton} from "../common/sl-button";
 import {ModalDialog} from "../common/modal-dialog";
-import classNames from "classnames";
-
-interface LegendData {
-  symbol: React.ReactNode,
-  legend: React.ReactNode,
-}
-
-type PropsLegend = {
-  legendData: LegendData[],
-  title: String,
-  useColumns?: boolean
-}
-
-function Legend({legendData, title, useColumns}: PropsLegend) {
-  const columnStyling = classNames({
-    'grid grid-cols-2 gap-y-1 gap-x-2': useColumns
-  });
-
-  return (
-    <div className="mt-0">
-      <p className="font-semibold">{title}</p>
-      <div className={columnStyling}>
-        {legendData.map((itm, index) =>
-          <div className="flex items-center space-x-2" id={"" + index}>
-            {itm.symbol}
-            {itm.legend}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
+import {destinations, symbols} from "./legend-data.tsx";
+import {Legend} from "./legend.tsx";
 
 type Props = {
   performManualUpdate?: React.Ref<ScheduleOperations>;
@@ -106,49 +75,6 @@ export function NextDeparture({performManualUpdate}: Props) {
   }
 
   const departurePres: Departure[] = sortDeparturesByDestination(departures?.departures);
-
-  const symbols: { symbol: React.ReactNode; legend: React.ReactNode; }[] = [
-    {
-      symbol: <Line journey={{id: 177, state: "EXPECTED"}}
-                    line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
-      legend: <div>Ej avgått</div>
-    },
-    {
-      symbol: <Line journey={{id: 177, state: "SLOWPROGRESS"}}
-                    line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
-      legend: <div>Låg fart</div>
-    },
-    {
-      symbol: <Line journey={{id: 177, state: "NORMALPROGRESS"}}
-                    line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
-      legend: <div>Normal fart</div>
-    },
-    {
-      symbol: <Line journey={{id: 177, state: "FASTPROGRESS"}}
-                    line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
-      legend: <div>Hög fart</div>
-    },
-    {
-      symbol: <Line journey={{id: 177, state: "ATORIGIN"}}
-                    line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
-      legend: <div>Avgångsstation</div>
-    },
-  ];
-  const destinations: { symbol: React.ReactNode; legend: React.ReactNode; }[] = [
-    {
-      symbol: <Destination journey={{id: 177, state: "EXPECTED"}} destination="Brommaplan" />,
-      legend: <div>Planerad</div>
-    },
-    {
-      symbol: <Destination journey={{id: 177, state: "NORMALPROGRESS"}} destination="Brommaplan" />,
-      legend: <div>På väg</div>
-    },
-    {
-      symbol: <Destination journey={{id: 177, state: "CANCELLED"}} destination="Brommaplan" />,
-      legend: <div>Inställd</div>
-    },
-  ];
-
   return (
     <Card>
       <div className="flex justify-between">
