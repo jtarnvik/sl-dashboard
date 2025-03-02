@@ -24,6 +24,7 @@ export function NextDeparture({performManualUpdate}: Props) {
   const [lastUpdated, setLastUpdated] = useState<DateTime | undefined>(undefined);
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
+  const [jsonOpen, setJsonOpen] = useState<boolean>(false);
 
   const updateDiffSinceLatUpdated = useCallback(() => {
     setDiffSinceLastUpdated(lastUpdated?.diffNow())
@@ -74,6 +75,10 @@ export function NextDeparture({performManualUpdate}: Props) {
     setLegendOpen(true);
   }
 
+  function handleJSON() {
+    setJsonOpen(true);
+  }
+
   const departurePres: Departure[] = sortDeparturesByDestination(departures?.departures);
   return (
     <Card>
@@ -91,11 +96,21 @@ export function NextDeparture({performManualUpdate}: Props) {
               <Destination journey={departure.journey} destination={departure.destination} />
             </div>
             <div className="grid-time justify-self-end">
-              {departure.display}
+              <div className="relative">
+                {departure.display}
+                {departure.deviations && departure.deviations.length > 0 &&
+                  <div className="absolute top-[0px] -right-[1px] w-0 h-0
+                      border-l-[4px] border-l-transparent
+                      border-r-[4px] border-r-transparent
+                      border-b-[7px] border-b-orange-500">
+                  </div>
+                }
+              </div>
             </div>
           </div>
         )}
-      <div className="w-full flex justify-end">
+      <div className="w-full flex justify-end space-x-1">
+        <SLButton onClick={handleJSON} thin>JSON</SLButton>
         <SLButton onClick={handleLegend} thin>Symboler</SLButton>
       </div>
       <ModalDialog
@@ -103,8 +118,18 @@ export function NextDeparture({performManualUpdate}: Props) {
         onClose={() => setLegendOpen(false)}
         title={"Symboler"}
       >
-        <Legend legendData={symbols} title="Linjesymbol" useColumns/>
+        <Legend legendData={symbols} title="Linjesymbol" useColumns />
         <Legend legendData={destinations} title="Destination" />
+      </ModalDialog>
+      <ModalDialog
+        isOpen={jsonOpen}
+        onClose={() => setJsonOpen(false)}
+        title={"Response Data"}
+        scrollable={true}
+      >
+        <pre>
+          {JSON.stringify(departures,null, 2)}
+        </pre>
       </ModalDialog>
     </Card>
   )
