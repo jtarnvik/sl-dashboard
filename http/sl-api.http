@@ -1,8 +1,24 @@
 ### API: https://www.trafiklab.se/api/trafiklab-apis/sl/
-### Skogslöparvägen = 300103715
-### Centralen = 300109001
-### Brommaplan = 300109109
-### Spånga station = 301109704
+### Skogslöparvägen = 300103715 - 9091001000003715
+### T-Centralen = 300109001 - 9091001000009001
+### Brommaplan = 300109109 - 9091001000009109
+### Spånga station = 301109704 - 9091001001009704
+
+### Find stop
+https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=Skogslöparvägen&any_obj_filter_sf=2&type_sf=any
+### Find stop
+https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=Brommaplan&any_obj_filter_sf=2&type_sf=any
+### Find stop
+https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=spånga&any_obj_filter_sf=2&type_sf=any
+### Find stop
+https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=centralen&any_obj_filter_sf=2&type_sf=any
+
+### Take me Home
+# T-Centrlen -> Skogslöparvägen
+https://journeyplanner.integration.sl.se/v2/trips?type_origin=any&type_destination=any&name_origin=9091001000009001&name_destination=9091001000003715&calc_number_of_trips=3
+###
+# T-Centrlen -> Skogslöparvägen
+https://journeyplanner.integration.sl.se/v2/trips?type_origin=any&type_destination=any&name_origin=9091001000009001&name_destination=9091001000003715&calc_number_of_trips=3
 
 ### Transport authorities
 https://transport.integration.sl.se/v1/transport-authorities
@@ -16,11 +32,6 @@ https://transport.integration.sl.se/v1/sites?expand=false
 ### Stops
 https://transport.integration.sl.se/v1/stop-points
 
-### Sök efter stop - Skogslöparvägen
-https://journeyplanner.integration.sl.se/v1/typeahead.json?searchstring=skogslöparvägen&stationsonly=true&maxresults=10&key=TRAFIKLAB-SLAPI-INTEGRATION-2024
-### Sök efter stop - centralen
-https://journeyplanner.integration.sl.se/v1/typeahead.json?searchstring=spånga&stationsonly=true&maxresults=10&key=TRAFIKLAB-SLAPI-INTEGRATION-2024
-
 ### Site id = 300103715 skogslöparvägen, man verkar skall använda 4 sista siffror
 https://transport.integration.sl.se/v1/sites/3715/departures
 ### From Sls web
@@ -29,10 +40,13 @@ https://services.c.web.sl.se/departurewebservice/departures/site/909100100000371
 ### Avvikelser ange fler parametrar
 https://deviations.integration.sl.se/v1/messages?future=true
 
-### Route ange fler parametrar
-https://journeyplanner.integration.sl.se/v1/TravelplannerV3_1/trip.json?key=TRAFIKLAB-SLAPI-INTEGRATION-2024&originExtId=300103715&destExtId=300109001
-### Via Spånga
-https://journeyplanner.integration.sl.se/v1/TravelplannerV3_1/trip.json?key=TRAFIKLAB-SLAPI-INTEGRATION-2024&originExtId=300103715&destExtId=300109001&via=301109704
-
-### Nearby stops, exemple
-https://journeyplanner.integration.sl.se/v1/nearbystopsv2.json?originCoordLat=59.3646686&originCoordLong=17.9251941&key=TRAFIKLAB-SLAPI-INTEGRATION-2024
+### Sök efter stop - Skogslöparvägen (v1 no longer in use)
+#https://journeyplanner.integration.sl.se/v1/typeahead.json?searchstring=skogslöparvägen&stationsonly=true&maxresults=10&key=TRAFIKLAB-SLAPI-INTEGRATION-2024
+### Sök efter stop - centralen (v1 no longer in use)
+#https://journeyplanner.integration.sl.se/v1/typeahead.json?searchstring=spånga&stationsonly=true&maxresults=10&key=TRAFIKLAB-SLAPI-INTEGRATION-2024
+### Route ange fler parametrar (v1 no longer in use)
+#https://journeyplanner.integration.sl.se/v1/TravelplannerV3_1/trip.json?key=TRAFIKLAB-SLAPI-INTEGRATION-2024&originExtId=300103715&destExtId=300109001
+### Via Spånga (v1 no longer in use)
+#https://journeyplanner.integration.sl.se/v1/TravelplannerV3_1/trip.json?key=TRAFIKLAB-SLAPI-INTEGRATION-2024&originExtId=300103715&destExtId=300109001&via=301109704
+### Nearby stops, exemple (v1 no longer in use)
+#https://journeyplanner.integration.sl.se/v1/nearbystopsv2.json?originCoordLat=59.3646686&originCoordLong=17.9251941&key=TRAFIKLAB-SLAPI-INTEGRATION-2024

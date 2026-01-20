@@ -4,6 +4,7 @@ import ErrorContext from "./contexts/error-context.ts";
 import {NextDeparture} from "./components/next-departure";
 import {ErrorHandler} from "./components/error-handler";
 import {Navbar} from "./components/navbar";
+import {NextCity} from "./components/next-city";
 
 function App() {
   const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
@@ -36,7 +37,7 @@ function App() {
             <div style={{minHeight: `${navbarHeight}px`}} />
             <ErrorHandler></ErrorHandler>
             <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} />
-            {/*<NextCity performManualUpdate={performManualUpdateNextCityRef} />*/}
+            <NextCity performManualUpdate={performManualUpdateNextCityRef} />
           </div>
         </main>
       </div>
