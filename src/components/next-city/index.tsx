@@ -19,6 +19,11 @@ export function NextCity({performManualUpdate}: Props) {
   const [systemMessages, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined)
   const [response, setResponse] = useState<string>("");
 
+  if (false) {
+    console.log(systemMessages);
+    console.log(response);
+  }
+
   const updateDepartures = useCallback(() => {
     setResponse("Loading...");
     const url = URL_GET_TRAVEL_FROM_TO_v2(SITE_SKOGSLOPARVAGEN_16_CHAR, SITE_CENTRALEN_16_CHAR);
