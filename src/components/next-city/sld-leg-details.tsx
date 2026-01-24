@@ -27,7 +27,7 @@ type Props = {
 
 export function SldLegDetails({legs}: Props) {
   return (
-    <div className="bg-[#F8F9FA] border border-gray-200 shadow-sm rounded-md p-[10px] ms-[10px] me-[10px] mb-2">
+    <div className="bg-[#F8F9FA] border border-gray-200 shadow-sm rounded-md rounded-t-none p-[10px] ms-[10px] me-[10px] mb-2">
       {legs.map((leg, index) => {
         return (<GeneralLegComponent leg={leg} index={index} key={index} />);
       })}

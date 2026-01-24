@@ -18,14 +18,17 @@ export function SldJourney({journey}: Props) {
   const headerLegs = findJourneyLegs(journey.legs);
 
   const journeyClasses = classNames({
-    'bg-[#F8F9FA] border border-gray-200 shadow-sm rounded-md p-[10px]': true,
+    'bg-[#F8F9FA] border border-gray-200 shadow p-[10px]': true,
     'cursor-pointer': true,
-    'mb-2': !showLegs
+    'mb-2': !showLegs,
+    'rounded-md': !showLegs,
+    'rounded-md rounded-b-none': showLegs,
+    'relative z-20': true
   });
-  
+
   return (
-    <div>
-      <div 
+    <div className="relative">
+      <div
         className={journeyClasses}
         onClick={() => setShowLegs(!showLegs)}
       >
@@ -50,9 +53,12 @@ export function SldJourney({journey}: Props) {
           interchanges {journey.interchanges}
         </div>
       </div>
-      {showLegs &&
-        <SldLegDetails legs={journey.legs} />
-      }
+
+      {showLegs && (
+        <div className="relative z-10 -mt-2">
+          <SldLegDetails legs={journey.legs} />
+        </div>
+      )}
     </div>
   );
 }
