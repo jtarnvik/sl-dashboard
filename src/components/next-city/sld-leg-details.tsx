@@ -1,0 +1,36 @@
+import {Leg, PRODUCT_CLASS_FOOTPATH} from "../../types/sl-journeyplaner-responses.ts";
+import {JSX} from "react";
+import {SldWalk} from "./sld-walk.tsx";
+import {SldInterchange} from "./sld-interchange.tsx";
+import {SldLeg} from "./sld-leg.tsx";
+
+type GeneralLegComponentProps = {
+  leg: Leg,
+  index: number
+}
+
+function GeneralLegComponent({leg, index}: GeneralLegComponentProps): JSX.Element {
+  if (leg.transportation?.product.class === PRODUCT_CLASS_FOOTPATH) {
+    if (index === 0) {
+      return (<SldWalk leg={leg} />);
+    } else {
+      return (<SldInterchange leg={leg} />);
+    }
+  } else {
+    return (<SldLeg leg={leg} />);
+  }
+}
+
+type Props = {
+  legs: Leg[]
+}
+
+export function SldLegDetails({legs}: Props) {
+  return (
+    <div className="bg-[#F8F9FA] border border-gray-200 shadow-sm rounded-md p-[10px] ms-[10px] me-[10px] mb-2">
+      {legs.map((leg, index) => {
+        return (<GeneralLegComponent leg={leg} index={index} key={index} />);
+      })}
+    </div>
+  );
+}

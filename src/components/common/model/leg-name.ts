@@ -25,4 +25,8 @@ export class LegName {
   public get name() : string {
     return this.hasTrack ? `Track ${this.track}, ${this._name}` : this._name;
   }
+
+  public get nonTrackedName() : string {
+    return this._name;
+  }
 }

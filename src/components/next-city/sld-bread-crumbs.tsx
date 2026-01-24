@@ -1,14 +1,14 @@
 import React from 'react';
-import {Leg, Product, PRODUCT_CLASS_FOOTPATH} from "../../types/sl-journeyplaner-responses.ts";
-import {TransportationIcon} from "../common/line";
+import {Leg, PRODUCT_CLASS_FOOTPATH, Transportation} from "../../types/sl-journeyplaner-responses.ts";
+import {LineTransportation} from "../common/line";
 import { IoChevronForward } from "react-icons/io5";
 
 export type Props = {
   legs: Leg[]
 }
 
-function convertLegsToIcons(legs: Leg[]) {
-  const result: Product[] = [];
+function convertLegsToProducts(legs: Leg[]) {
+  const result: Transportation[] = [];
 
   for (let i = 0; i < legs.length; i++) {
     let leg = legs[i];
@@ -19,21 +19,21 @@ function convertLegsToIcons(legs: Leg[]) {
       // Skip icons for interchange
       continue;
     }
-    result.push(leg.transportation.product);
+    result.push(leg.transportation);
   }
   return result;
 }
 
 export function SldBreadCrumbs({legs}: Props) {
-  var numbers = convertLegsToIcons(legs);
+  const transpos = convertLegsToProducts(legs);
 
   return (
     <div className="flex gap-2 items-center">
-      {numbers.map((number, index) => {
+      {transpos.map((transpo, index) => {
         return (
           <React.Fragment key={index}>
-            <TransportationIcon product={number} />
-            {index < numbers.length - 1 && (
+            <LineTransportation transpo={transpo} />
+            {index < transpos.length - 1 && (
               <IoChevronForward className="w-4 h-4 mt-[4px]" />
             )}
           </React.Fragment>

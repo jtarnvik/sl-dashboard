@@ -1,29 +1,29 @@
-import {Line} from "../common/line";
+import {LineJourney} from "../common/line";
 import {Destination} from "./destination.tsx";
 
 export const symbols: { symbol: React.ReactNode; legend: React.ReactNode; }[] = [
   {
-    symbol: <Line journey={{id: 177, state: "EXPECTED"}}
+    symbol: <LineJourney journey={{id: 177, state: "EXPECTED"}}
                   line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
     legend: <div>Ej avgått</div>
   },
   {
-    symbol: <Line journey={{id: 177, state: "SLOWPROGRESS"}}
+    symbol: <LineJourney journey={{id: 177, state: "SLOWPROGRESS"}}
                   line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
     legend: <div>Låg fart</div>
   },
   {
-    symbol: <Line journey={{id: 177, state: "NORMALPROGRESS"}}
+    symbol: <LineJourney journey={{id: 177, state: "NORMALPROGRESS"}}
                   line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
     legend: <div>Normal fart</div>
   },
   {
-    symbol: <Line journey={{id: 177, state: "FASTPROGRESS"}}
+    symbol: <LineJourney journey={{id: 177, state: "FASTPROGRESS"}}
                   line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
     legend: <div>Hög fart</div>
   },
   {
-    symbol: <Line journey={{id: 177, state: "ATORIGIN"}}
+    symbol: <LineJourney journey={{id: 177, state: "ATORIGIN"}}
                   line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
     legend: <div>Avgångsstation</div>
   },

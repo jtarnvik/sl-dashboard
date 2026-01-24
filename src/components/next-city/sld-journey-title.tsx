@@ -12,7 +12,7 @@ export function SldJourneyTitle({headerLegs}: Props) {
 
   return (
     <div>
-      {originName.name} - {destName.name}
+      {originName.nonTrackedName} - {destName.nonTrackedName}
     </div>
   );
 }

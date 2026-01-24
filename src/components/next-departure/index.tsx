@@ -5,7 +5,7 @@ import {DateTime, Duration} from "luxon";
 import {shortSwedishHumanizer} from "../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../util/sorters.ts";
 import {useVisibility} from "../../hook/use-visibility.ts";
-import {Line} from "../common/line";
+import {LineJourney} from "../common/line";
 import {Card} from "../common/card";
 
 import "./index.css"
@@ -90,7 +90,7 @@ export function NextDeparture({performManualUpdate}: Props) {
         departurePres.map((departure, index) =>
           <div key={index} className="departures-grid">
             <div className="grid-line justify-self-start">
-              <Line line={departure.line} journey={departure.journey} />
+              <LineJourney line={departure.line} journey={departure.journey} />
             </div>
             <div className="grid-name">
               <Destination journey={departure.journey} destination={departure.destination} />
