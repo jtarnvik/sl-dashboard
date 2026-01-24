@@ -2,11 +2,14 @@ import {shortSwedishHumanizer} from "../../util/humanizer.ts";
 import {Journey} from "../../types/sl-journeyplaner-responses.ts";
 import {SldJourneyTitle} from "./sld-journey-title.tsx";
 import {findJourneyLegs} from "../../util/journey-utils.ts";
-import {ImArrowRight2} from "react-icons/im";
 import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
 import {SldLegDetails} from "./sld-leg-details.tsx";
 import {useState} from "react";
 import classNames from "classnames";
+
+import { TbArrowNarrowRightDashed } from "react-icons/tb";
+// import {ImArrowRight2} from "react-icons/im";
+
 
 type Props = {
   journey: Journey
@@ -35,7 +38,7 @@ export function SldJourney({journey}: Props) {
         <div className="flex justify-between">
           <div className="flex gap-1">
             {headerLegs.origin.estimatedTimeString}
-            <ImArrowRight2 className="ms-1 mt-[4px]" />
+            <TbArrowNarrowRightDashed className="mt-[4px]" />
             {headerLegs.dest.estimatedTimeString}
           </div>
           <div>{headerLegs.duration.durationString} min</div>

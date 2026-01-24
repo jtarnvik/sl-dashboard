@@ -16,16 +16,10 @@ export function SldLeg({leg}: Props) {
 
   return (
     <div>
-      --
-      <br/>
-       leg
       <SldLegTitle headerLegs={headerLegs} />
       origin: {timeOrigin.toString()}
       <br/>
       destination: {timeDestination.toString()}
-      <br/>
-      --
-      <br/>
     </div>
   );
 }
