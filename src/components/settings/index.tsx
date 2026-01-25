@@ -8,7 +8,9 @@ import {IoCloseCircle} from "react-icons/io5";
 
 type Props = {
   settingsOpen: boolean,
-  setSettingsOpen: (open: boolean) => void
+  setSettingsOpen: (open: boolean) => void,
+  applySettings: (data: SettingsData) => void,
+  removeSettings: () => void
 }
 
 export function Settings({settingsOpen, setSettingsOpen}: Props) {

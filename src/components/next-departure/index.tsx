@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useImperativeHandle, useState} from "react";
 import axios from 'axios';
-import {SITE_SKOGSLOPARVAGEN_4_CHAR, URL_GET_DEPARTURES_FROM_SITE} from "../../communication/constant.ts";
+import {URL_GET_DEPARTURES_FROM_SITE} from "../../communication/constant.ts";
 import {DateTime, Duration} from "luxon";
 import {shortSwedishHumanizer} from "../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../util/sorters.ts";
@@ -16,10 +16,11 @@ import {destinations, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
 
 type Props = {
-  performManualUpdate?: React.Ref<ScheduleOperations>;
+  performManualUpdate?: React.Ref<ScheduleOperations>,
+  stopPoint16Chars: string
 }
 
-export function NextDeparture({performManualUpdate}: Props) {
+export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
   const [departures, setDepartures] = useState<SlDeparturesResponse | undefined>(undefined);
   const [lastUpdated, setLastUpdated] = useState<DateTime | undefined>(undefined);
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
@@ -31,7 +32,7 @@ export function NextDeparture({performManualUpdate}: Props) {
   }, [lastUpdated]);
 
   const updateDepartures = useCallback(() => {
-    const url = URL_GET_DEPARTURES_FROM_SITE(SITE_SKOGSLOPARVAGEN_4_CHAR);
+    const url = URL_GET_DEPARTURES_FROM_SITE(stopPoint16Chars.slice(-4));
     axios.get(url)
       .then(function (response) {
         setDepartures(response.data);
