@@ -5,12 +5,15 @@ import {NextDeparture} from "./components/next-departure";
 import {ErrorHandler} from "./components/error-handler";
 import {Navbar} from "./components/navbar";
 import {NextCity} from "./components/next-city";
+import {SLButton} from "./components/common/sl-button";
+import {Settings} from "./components/settings";
 
 function App() {
   const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
   const performManualUpdateNextCityRef = useRef<ScheduleOperations>(null);
   const [error, setError] = useState<string>("");
   const [navbarHeight, setNavbarHeight] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const navbar = document.querySelector("nav");
@@ -38,7 +41,11 @@ function App() {
             <ErrorHandler></ErrorHandler>
             <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} />
             <NextCity performManualUpdate={performManualUpdateNextCityRef} />
+            <div className="flex justify-end">
+            <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
+            </div>
           </div>
+          <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} />
         </main>
       </div>
     </ErrorContext.Provider>

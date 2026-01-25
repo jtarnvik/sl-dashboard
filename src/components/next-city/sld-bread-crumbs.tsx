@@ -1,7 +1,7 @@
 import React from 'react';
 import {Leg, PRODUCT_CLASS_FOOTPATH, Transportation} from "../../types/sl-journeyplaner-responses.ts";
 import {LineTransportation} from "../common/line";
-import { IoChevronForward } from "react-icons/io5";
+import {BreadCrumbChevron} from "../common/base/bread-crumb-chevron.tsx";
 
 export type Props = {
   legs: Leg[]
@@ -34,7 +34,7 @@ export function SldBreadCrumbs({legs}: Props) {
           <React.Fragment key={index}>
             <LineTransportation transpo={transpo} />
             {index < transpos.length - 1 && (
-              <IoChevronForward className="w-4 h-4 mt-[4px]" />
+              <BreadCrumbChevron />
             )}
           </React.Fragment>
         );

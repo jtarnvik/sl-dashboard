@@ -6,10 +6,7 @@ import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
 import {SldLegDetails} from "./sld-leg-details.tsx";
 import {useState} from "react";
 import classNames from "classnames";
-
-import { TbArrowNarrowRightDashed } from "react-icons/tb";
-// import {ImArrowRight2} from "react-icons/im";
-
+import {BreadCrumbArrow} from "../common/base/bread-crumb-arrow.tsx";
 
 type Props = {
   journey: Journey
@@ -38,7 +35,7 @@ export function SldJourney({journey}: Props) {
         <div className="flex justify-between">
           <div className="flex gap-1">
             {headerLegs.origin.estimatedTimeString}
-            <TbArrowNarrowRightDashed className="mt-[4px]" />
+            <BreadCrumbArrow />
             {headerLegs.dest.estimatedTimeString}
           </div>
           <div>{headerLegs.duration.durationString} min</div>

@@ -5,7 +5,8 @@ export interface JourneyPlannerTripsResponse {
 
 export interface SystemMessage {
   type?: string;
-  code?: string;
+  code?: string | number;
+  module?: string;
   text?: string;
 }
 
@@ -190,3 +191,39 @@ export type RealtimeStatus =
   | "MONITORED"
   | "UNMONITORED"
   | string;
+
+export interface StopFinderResponse {
+  locations: StopFinderLocation[];
+  systemMessages?: SystemMessage[];
+}
+
+export interface StopFinderLocation {
+  coord: Coordinate; // [lat, lon]
+  disassembledName?: string;
+  id: string;
+
+  isBest?: boolean;
+  isGlobalId?: boolean;
+
+  matchQuality?: number;
+  name: string;
+
+  parent?: StopFinderParent;
+
+  productClasses?: number[];
+
+  properties?: StopFinderProperties;
+
+  type: StopPointType; // typically "stop" (can also be "locality" depending on query)
+}
+
+export interface StopFinderParent {
+  id: string;
+  name: string;
+  type: StopPointType; // e.g. "locality"
+}
+
+export interface StopFinderProperties {
+  mainLocality?: string;
+  stopId?: string;
+}

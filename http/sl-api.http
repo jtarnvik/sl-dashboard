@@ -5,7 +5,7 @@
 ### Spånga station = 301109704 - 9091001001009704
 
 ### Find stop
-https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=Skogslöparvägen&any_obj_filter_sf=2&type_sf=any
+https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=Skogsl&any_obj_filter_sf=2&type_sf=any
 ### Find stop
 https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=Brommaplan&any_obj_filter_sf=2&type_sf=any
 ### Find stop
