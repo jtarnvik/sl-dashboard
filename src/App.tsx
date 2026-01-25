@@ -7,6 +7,9 @@ import {Navbar} from "./components/navbar";
 import {NextCity} from "./components/next-city";
 import {SLButton} from "./components/common/sl-button";
 import {Settings} from "./components/settings";
+import {SITE_SKOGSLOPARVAGEN_16_CHAR} from "./communication/constant.ts";
+import useLocalStorageState from 'use-local-storage-state';
+import {SETTINGS_KEY} from "./types/common-constants.ts";
 
 function App() {
   const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
@@ -14,6 +17,9 @@ function App() {
   const [error, setError] = useState<string>("");
   const [navbarHeight, setNavbarHeight] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+  const [settingsData, setSettingsData, { removeItem, isPersistent }] = useLocalStorageState<SettingsData>(SETTINGS_KEY, {
+    defaultValue: {stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen"}
+  })
 
   useEffect(() => {
     const navbar = document.querySelector("nav");
@@ -31,21 +37,26 @@ function App() {
     }
   }
 
+  if (!isPersistent) {
+    console.log("Settings data not persistent");
+    setError("Settings data not persistent. Please reload the page.");
+  }
+
   return (
     <ErrorContext.Provider value={{error, setError}}>
       <div>
-        <Navbar onManualUpdate={onManualUpdate} />
+        <Navbar onManualUpdate={onManualUpdate} heading={settingsData.stopPointName} />
         <main>
           <div className="flex flex-col space-y-2 px-2">
             <div style={{minHeight: `${navbarHeight}px`}} />
             <ErrorHandler></ErrorHandler>
-            <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} />
+            <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
             <NextCity performManualUpdate={performManualUpdateNextCityRef} />
             <div className="flex justify-end">
-            <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
+              <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
             </div>
           </div>
-          <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} />
+          <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem}/>
         </main>
       </div>
     </ErrorContext.Provider>
