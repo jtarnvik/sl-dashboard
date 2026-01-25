@@ -49,7 +49,7 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
       .finally(function () {
         // always executed
       });
-  }, []);
+  }, [stopPoint16Chars]);
 
   useVisibility({onVisible: updateDepartures});
 

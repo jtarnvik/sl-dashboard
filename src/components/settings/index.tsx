@@ -13,12 +13,13 @@ type Props = {
   removeSettings: () => void
 }
 
-export function Settings({settingsOpen, setSettingsOpen}: Props) {
+export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSettings}: Props) {
   const MAX_RESULTS = 5;
 
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResponse, setSearchResponse] = useState<StopFinderResponse | undefined>(undefined);
   const [searchInProgress, setSearchInProgress] = useState<boolean>(false);
+  const [selectedStopPointId, setSelectedStopPointId] = useState<string | undefined>(undefined);
 
   function stopPointSearch() {
     const trimmed = searchTerm.trim();
@@ -51,6 +52,21 @@ export function Settings({settingsOpen, setSettingsOpen}: Props) {
   function clearSettingsModal() {
     setSearchTerm("");
     setSearchResponse(undefined);
+    setSelectedStopPointId(undefined);
+  }
+
+  function applySelectedStopPoint() {
+    if (!selectedStopPointId) return;
+
+    const selected = visibleResults.find((x) => x.id === selectedStopPointId);
+    if (!selected) return;
+
+    applySettings({
+      stopPointId: selected.id,
+      stopPointName: selected.disassembledName ?? selected.name
+    });
+
+    close();
   }
 
   const trimmedSearchTerm = useMemo(() => searchTerm.trim(), [searchTerm]);
@@ -107,6 +123,9 @@ export function Settings({settingsOpen, setSettingsOpen}: Props) {
             <table className="w-full table-fixed">
               <thead className="bg-gray-50">
               <tr>
+                <th className="w-10 px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                  <span className="sr-only">Välj</span>
+                </th>
                 <th className="w-1/2 px-3 py-2 text-left text-xs font-semibold text-gray-600">
                   Hållplats
                 </th>
@@ -116,19 +135,35 @@ export function Settings({settingsOpen, setSettingsOpen}: Props) {
               </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-              {visibleResults.map((itm, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 text-sm text-gray-900">
-                    {itm.disassembledName ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-gray-600">
+              {visibleResults.map((itm) => {
+                const isSelected = itm.id === selectedStopPointId;
+                return (
+                  <tr
+                    key={itm.id}
+                    className={`hover:bg-gray-50 cursor-pointer ${isSelected ? "bg-blue-50" : ""}`}
+                    onClick={() => setSelectedStopPointId(itm.id)}
+                  >
+                    <td className="px-3 py-2 text-sm text-gray-900">
+                      <input
+                        type="radio"
+                        name="selectedStopPoint"
+                        checked={isSelected}
+                        onChange={() => setSelectedStopPointId(itm.id)}
+                        className="h-4 w-4"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-900">
+                      {itm.disassembledName ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-600">
                     {itm.parent?.name ?? "—"}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {visibleResults.length === 0 && (
                 <tr>
-                  <td colSpan={2} className="px-3 py-4 text-sm text-gray-500">
+                  <td colSpan={3} className="px-3 py-4 text-sm text-gray-500">
                     Inga träffar än.
                   </td>
                 </tr>
@@ -142,6 +177,20 @@ export function Settings({settingsOpen, setSettingsOpen}: Props) {
               Visar {Math.min(MAX_RESULTS, totalResults)} ({totalResults})
             </div>
           }
+
+          <div className="flex justify-end gap-2">
+            <SLButton
+              onClick={removeSettings}
+            >
+              Default
+            </SLButton>
+            <SLButton
+              onClick={applySelectedStopPoint}
+              disabled={!selectedStopPointId}
+            >
+              Använd
+            </SLButton>
+          </div>
         </div>
       </div>
     </ModalDialog>
