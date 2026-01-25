@@ -44,9 +44,13 @@ export function Settings({settingsOpen, setSettingsOpen}: Props) {
   }
 
   function close() {
-    setSearchResponse(undefined);
     setSettingsOpen(false);
+    clearSettingsModal();
+  }
+
+  function clearSettingsModal() {
     setSearchTerm("");
+    setSearchResponse(undefined);
   }
 
   const trimmedSearchTerm = useMemo(() => searchTerm.trim(), [searchTerm]);
@@ -77,8 +81,7 @@ export function Settings({settingsOpen, setSettingsOpen}: Props) {
               {trimmedSearchTerm.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setSearchTerm("")}
-                  aria-label="Rensa sökfält"
+                  onClick={clearSettingsModal}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 >
                   <IoCloseCircle className="h-5 w-5" />
@@ -99,47 +102,47 @@ export function Settings({settingsOpen, setSettingsOpen}: Props) {
           </p>
         </div>
 
-        {searchResponse && (
-          <div className="space-y-2">
-            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-              <table className="w-full table-fixed">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="w-1/2 px-3 py-2 text-left text-xs font-semibold text-gray-600">
-                      Hållplats
-                    </th>
-                    <th className="w-1/2 px-3 py-2 text-left text-xs font-semibold text-gray-600">
-                      Område
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {visibleResults.map((itm, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 text-sm text-gray-900">
-                        {itm.disassembledName ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-600">
-                        {itm.parent?.name ?? "—"}
-                      </td>
-                    </tr>
-                  ))}
-                  {visibleResults.length === 0 && (
-                    <tr>
-                      <td colSpan={2} className="px-3 py-4 text-sm text-gray-500">
-                        Inga träffar.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+        <div className="space-y-2">
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <table className="w-full table-fixed">
+              <thead className="bg-gray-50">
+              <tr>
+                <th className="w-1/2 px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                  Hållplats
+                </th>
+                <th className="w-1/2 px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                  Område
+                </th>
+              </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+              {visibleResults.map((itm, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 text-sm text-gray-900">
+                    {itm.disassembledName ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-gray-600">
+                    {itm.parent?.name ?? "—"}
+                  </td>
+                </tr>
+              ))}
+              {visibleResults.length === 0 && (
+                <tr>
+                  <td colSpan={2} className="px-3 py-4 text-sm text-gray-500">
+                    Inga träffar än.
+                  </td>
+                </tr>
+              )}
+              </tbody>
+            </table>
+          </div>
 
+          {totalResults > MAX_RESULTS &&
             <div className="text-xs text-gray-500">
               Visar {Math.min(MAX_RESULTS, totalResults)} ({totalResults})
             </div>
-          </div>
-        )}
+          }
+        </div>
       </div>
     </ModalDialog>
   );
