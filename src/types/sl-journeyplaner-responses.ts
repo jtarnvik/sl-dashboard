@@ -98,6 +98,7 @@ export interface Transportation {
 export const PRODUCT_CLASS_TRAIN = 0;
 export const PRODUCT_CLASS_SUBWAY = 2;
 export const PRODUCT_CLASS_BUS = 3;
+export const PRODUCT_CLASS_TRAM = 4;
 export const PRODUCT_CLASS_BUS_LOCAL = 5;
 export const PRODUCT_CLASS_FOOTPATH = 99;
 export const PRODUCT_CLASS_FOOTPATH_2 = 100;

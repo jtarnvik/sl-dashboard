@@ -8,7 +8,7 @@ import {PiTaxi} from "react-icons/pi";
 import {TbUfo} from "react-icons/tb";
 import {LiaWalkingSolid} from "react-icons/lia";
 import classNames from "classnames";
-import {PRODUCT_CLASS_BUS, PRODUCT_CLASS_BUS_LOCAL, PRODUCT_CLASS_FOOTPATH, PRODUCT_CLASS_FOOTPATH_2, PRODUCT_CLASS_SUBWAY, PRODUCT_CLASS_TRAIN, Transportation} from "../../../types/sl-journeyplaner-responses.ts";
+import {PRODUCT_CLASS_BUS, PRODUCT_CLASS_BUS_LOCAL, PRODUCT_CLASS_FOOTPATH, PRODUCT_CLASS_FOOTPATH_2, PRODUCT_CLASS_SUBWAY, PRODUCT_CLASS_TRAIN, PRODUCT_CLASS_TRAM, Transportation} from "../../../types/sl-journeyplaner-responses.ts";
 
 export enum SldProgress {
   FAST = 1,
@@ -103,12 +103,15 @@ export function convertTransportationToTransportationMode(transpo: Transportatio
       return TransportationMode.BUS;
     case PRODUCT_CLASS_SUBWAY:
       return TransportationMode.SUBWAY;
+    case PRODUCT_CLASS_TRAM:
+      return TransportationMode.TRAM;
     case PRODUCT_CLASS_TRAIN:
       return TransportationMode.TRAIN;
     case PRODUCT_CLASS_FOOTPATH:
     case PRODUCT_CLASS_FOOTPATH_2:
       return TransportationMode.WALKING;
   }
+  console.log("Unknown transportation class: " , transpo?.product);
   return TransportationMode.UNKNOWN;
 }
 

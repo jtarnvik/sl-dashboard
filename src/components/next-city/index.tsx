@@ -43,13 +43,15 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
 
   function updateDepartures() {
     function generateRoute(lat:number, long:number){
-      setState("Generating route...");
       const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId);
       axios.get(url)
         .then(function (response) {
           setJourneys(response.data.journeys);
           setSystemMessages(response.data.systemMessages);
-          setState("route fetched - presenting")
+          if (!response.data.journeys) {
+            setState("No routes, are you already there?")
+          }
+          console.log("journey", response.data);
         })
         .catch(function (error) {
           // TODO: Log error
@@ -68,11 +70,9 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
     setJourneys(undefined);
     setSystemMessages(undefined);
 
-    setState("Planning route...");
     if (!navigator.geolocation) {
       setGeoInfo('Geolocation is not supported by your browser');
       setRoutePlanningInProgress(false);
-      setState("Geolocation is not supported by your browser");
       return;
     }
 
@@ -91,7 +91,6 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
         });
         setRoutePlanningInProgress(false);
         console.log("position", position);
-        setState("Route planned, geolocation received.");
         generateRoute(position.coords.latitude, position.coords.longitude);
       },
       (err) => {
