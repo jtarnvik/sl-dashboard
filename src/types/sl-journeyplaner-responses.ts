@@ -100,6 +100,8 @@ export const PRODUCT_CLASS_SUBWAY = 2;
 export const PRODUCT_CLASS_BUS = 3;
 export const PRODUCT_CLASS_BUS_LOCAL = 5;
 export const PRODUCT_CLASS_FOOTPATH = 99;
+export const PRODUCT_CLASS_FOOTPATH_2 = 100;
+
 
 export interface Product {
   id?: number;
@@ -107,7 +109,11 @@ export interface Product {
   name: string;
   iconId: number;
 }
-                                
+
+export function isFootPath(product:Product) {
+  return product.class === PRODUCT_CLASS_FOOTPATH || product.class === PRODUCT_CLASS_FOOTPATH_2;
+}
+
 export interface Operator {
   id: string;
   name: string;

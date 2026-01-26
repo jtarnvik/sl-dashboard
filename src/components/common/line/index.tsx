@@ -8,7 +8,7 @@ import {PiTaxi} from "react-icons/pi";
 import {TbUfo} from "react-icons/tb";
 import {LiaWalkingSolid} from "react-icons/lia";
 import classNames from "classnames";
-import {PRODUCT_CLASS_BUS, PRODUCT_CLASS_BUS_LOCAL, PRODUCT_CLASS_FOOTPATH, PRODUCT_CLASS_SUBWAY, PRODUCT_CLASS_TRAIN, Transportation} from "../../../types/sl-journeyplaner-responses.ts";
+import {PRODUCT_CLASS_BUS, PRODUCT_CLASS_BUS_LOCAL, PRODUCT_CLASS_FOOTPATH, PRODUCT_CLASS_FOOTPATH_2, PRODUCT_CLASS_SUBWAY, PRODUCT_CLASS_TRAIN, Transportation} from "../../../types/sl-journeyplaner-responses.ts";
 
 export enum SldProgress {
   FAST = 1,
@@ -106,6 +106,7 @@ export function convertTransportationToTransportationMode(transpo: Transportatio
     case PRODUCT_CLASS_TRAIN:
       return TransportationMode.TRAIN;
     case PRODUCT_CLASS_FOOTPATH:
+    case PRODUCT_CLASS_FOOTPATH_2:
       return TransportationMode.WALKING;
   }
   return TransportationMode.UNKNOWN;
@@ -142,7 +143,7 @@ export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, f
     <div>
       <div className="flex space-x-1">
         <div className="flex space-x-[2px]">
-          {(progress !== SldProgress.NO_INFO || forceProgressUsage )&&
+          {(progress !== SldProgress.NO_INFO || forceProgressUsage) &&
             <div className={"flex flex-col space-y-0.5 w-[9px] items-end " + lineAdjustment}>
               {Array.from({length: progressToLines(progress)}).map((_, index) => {
                 return (
@@ -159,9 +160,11 @@ export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, f
           }
           <TransportationIconCommon mode={mode} className="mt-[4px]" />
         </div>
-        <div className="font-signage bg-black text-white font-extrabold px-[3px] leading-[12px] pt-[2px] mt-[4px]">
-          {designation}
-        </div>
+        {mode !== TransportationMode.WALKING && mode !== TransportationMode.UNKNOWN &&
+          <div className="font-signage bg-black text-white font-extrabold px-[3px] leading-[12px] pt-[2px] mt-[4px]">
+            {designation}
+          </div>
+        }
       </div>
     </div>
   );
@@ -178,7 +181,7 @@ export function LineJourney({line, journey}: PropsLineJourney) {
   const transportationMode = convertLineJourneyToTransportionMode(line, journey);
   const designation = line.designation;
 
-  return (<LineCommon mode={transportationMode} progress={progress} designation={designation} forceProgressUsage={true}/>);
+  return (<LineCommon mode={transportationMode} progress={progress} designation={designation} forceProgressUsage={true} />);
 }
 
 type PropsLineProduct = {

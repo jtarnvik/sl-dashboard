@@ -1,5 +1,5 @@
 import React from 'react';
-import {Leg, PRODUCT_CLASS_FOOTPATH, Transportation} from "../../types/sl-journeyplaner-responses.ts";
+import {isFootPath, Leg, Transportation} from "../../types/sl-journeyplaner-responses.ts";
 import {LineTransportation} from "../common/line";
 import {BreadCrumbChevron} from "../common/base/bread-crumb-chevron.tsx";
 
@@ -15,7 +15,7 @@ function convertLegsToProducts(legs: Leg[]) {
     if (!leg?.transportation?.product) {
       continue;
     }
-    if (leg.transportation.product.class === PRODUCT_CLASS_FOOTPATH && i !== 0) {
+    if (isFootPath(leg.transportation.product) && i !== 0) {
       // Skip icons for interchange
       continue;
     }
@@ -25,7 +25,9 @@ function convertLegsToProducts(legs: Leg[]) {
 }
 
 export function SldBreadCrumbs({legs}: Props) {
+  console.log("breadcrumb legs", legs);
   const transpos = convertLegsToProducts(legs);
+  console.log("breadcrumb transpos", transpos);
 
   return (
     <div className="flex gap-2 items-center">

@@ -13,6 +13,9 @@ https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=spånga&any_obj_
 ### Find stop
 https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=centralen&any_obj_filter_sf=2&type_sf=any
 
+### Take me Home (or to centralen)
+# T-Centrlen -> Skogslöparvägen
+https://journeyplanner.integration.sl.se/v2/trips?type_origin=coord&type_destination=any&name_origin=18.013809:59.335104:WGS84[dd.ddddd]&name_destination=9091001000003715&calc_number_of_trips=3
 ### Take me Home
 # T-Centrlen -> Skogslöparvägen
 https://journeyplanner.integration.sl.se/v2/trips?type_origin=any&type_destination=any&name_origin=9091001000009001&name_destination=9091001000003715&calc_number_of_trips=3

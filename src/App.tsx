@@ -51,7 +51,7 @@ function App() {
             <div style={{minHeight: `${navbarHeight}px`}} />
             <ErrorHandler></ErrorHandler>
             <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
-            <NextCity performManualUpdate={performManualUpdateNextCityRef} />
+            <NextCity performManualUpdate={performManualUpdateNextCityRef} settingsData={settingsData}/>
             <div className="flex justify-end">
               <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
             </div>

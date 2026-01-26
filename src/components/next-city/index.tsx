@@ -1,48 +1,104 @@
-import {useCallback, useImperativeHandle, useState} from "react";
+import { useImperativeHandle, useState} from "react";
 import {Card} from "../common/card";
 import {
-  SITE_CENTRALEN_16_CHAR,
-  SITE_SKOGSLOPARVAGEN_16_CHAR,
-  URL_GET_TRAVEL_FROM_TO_v2
+  URL_GET_TRAVEL_COORD_TO_v2,
 } from "../../communication/constant.ts";
 import axios from "axios";
 import {Button} from "@headlessui/react";
 import {Journey, SystemMessage} from "../../types/sl-journeyplaner-responses";
 import {SldJourney} from "./sld-journey.tsx";
 
+type Location = {
+  latitude: number,
+  longitude: number,
+  accuracy: number, // in meters
+  altitude: number | null,
+  altitudeAccuracy: number | null,
+  heading: number | null,
+  speed: number | null,
+  timestamp: number | null
+};
+
 type Props = {
-  performManualUpdate?: React.Ref<ScheduleOperations>;
+  performManualUpdate?: React.Ref<ScheduleOperations>,
+  settingsData: SettingsData
 }
 
-export function NextCity({performManualUpdate}: Props) {
+export function NextCity({performManualUpdate, settingsData}: Props) {
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined)
   const [response, setResponse] = useState<string>("");
 
+  const [location, setLocation] = useState<Location | undefined >(undefined);
+  const [geoInfo, setGeoInfo] = useState<string | undefined>(undefined);
+  const [routePlanningInProgress, setRoutePlanningInProgress] = useState<boolean>(false);
+
   if (false) {
     console.log(systemMessages);
     console.log(response);
+    console.log(location);
+    console.log(routePlanningInProgress);
   }
 
-  const updateDepartures = useCallback(() => {
-    setResponse("Loading...");
-    const url = URL_GET_TRAVEL_FROM_TO_v2(SITE_SKOGSLOPARVAGEN_16_CHAR, SITE_CENTRALEN_16_CHAR);
-    axios.get(url)
-      .then(function (response) {
-        setJourneys(response.data.journeys);
-        setSystemMessages(response.data.systemMessages);
-      })
-      .catch(function (error) {
-        // TODO: Log error
-        // handle error
-        console.log(error);
-        setResponse("Error: " + error);
-      })
-      .finally(function () {
-        // always executed
-      });
-  }, []);
+  function updateDepartures() {
+    function generateRoute(lat:number, long:number){
+      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId);
+      axios.get(url)
+        .then(function (response) {
+          setJourneys(response.data.journeys);
+          setSystemMessages(response.data.systemMessages);
+        })
+        .catch(function (error) {
+          // TODO: Log error
+          // handle error
+          console.log(error);
+          setResponse("Error: " + error);
+        })
+        .finally(function () {
+          // always executed
+        });
+    }
 
+    setRoutePlanningInProgress(true);
+    setLocation(undefined);
+    setGeoInfo(undefined);
+    setJourneys(undefined);
+    setSystemMessages(undefined);
+
+    if (!navigator.geolocation) {
+      setGeoInfo('Geolocation is not supported by your browser');
+      setRoutePlanningInProgress(false);
+      return;
+    }
+
+    // Get current position once
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          latitude: position.coords.latitude,    // 59,....
+          longitude: position.coords.longitude,  // 17,....
+          accuracy: position.coords.accuracy, // in meters
+          altitude: position.coords.altitude,
+          altitudeAccuracy: position.coords.altitudeAccuracy,
+          heading: position.coords.heading,
+          speed: position.coords.speed,
+          timestamp: position.timestamp
+        });
+        setRoutePlanningInProgress(false);
+        console.log("position", position);
+        generateRoute(position.coords.latitude, position.coords.longitude);
+      },
+      (err) => {
+        setRoutePlanningInProgress(false);
+        setGeoInfo(err.message);
+      },
+      {
+        enableHighAccuracy: true, // Request GPS if available
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+  }
 
   function manualUpdate() {
     // updateDepartures();
@@ -63,19 +119,26 @@ export function NextCity({performManualUpdate}: Props) {
       <Button onClick={tempButtonUpdate}
               className="rounded bg-[#184fc2] p-[6px] text-sm text-white data-[hover]:bg-[#578ff3] data-[active]:bg-[#578ff3] focus:outline-none "
       >Tryit</Button>
-      <p />
-      {journeys &&
+      {geoInfo ?
         <div>
-          {journeys.map((journey, index) => {
-            return (
-              <div key={index}>
-                <SldJourney journey={journey}  />
-              </div>
-            )
-          })
+          {geoInfo}
+        </div>
+        :
+        <div>
+          <p />
+          {journeys &&
+            <div>
+              {journeys.map((journey, index) => {
+                return (
+                  <div key={index}>
+                    <SldJourney journey={journey} />
+                  </div>
+                )
+              })
+              }
+            </div>
           }
         </div>
       }
-
     </Card>);
 }
