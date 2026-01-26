@@ -32,6 +32,7 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
   const [location, setLocation] = useState<Location | undefined >(undefined);
   const [geoInfo, setGeoInfo] = useState<string | undefined>(undefined);
   const [routePlanningInProgress, setRoutePlanningInProgress] = useState<boolean>(false);
+  const [state, setState] = useState<string>("");
 
   if (false) {
     console.log(systemMessages);
@@ -42,11 +43,13 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
 
   function updateDepartures() {
     function generateRoute(lat:number, long:number){
+      setState("Generating route...");
       const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId);
       axios.get(url)
         .then(function (response) {
           setJourneys(response.data.journeys);
           setSystemMessages(response.data.systemMessages);
+          setState("route fetched - presenting")
         })
         .catch(function (error) {
           // TODO: Log error
@@ -65,9 +68,11 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
     setJourneys(undefined);
     setSystemMessages(undefined);
 
+    setState("Planning route...");
     if (!navigator.geolocation) {
       setGeoInfo('Geolocation is not supported by your browser');
       setRoutePlanningInProgress(false);
+      setState("Geolocation is not supported by your browser");
       return;
     }
 
@@ -86,9 +91,11 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
         });
         setRoutePlanningInProgress(false);
         console.log("position", position);
+        setState("Route planned, geolocation received.");
         generateRoute(position.coords.latitude, position.coords.longitude);
       },
       (err) => {
+        setState("Error: " + err.message);
         setRoutePlanningInProgress(false);
         setGeoInfo(err.message);
       },
@@ -119,6 +126,7 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
       <Button onClick={tempButtonUpdate}
               className="rounded bg-[#184fc2] p-[6px] text-sm text-white data-[hover]:bg-[#578ff3] data-[active]:bg-[#578ff3] focus:outline-none "
       >Tryit</Button>
+      {state}
       {geoInfo ?
         <div>
           {geoInfo}
