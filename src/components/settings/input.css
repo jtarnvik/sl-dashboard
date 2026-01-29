@@ -1,3 +1,7 @@
 input, select {
   font-size: max(16px, 1rem); /* Ensures at least 16px */
 }
+
+.font-size-settings {
+  font-size: max(16px, 1rem); /* Ensures at least 16px */
+}

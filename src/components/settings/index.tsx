@@ -76,9 +76,9 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
 
   return (
     <ModalDialog isOpen={settingsOpen} onClose={close} title="Inställningar">
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 font-size-settings">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block font-medium text-gray-700">
             Hållplats
           </label>
 
@@ -114,7 +114,7 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
             </SLButton>
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-gray-500">
             Tips: tryck Enter för att söka
           </p>
         </div>
@@ -124,13 +124,13 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
             <table className="w-full table-fixed">
               <thead className="bg-gray-50">
               <tr>
-                <th className="w-10 px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                <th className="w-10 px-3 py-2 text-left font-semibold text-gray-600">
                   <span className="sr-only">Välj</span>
                 </th>
-                <th className="w-1/2 px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
                   Hållplats
                 </th>
-                <th className="w-1/2 px-3 py-2 text-left text-xs font-semibold text-gray-600">
+                <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
                   Område
                 </th>
               </tr>
@@ -144,7 +144,7 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
                     className={`hover:bg-gray-50 cursor-pointer ${isSelected ? "bg-blue-50" : ""}`}
                     onClick={() => setSelectedStopPointId(itm.id)}
                   >
-                    <td className="px-3 py-2 text-sm text-gray-900">
+                    <td className="px-3 py-2 text-gray-900">
                       <input
                         type="radio"
                         name="selectedStopPoint"
@@ -153,10 +153,10 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
                         className="h-4 w-4"
                       />
                     </td>
-                    <td className="px-3 py-2 text-sm text-gray-900">
+                    <td className="px-3 py-2 text-gray-900">
                       {itm.disassembledName ?? "—"}
                     </td>
-                    <td className="px-3 py-2 text-sm text-gray-600">
+                    <td className="px-3 py-2 text-gray-600">
                     {itm.parent?.name ?? "—"}
                   </td>
                 </tr>
@@ -164,7 +164,7 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
               })}
               {visibleResults.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-3 py-4 text-sm text-gray-500">
+                  <td colSpan={3} className="px-3 py-4 text-gray-500">
                     Inga träffar än.
                   </td>
                 </tr>
