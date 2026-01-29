@@ -5,6 +5,7 @@ import axios from "axios";
 import {StopFinderResponse} from "../../types/sl-journeyplaner-responses.ts";
 import {SLButton} from "../common/sl-button";
 import {IoCloseCircle} from "react-icons/io5";
+import "./input.css"
 
 type Props = {
   settingsOpen: boolean,
@@ -91,7 +92,7 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
                   if (e.key === "Enter") stopPointSearch();
                 }}
                 placeholder="Sök hållplats…"
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
 
               {trimmedSearchTerm.length > 0 && (
