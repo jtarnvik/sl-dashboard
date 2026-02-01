@@ -1,7 +1,8 @@
 import React from 'react';
-import {isFootPath, Leg, Transportation} from "../../types/sl-journeyplaner-responses.ts";
+import {Leg, Transportation} from "../../types/sl-journeyplaner-responses.ts";
 import {LineTransportation} from "../common/line";
 import {BreadCrumbChevron} from "../common/base/bread-crumb-chevron.tsx";
+import {isFootPathForLeg} from "../../util/journey-utils.ts";
 
 export type Props = {
   legs: Leg[]
@@ -15,7 +16,7 @@ function convertLegsToProducts(legs: Leg[]) {
     if (!leg?.transportation?.product) {
       continue;
     }
-    if (isFootPath(leg.transportation.product) && i !== 0) {
+    if (isFootPathForLeg(leg) && i !== 0) {
       // Skip icons for interchange
       continue;
     }
@@ -25,9 +26,7 @@ function convertLegsToProducts(legs: Leg[]) {
 }
 
 export function SldBreadCrumbs({legs}: Props) {
-  console.log("breadcrumb legs", legs);
   const transpos = convertLegsToProducts(legs);
-  console.log("breadcrumb transpos", transpos);
 
   return (
     <div className="flex gap-2 items-center">

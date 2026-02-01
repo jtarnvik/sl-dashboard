@@ -11,6 +11,7 @@ export class LegStopPoint {
 
   private baseTimetableDT: DateTime;
   private estimatedDT: DateTime;
+  // @ts-ignore
   private plannedDT: DateTime;
 
   private estimatedRounded: DateTime;
@@ -46,13 +47,20 @@ export class LegStopPoint {
     return this.baseTimetableRounded;
   }
 
+  public get timeTableTimeString(): string {
+    return this.baseTimetableRounded.toLocaleString(DateTime.TIME_24_SIMPLE);
+  }
+
+  public get hasDestScheduluDifference(): boolean {
+    return this.estimatedRounded.diff(this.baseTimetableRounded).as('minutes') > 1;
+  }
+
   toString(): string {
     const baseTimetableTime = this.baseTimetableDT?.toLocaleString(DateTime.TIME_24_WITH_SECONDS);
     const estimatedDTTime = this.estimatedDT?.toLocaleString(DateTime.TIME_24_WITH_SECONDS);
-    const plannedDTTime = this.plannedDT?.toLocaleString(DateTime.TIME_24_WITH_SECONDS);
 
     const estDTTime = this.estimatedRounded?.toLocaleString(DateTime.TIME_24_SIMPLE);
     const baseTimetableTimeRounded = this.baseTimetableRounded?.toLocaleString(DateTime.TIME_24_SIMPLE);
-    return `baseTimetable: ${baseTimetableTime}/${baseTimetableTimeRounded} estimated: ${estimatedDTTime}/${estDTTime} planned: ${plannedDTTime}`;
+    return `baseTimetable: ${baseTimetableTime}/${baseTimetableTimeRounded} estimated: ${estimatedDTTime}/${estDTTime}`;
   }
 }

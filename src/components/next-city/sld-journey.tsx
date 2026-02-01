@@ -3,10 +3,10 @@ import {Journey} from "../../types/sl-journeyplaner-responses.ts";
 import {SldJourneyTitle} from "./sld-journey-title.tsx";
 import {findJourneyLegs} from "../../util/journey-utils.ts";
 import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
-import {SldLegDetails} from "./sld-leg-details.tsx";
+import {SldJourneyDetails} from "./sld-journey-details.tsx";
 import {useState} from "react";
 import classNames from "classnames";
-import {BreadCrumbArrow} from "../common/base/bread-crumb-arrow.tsx";
+import {SldDuration} from "./sld-duration.tsx";
 
 type Props = {
   journey: Journey
@@ -32,17 +32,8 @@ export function SldJourney({journey}: Props) {
         className={journeyClasses}
         onClick={() => setShowLegs(!showLegs)}
       >
-        <div className="flex justify-between">
-          <div className="flex gap-1">
-            {headerLegs.origin.estimatedTimeString}
-            <BreadCrumbArrow />
-            {headerLegs.dest.estimatedTimeString}
-          </div>
-          <div>{headerLegs.duration.durationString} min</div>
-        </div>
-        <div>
-          <SldJourneyTitle headerLegs={headerLegs} />
-        </div>
+        <SldDuration headerLegs={headerLegs} />
+        <SldJourneyTitle headerLegs={headerLegs} />
         <div>
           <SldBreadCrumbs legs={journey.legs} />
         </div>
@@ -56,7 +47,7 @@ export function SldJourney({journey}: Props) {
 
       {showLegs && (
         <div className="relative z-10 -mt-2">
-          <SldLegDetails legs={journey.legs} />
+          <SldJourneyDetails legs={journey.legs} />
         </div>
       )}
     </div>

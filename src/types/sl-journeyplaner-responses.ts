@@ -103,16 +103,11 @@ export const PRODUCT_CLASS_BUS_LOCAL = 5;
 export const PRODUCT_CLASS_FOOTPATH = 99;
 export const PRODUCT_CLASS_FOOTPATH_2 = 100;
 
-
 export interface Product {
   id?: number;
   class: number;
   name: string;
   iconId: number;
-}
-
-export function isFootPath(product:Product) {
-  return product.class === PRODUCT_CLASS_FOOTPATH || product.class === PRODUCT_CLASS_FOOTPATH_2;
 }
 
 export interface Operator {
@@ -192,7 +187,8 @@ export type ISODateTime = string;
 export type StopPointType =
   | "platform"
   | "stop"
-  | "locality";
+  | "locality"
+  | "address";
 
 export type RealtimeStatus =
   | "MONITORED"

@@ -5,5 +5,5 @@ type Props = {
 }
 
 export function SldWalk({leg}:Props) {
-  return (<div>walk{leg.origin.type}</div>);
+  return (<div>walk {leg.origin.type}</div>);
 }
