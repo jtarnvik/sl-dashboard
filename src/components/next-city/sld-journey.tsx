@@ -1,7 +1,7 @@
 import {shortSwedishHumanizer} from "../../util/humanizer.ts";
-import {Journey} from "../../types/sl-journeyplaner-responses.ts";
+import {Journey, Leg} from "../../types/sl-journeyplaner-responses.ts";
 import {SldJourneyTitle} from "./sld-journey-title.tsx";
-import {findJourneyLegs} from "../../util/journey-utils.ts";
+import {findJourneyLegs, isFootPathForLeg} from "../../util/journey-utils.ts";
 import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
 import {SldJourneyDetails} from "./sld-journey-details.tsx";
 import {useState} from "react";
@@ -15,8 +15,21 @@ type Props = {
 export function SldJourney({journey}: Props) {
   const [showLegs, setShowLegs] = useState<boolean>(false);
 
-  const headerLegs = findJourneyLegs(journey.legs);
+  function adjustInitialWalks(legs: Leg[]) {
+    const result = legs.slice();
+    if (result.length > 2 && isFootPathForLeg(result[0]) && isFootPathForLeg(result[1])) {
+      const removedLegs = result.splice(1, 1);
+      if (removedLegs.length !== 1) {
+        throw new Error("Unexpected number of removed legs, removed " + removedLegs.length + " legs, expected 1");
+      }
+      result[0].extraInterchange = removedLegs[0];
+    }
+    return result;
+  }
 
+  const adjustedLegs = adjustInitialWalks(journey.legs);
+
+  const headerLegs = findJourneyLegs(adjustedLegs);
   const journeyClasses = classNames({
     'bg-[#F8F9FA] border border-gray-200 shadow p-[10px]': true,
     'cursor-pointer': true,
@@ -35,7 +48,7 @@ export function SldJourney({journey}: Props) {
         <SldDuration headerLegs={headerLegs} />
         <SldJourneyTitle headerLegs={headerLegs} />
         <div>
-          <SldBreadCrumbs legs={journey.legs} />
+          <SldBreadCrumbs legs={adjustedLegs} />
         </div>
         <div hidden={true}>
           duration: {shortSwedishHumanizer(journey.tripDuration * 1000)} -
@@ -47,7 +60,7 @@ export function SldJourney({journey}: Props) {
 
       {showLegs && (
         <div className="relative z-10 -mt-2">
-          <SldJourneyDetails legs={journey.legs} />
+          <SldJourneyDetails legs={adjustedLegs} />
         </div>
       )}
     </div>

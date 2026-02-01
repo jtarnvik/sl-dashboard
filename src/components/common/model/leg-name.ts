@@ -2,7 +2,7 @@ import {Leg} from "../../../types/sl-journeyplaner-responses.ts";
 import {LegType} from "./leg-type.ts";
 
 export class LegName {
-  private hasTrack: boolean = false;
+  private _hasTrack: boolean = false;
   private track: string = "";
   private _name: string = "";
 
@@ -15,7 +15,7 @@ export class LegName {
 
     if (presName.length < 3 && stopPoint.parent?.disassembledName) {
       this.track = presName;
-      this.hasTrack = true;
+      this._hasTrack = true;
       this._name = stopPoint.parent.disassembledName;
     } else {
       this._name = presName;
@@ -23,10 +23,21 @@ export class LegName {
   }
 
   public get name() : string {
-    return this.hasTrack ? `Track ${this.track}, ${this._name}` : this._name;
+    return this._hasTrack ? `Track ${this.track}, ${this._name}` : this._name;
   }
 
   public get nonTrackedName() : string {
     return this._name;
+  }
+
+  public get hasTrack() : boolean {
+    return this._hasTrack;
+  }
+
+  public get onlyTrackedName() : string {
+    if (!this._hasTrack) {
+      return "";
+    }
+    return this.track;
   }
 }

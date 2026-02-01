@@ -20,6 +20,8 @@ export interface Journey {
 }
 
 export interface Leg {
+  extraInterchange?: Leg;
+
   infos: InfoMessage[];
   duration: number;                 // seconds
   origin: StopPoint;

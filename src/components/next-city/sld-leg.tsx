@@ -10,7 +10,6 @@ type Props = {
 }
 
 export function SldLeg({leg}: Props) {
-  console.log(leg);
   const headerLegs = findJourneyLegs([leg, leg]);
 
   return (
