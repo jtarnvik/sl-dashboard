@@ -31,6 +31,8 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
     setDiffSinceLastUpdated(lastUpdated?.diffNow())
   }, [lastUpdated]);
 
+  // add cancel func
+
   const updateDepartures = useCallback(() => {
     const url = URL_GET_DEPARTURES_FROM_SITE(stopPoint16Chars.slice(-4));
     axios.get(url)
