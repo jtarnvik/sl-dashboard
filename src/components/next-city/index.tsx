@@ -3,11 +3,11 @@ import {Card} from "../common/card";
 import {
   URL_GET_TRAVEL_COORD_TO_v2,
 } from "../../communication/constant.ts";
-import axios, {CancelTokenSource} from "axios";
+import axios from "axios";
 import {Button} from "@headlessui/react";
 import {Journey, SystemMessage} from "../../types/sl-journeyplaner-responses";
 import {SldJourney} from "./sld-journey.tsx";
-import {getCancelToken} from "../../types/communication.ts";
+import {AbortControllerState, createAbortController, isAbortError} from "../../types/communication.ts";
 
 type Location = {
   latitude: number,
@@ -26,7 +26,7 @@ type Props = {
 }
 
 export function NextCity({performManualUpdate, settingsData}: Props) {
-  const latestRequest = useRef<CancelTokenSource | undefined>(undefined);
+  const latestRequest = useRef<AbortControllerState | undefined>(undefined);
 
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined)
@@ -51,17 +51,22 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
     setSystemMessages(undefined);
   }, [settingsData])
 
+  useEffect(() => {
+    return () => latestRequest.current?.abort("Component unmounted");
+  }, []);
+
   function updateDepartures() {
     function generateRoute(lat:number, long:number){
       if (latestRequest.current) {
-        latestRequest.current.cancel("Previous request contains stale data");
+        latestRequest.current.abort("Previous request contains stale data");
       }
-      const cancelToken = getCancelToken();
-      latestRequest.current = cancelToken;
+
+      const controller = createAbortController();
+      latestRequest.current = controller;
 
       const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId);
       axios.get(url, {
-        cancelToken: cancelToken.token,
+        signal: controller.signal,
       })
         .then(function (response) {
           setJourneys(response.data.journeys);
@@ -72,8 +77,8 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
           console.log("journey", response.data);
         })
         .catch(function (error) {
-          // Treat cancellations as "expected"
-          if (axios.isCancel?.(error)) {
+          // Treat aborts as "expected"
+          if (isAbortError(error)) {
             return;
           }
 
@@ -82,7 +87,7 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
         })
         .finally(function () {
           // Clear ONLY if this request is still the latest one
-          if (latestRequest.current === cancelToken) {
+          if (latestRequest.current === controller) {
             latestRequest.current = undefined;
           }
         });

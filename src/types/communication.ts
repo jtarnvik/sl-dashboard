@@ -1,7 +1,12 @@
-import axios, { type CancelTokenSource } from "axios";
+import { type AxiosError } from "axios";
 
-export function getCancelToken(): CancelTokenSource {
-  return axios.CancelToken.source();
+export type AbortControllerState = AbortController | undefined;
+
+export function createAbortController(): AbortController {
+  return new AbortController();
 }
 
-
+export function isAbortError(error: unknown): boolean {
+  const e = error as AxiosError & { code?: string; name?: string };
+  return e?.code === "ERR_CANCELED" || e?.name === "CanceledError";
+}
