@@ -4,10 +4,10 @@ import {
   URL_GET_TRAVEL_COORD_TO_v2,
 } from "../../communication/constant.ts";
 import axios from "axios";
-import {Button} from "@headlessui/react";
 import {Journey, SystemMessage} from "../../types/sl-journeyplaner-responses";
 import {SldJourney} from "./sld-journey.tsx";
 import {AbortControllerState, createAbortController, isAbortError} from "../../types/communication.ts";
+import {SLButton} from "../common/sl-button";
 
 type Location = {
   latitude: number,
@@ -149,11 +149,7 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
 
   return (
     <Card>
-      NextToCity
-      <p />
-      <Button onClick={tempButtonUpdate}
-              className="rounded bg-[#184fc2] p-[6px] text-sm text-white data-[hover]:bg-[#578ff3] data-[active]:bg-[#578ff3] focus:outline-none "
-      >Tryit</Button>
+      Ta mig <SLButton onClick={tempButtonUpdate} thin>hem</SLButton>
       {state}
       {geoInfo ?
         <div>

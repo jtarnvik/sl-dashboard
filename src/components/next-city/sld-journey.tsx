@@ -7,6 +7,8 @@ import {SldJourneyDetails} from "./sld-journey-details.tsx";
 import {useState} from "react";
 import classNames from "classnames";
 import {SldDuration} from "./sld-duration.tsx";
+import {ModalDialog} from "../common/modal-dialog";
+import {SLButton} from "../common/sl-button";
 
 type Props = {
   journey: Journey
@@ -14,6 +16,7 @@ type Props = {
 
 export function SldJourney({journey}: Props) {
   const [showLegs, setShowLegs] = useState<boolean>(false);
+  const [jsonOpen, setJsonOpen] = useState<boolean>(false);
 
   function adjustInitialWalks(legs: Leg[]) {
     const result = legs.slice();
@@ -41,14 +44,26 @@ export function SldJourney({journey}: Props) {
 
   return (
     <div className="relative">
+      <ModalDialog
+        isOpen={jsonOpen}
+        onClose={() => setJsonOpen(false)}
+        title={"Response Data"}
+        scrollable={true}
+      >
+        <pre>
+          {JSON.stringify(headerLegs.origin.leg.origin,null, 2)}
+        </pre>
+      </ModalDialog>
+
       <div
         className={journeyClasses}
         onClick={() => setShowLegs(!showLegs)}
       >
         <SldDuration headerLegs={headerLegs} />
         <SldJourneyTitle headerLegs={headerLegs} />
-        <div>
+        <div className="flex justify-between gap-2">
           <SldBreadCrumbs legs={adjustedLegs} />
+          <SLButton onClick={() => setJsonOpen(true)} thin>JSON</SLButton>
         </div>
         <div hidden={true}>
           duration: {shortSwedishHumanizer(journey.tripDuration * 1000)} -
