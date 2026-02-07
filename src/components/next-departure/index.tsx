@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useImperativeHandle, useState} from "react";
+import {useCallback, useEffect, useImperativeHandle, useRef, useState} from "react";
 import axios from 'axios';
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../communication/constant.ts";
 import {DateTime, Duration} from "luxon";
@@ -14,6 +14,7 @@ import {SLButton} from "../common/sl-button";
 import {ModalDialog} from "../common/modal-dialog";
 import {destinations, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
+import {AbortControllerState, createAbortController} from "../../types/communication.ts";
 
 type Props = {
   performManualUpdate?: React.Ref<ScheduleOperations>,
@@ -21,6 +22,8 @@ type Props = {
 }
 
 export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
+  const latestRequest = useRef<AbortControllerState | undefined>(undefined);
+
   const [departures, setDepartures] = useState<SlDeparturesResponse | undefined>(undefined);
   const [lastUpdated, setLastUpdated] = useState<DateTime | undefined>(undefined);
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
@@ -31,11 +34,21 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
     setDiffSinceLastUpdated(lastUpdated?.diffNow())
   }, [lastUpdated]);
 
-  // add cancel func
+  useEffect(() => {
+    return () => latestRequest.current?.abort("Component unmounted");
+  }, []);
 
   const updateDepartures = useCallback(() => {
+    if (latestRequest.current) {
+      latestRequest.current.abort("Previous request contains stale data");
+    }
+    const controller = createAbortController();
+    latestRequest.current = controller;
+
     const url = URL_GET_DEPARTURES_FROM_SITE(stopPoint16Chars.slice(-4));
-    axios.get(url)
+    axios.get(url, {
+      signal: controller.signal,
+    })
       .then(function (response) {
         setDepartures(response.data);
         setLastUpdated(DateTime.now());
@@ -49,7 +62,10 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
         console.log(error);
       })
       .finally(function () {
-        // always executed
+        // Clear ONLY if this request is still the latest one
+        if (latestRequest.current === controller) {
+          latestRequest.current = undefined;
+        }
       });
   }, [stopPoint16Chars]);
 

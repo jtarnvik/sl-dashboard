@@ -49,6 +49,7 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
     setGeoInfo(undefined);
     setJourneys(undefined);
     setSystemMessages(undefined);
+    setState("");
   }, [settingsData])
 
   useEffect(() => {
