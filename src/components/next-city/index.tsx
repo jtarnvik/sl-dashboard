@@ -1,4 +1,4 @@
-import {useEffect, useImperativeHandle, useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {Card} from "../common/card";
 import {
   URL_GET_TRAVEL_COORD_TO_v2,
@@ -21,11 +21,10 @@ type Location = {
 };
 
 type Props = {
-  performManualUpdate?: React.Ref<ScheduleOperations>,
   settingsData: SettingsData
 }
 
-export function NextCity({performManualUpdate, settingsData}: Props) {
+export function NextCity({settingsData}: Props) {
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
 
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
@@ -56,8 +55,8 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
     return () => latestRequest.current?.abort("Component unmounted");
   }, []);
 
-  function updateDepartures() {
-    function generateRoute(lat:number, long:number){
+  function updateDepartures(maxWalk: number) {
+    function generateRoute(lat:number, long:number, maxInitialWalkTime: number){
       if (latestRequest.current) {
         latestRequest.current.abort("Previous request contains stale data");
       }
@@ -65,7 +64,7 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
       const controller = createAbortController();
       latestRequest.current = controller;
 
-      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId);
+      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId, maxInitialWalkTime);
       axios.get(url, {
         signal: controller.signal,
       })
@@ -120,7 +119,7 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
         });
         setRoutePlanningInProgress(false);
         console.log("position", position);
-        generateRoute(position.coords.latitude, position.coords.longitude);
+        generateRoute(position.coords.latitude, position.coords.longitude, maxWalk);
       },
       (err) => {
         setState("Error: " + err.message);
@@ -135,21 +134,14 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
     );
   }
 
-  function manualUpdate() {
-    // updateDepartures();
-  }
-
-  useImperativeHandle(performManualUpdate, () => ({
-    manualUpdate: manualUpdate,
-  }));
-
-  function tempButtonUpdate() {
-    updateDepartures();
+  function tempButtonUpdate(maxWalk: number) {
+    updateDepartures(maxWalk);
   }
 
   return (
     <Card>
-      Ta mig <SLButton onClick={tempButtonUpdate} thin>hem</SLButton>
+      Ta mig hem <SLButton onClick={() => tempButtonUpdate(15)} thin>15 min</SLButton>&nbsp;
+                 <SLButton onClick={() => tempButtonUpdate(60)} thin>60 min</SLButton> Max promenadtid
       {state}
       {geoInfo ?
         <div>

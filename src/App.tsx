@@ -13,7 +13,6 @@ import {SETTINGS_KEY} from "./types/common-constants.ts";
 
 function App() {
   const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
-  const performManualUpdateNextCityRef = useRef<ScheduleOperations>(null);
   const [error, setError] = useState<string>("");
   const [navbarHeight, setNavbarHeight] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
@@ -32,9 +31,6 @@ function App() {
     if (performManualUpdateNextDepartureRef.current) {
       performManualUpdateNextDepartureRef.current.manualUpdate();
     }
-    if (performManualUpdateNextCityRef.current) {
-      performManualUpdateNextCityRef.current.manualUpdate();
-    }
   }
 
   if (!isPersistent) {
@@ -51,7 +47,7 @@ function App() {
             <div style={{minHeight: `${navbarHeight}px`}} />
             <ErrorHandler></ErrorHandler>
             <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
-            <NextCity performManualUpdate={performManualUpdateNextCityRef} settingsData={settingsData}/>
+            <NextCity settingsData={settingsData}/>
             <div className="flex justify-end">
               <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
             </div>
