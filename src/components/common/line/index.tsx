@@ -132,10 +132,12 @@ type LineCommonProps = {
   mode: TransportationMode,
   progress?: SldProgress,
   designation: string,
-  forceProgressUsage?: boolean
+  forceProgressUsage?: boolean,
+  hideDesignation?: boolean,
+  extraIconClass?: string,
 }
 
-export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, forceProgressUsage = false}: LineCommonProps) {
+export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, forceProgressUsage = false, hideDesignation = false, extraIconClass = ""}: LineCommonProps) {
   const lineAdjustment = classNames({
     'mt-[9px]': progress === SldProgress.FAST,
     'mt-[11px]': progress === SldProgress.NORMAL,
@@ -145,7 +147,7 @@ export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, f
   return (
     <div>
       <div className="flex space-x-1">
-        <div className="flex space-x-[2px]">
+        <div className={"flex space-x-[2px] " + extraIconClass}>
           {(progress !== SldProgress.NO_INFO || forceProgressUsage) &&
             <div className={"flex flex-col space-y-0.5 w-[9px] items-end " + lineAdjustment}>
               {Array.from({length: progressToLines(progress)}).map((_, index) => {
@@ -163,7 +165,7 @@ export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, f
           }
           <TransportationIconCommon mode={mode} className="mt-[4px]" />
         </div>
-        {mode !== TransportationMode.WALKING && mode !== TransportationMode.UNKNOWN &&
+        {!hideDesignation && mode !== TransportationMode.WALKING && mode !== TransportationMode.UNKNOWN &&
           <div className="font-signage bg-black text-white font-extrabold px-[3px] leading-[12px] pt-[2px] mt-[4px]">
             {designation}
           </div>
@@ -176,25 +178,41 @@ export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, f
 type PropsLineJourney = {
   line: Line,
   journey: Journey
-  useProgress?: boolean
+  useProgress?: boolean,
+  hideDesignation?: boolean,
+  extraIconClass?: string,
 }
 
-export function LineJourney({line, journey}: PropsLineJourney) {
+export function LineJourney({line, journey, hideDesignation, extraIconClass}: PropsLineJourney) {
   const progress = convertJourneyToProgress(journey);
   const transportationMode = convertLineJourneyToTransportionMode(line, journey);
   const designation = line.designation;
 
-  return (<LineCommon mode={transportationMode} progress={progress} designation={designation} forceProgressUsage={true} />);
+  return (<LineCommon
+    mode={transportationMode}
+    progress={progress}
+    designation={designation}
+    forceProgressUsage={true}
+    hideDesignation={hideDesignation}
+    extraIconClass={extraIconClass}
+  />);
 }
 
 type PropsLineProduct = {
   transpo: Transportation,
+  hideDesignation?: boolean,
+  extraIconClass?: string,
 }
 
-export function LineTransportation({transpo}: PropsLineProduct) {
+export function LineTransportation({transpo, hideDesignation, extraIconClass}: PropsLineProduct) {
 
   const transportationMode = convertTransportationToTransportationMode(transpo);
   const designation = transpo.disassembledName || "";
 
-  return (<LineCommon mode={transportationMode} designation={designation} />);
+  return (<LineCommon
+    mode={transportationMode}
+    designation={designation}
+    hideDesignation={hideDesignation}
+    extraIconClass={extraIconClass}
+  />);
 }

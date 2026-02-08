@@ -82,8 +82,7 @@ export function NextCity({performManualUpdate, settingsData}: Props) {
           if (isAbortError(error)) {
             return;
           }
-
-          console.log(error);
+          console.log("Axios error" ,error);
           setResponse("Error: " + error);
         })
         .finally(function () {
