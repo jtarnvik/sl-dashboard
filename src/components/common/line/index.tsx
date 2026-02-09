@@ -17,6 +17,7 @@ export enum SldProgress {
   NO_INFO
 }
 
+// @ts-ignore
 function getColorRef(mode: TransportationMode, designation: string) {
   if (mode === TransportationMode.TRAIN) {
     return "#CC417F";
