@@ -137,7 +137,18 @@ type LineCommonProps = {
   extraIconClass?: string,
 }
 
+function getColorRef(mode:TransportationMode, designation:string) {
+// #CC417F
+  if (mode === TransportationMode.TRAIN) {
+    return "#CC417F";
+  } else {
+    return "#000000";
+  }
+}
+
 export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, forceProgressUsage = false, hideDesignation = false, extraIconClass = ""}: LineCommonProps) {
+  const backgroundColor = getColorRef(mode, designation);
+
   const lineAdjustment = classNames({
     'mt-[9px]': progress === SldProgress.FAST,
     'mt-[11px]': progress === SldProgress.NORMAL,
@@ -166,8 +177,19 @@ export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, f
           <TransportationIconCommon mode={mode} className="mt-[4px]" />
         </div>
         {!hideDesignation && mode !== TransportationMode.WALKING && mode !== TransportationMode.UNKNOWN &&
-          <div className="font-signage bg-black text-white font-extrabold px-[3px] leading-[12px] pt-[2px] mt-[4px]">
-            {designation}
+          <div className="font-signage text-white font-extrabold w-[40px] text-center leading-[16px] pt-[1px] mt-[3px]"
+               style={{ backgroundColor }}
+          >
+            {designation?.toUpperCase().endsWith("X") ? (
+              <>
+                {designation.slice(0, -1)}
+                <sup className="text-[10px] leading-none ">
+                  X
+                </sup>
+              </>
+            ) : (
+              designation
+            )}
           </div>
         }
       </div>
@@ -175,6 +197,7 @@ export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, f
   );
 }
 
+// work on designation shaps and color, is the width OK?
 type PropsLineJourney = {
   line: Line,
   journey: Journey
