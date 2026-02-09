@@ -23,5 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 
-next-city-with-info.json
-next-departure-with-deviation.json
+1-next-city-with-info.json
+1-next-departure-with-deviation.json
