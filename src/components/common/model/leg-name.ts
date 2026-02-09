@@ -23,7 +23,8 @@ export class LegName {
   }
 
   public get name() : string {
-    return this._hasTrack ? `Track ${this.track}, ${this._name}` : this._name;
+    // return this._hasTrack ? `Spår ${this.track}, ${this._name}` : this._name;
+    return this._name;
   }
 
   public get nonTrackedName() : string {

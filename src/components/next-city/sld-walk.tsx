@@ -17,7 +17,7 @@ export function SldWalk({leg}: Props) {
     <div>
       <div className="flex justify-between">
         <div>
-          Gå till
+          {timeOrigin.estimatedTimeString} Gå till
         </div>
         <div>
           {duration.durationString} min
