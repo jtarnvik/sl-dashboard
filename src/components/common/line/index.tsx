@@ -21,6 +21,20 @@ export enum SldProgress {
 function getColorRef(mode: TransportationMode, designation: string) {
   if (mode === TransportationMode.TRAIN) {
     return "#CC417F";
+  } else if (mode === TransportationMode.SUBWAY) {
+    switch (designation) {
+      case "10":
+      case "11":
+        return "#0079C1";
+      case "13":
+      case "14" :
+        return "#D71D24";
+      case "17":
+      case "18":
+      case "19" :
+        return "#009640";
+    }
+    return "#000000";
   } else {
     return "#000000";
   }
