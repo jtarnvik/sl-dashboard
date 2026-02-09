@@ -46,8 +46,10 @@ function LineDesignationBadge({designation, mode, className = ""}: LineDesignati
   const backgroundColor = getColorRef(mode, designation);
 
   const normalized = (designation ?? "").trim();
-  const endsWithX = normalized.toUpperCase().endsWith("X");
-  const base = endsWithX ? normalized.slice(0, -1) : normalized;
+  const lastChar = normalized.slice(-1);
+  const hasLetterSuffix = normalized.length > 1 && /[A-Z]/i.test(lastChar) && /^\d+[A-Z]$/i.test(normalized);
+  const base = hasLetterSuffix ? normalized.slice(0, -1) : normalized;
+  const suffix = hasLetterSuffix ? lastChar.toUpperCase() : null;
 
   const badgeClasses = classNames("font-signage text-white font-extrabold w-[40px] text-center leading-[16px] pt-[1px] mt-[3px]",
     className, getBadgeShapeClass(mode));
@@ -57,10 +59,10 @@ function LineDesignationBadge({designation, mode, className = ""}: LineDesignati
       className={badgeClasses}
       style={{backgroundColor}}
     >
-      {endsWithX ? (
+      {suffix ? (
         <>
           {base}
-          <sup className="text-[10px] leading-none">X</sup>
+          <sup className="text-[10px] leading-none">{suffix}</sup>
         </>
       ) : (
         normalized
