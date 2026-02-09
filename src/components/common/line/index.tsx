@@ -17,11 +17,22 @@ export enum SldProgress {
   NO_INFO
 }
 
-function getColorRef(mode:TransportationMode, designation:string) {
+function getColorRef(mode: TransportationMode, designation: string) {
   if (mode === TransportationMode.TRAIN) {
     return "#CC417F";
   } else {
     return "#000000";
+  }
+}
+
+function getBadgeShapeClass(mode: TransportationMode): string {
+  switch (mode) {
+    case TransportationMode.TRAIN:
+      return "rounded-full";
+    case TransportationMode.SUBWAY:
+      return "rounded-sm";
+    default:
+      return "";
   }
 }
 
@@ -35,16 +46,15 @@ function LineDesignationBadge({designation, mode, className = ""}: LineDesignati
   const backgroundColor = getColorRef(mode, designation);
 
   const normalized = (designation ?? "").trim();
-
   const endsWithX = normalized.toUpperCase().endsWith("X");
   const base = endsWithX ? normalized.slice(0, -1) : normalized;
 
+  const badgeClasses = classNames("font-signage text-white font-extrabold w-[40px] text-center leading-[16px] pt-[1px] mt-[3px]",
+    className, getBadgeShapeClass(mode));
+
   return (
     <div
-      className={
-        "font-signage text-white font-extrabold w-[40px] text-center leading-[16px] pt-[1px] mt-[3px] " +
-        className
-      }
+      className={badgeClasses}
       style={{backgroundColor}}
     >
       {endsWithX ? (
@@ -153,7 +163,7 @@ export function convertTransportationToTransportationMode(transpo: Transportatio
     case PRODUCT_CLASS_FOOTPATH_2:
       return TransportationMode.WALKING;
   }
-  console.log("Unknown transportation class: " , transpo?.product);
+  console.log("Unknown transportation class: ", transpo?.product);
   return TransportationMode.UNKNOWN;
 }
 
