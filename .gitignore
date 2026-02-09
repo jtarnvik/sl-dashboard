@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+next-city-with-info.json
+next-departure-with-deviation.json
