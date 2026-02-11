@@ -35,6 +35,19 @@ function getColorRef(mode: TransportationMode, designation: string) {
         return "#009640";
     }
     return "#000000";
+  } else if (mode === TransportationMode.TRAM) {
+    switch (designation) {
+      case "7":
+        return "#4B4F54";
+      case "12":
+        return "#F17F11";
+      case "21":
+        return "#7A4A29";
+      case "30":
+      case "31":
+        return "#838688";
+    }
+    return "#000000";
   } else {
     return "#000000";
   }
