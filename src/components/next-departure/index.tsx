@@ -70,7 +70,7 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
             setDepartures(response.data);
             setLastUpdated(DateTime.now());
             setDiffSinceLastUpdated(DateTime.now().diffNow())
-          } else if (removedIds.length > 20) {
+          } else if (removedIds.length > 2) {
             // too many, just update
             lastDepartures.current = response.data.departures;
             setDeparting(new Set([]));
