@@ -77,6 +77,19 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
   return (
     <ModalDialog isOpen={settingsOpen} onClose={close} title="Inställningar">
       <div className="flex flex-col gap-5 font-size-settings">
+
+        {/*<div className="space-y-2">*/}
+        {/*  <label className="flex items-center gap-2 cursor-pointer">*/}
+        {/*    <input*/}
+        {/*      type="checkbox"*/}
+        {/*      checked={debugMode}*/}
+        {/*      onChange={(e) => applyDebugMode(e.target.checked)}*/}
+        {/*      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"*/}
+        {/*    />*/}
+        {/*    <span className="font-medium text-gray-700">Debug-läge</span>*/}
+        {/*  </label>*/}
+        {/*</div>*/}
+
         <div className="space-y-2">
           <label className="block font-medium text-gray-700">
             Hållplats

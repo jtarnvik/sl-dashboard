@@ -43,7 +43,7 @@ function App() {
       <div>
         <Navbar onManualUpdate={onManualUpdate} heading={settingsData.stopPointName} />
         <main>
-          <div className="flex flex-col space-y-2 px-2">
+          <div className="flex flex-col space-y-2 px-2 mb-2">
             <div style={{minHeight: `${navbarHeight}px`}} />
             <ErrorHandler></ErrorHandler>
             <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
