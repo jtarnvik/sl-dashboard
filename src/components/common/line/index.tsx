@@ -1,8 +1,8 @@
 import {TbBus} from "react-icons/tb";
 import {TbBusStop} from "react-icons/tb";
 import {TbTrain} from "react-icons/tb";
-import {PiSubway} from "react-icons/pi";
-import {PiTram} from "react-icons/pi";
+import {PiSubwayBold} from "react-icons/pi";
+import {PiTramBold} from "react-icons/pi";
 import {TbFerry} from "react-icons/tb";
 import {PiTaxi} from "react-icons/pi";
 import {TbUfo} from "react-icons/tb";
@@ -136,15 +136,15 @@ type TransportationIconCommonProps = {
 
 export function TransportationIconCommon({mode, className = ""}: TransportationIconCommonProps) {
   if (mode === TransportationMode.BUS_AT_STOPPOINT) {
-    return (<TbBusStop className={className + " ms-[0px]"} />);
+    return (<TbBusStop className={className } />);
   } else if (mode === TransportationMode.BUS) {
-    return (<TbBus className={className + " ms-[0px]"} />);
+    return (<TbBus className={className } />);
   } else if (mode === TransportationMode.SUBWAY) {
-    return (<PiSubway className={className} />);
+    return (<PiSubwayBold className={className} />);
   } else if (mode === TransportationMode.TRAIN) {
     return (<TbTrain className={className} />);
   } else if (mode === TransportationMode.TRAM) {
-    return (<PiTram className={className} />);
+    return (<PiTramBold className={className} />);
   } else if (mode === TransportationMode.FERRY) {
     return (<TbFerry className={className} />);
   } else if (mode === TransportationMode.SHIP) {
@@ -249,7 +249,7 @@ export function LineCommon({mode, progress = SldProgress.NO_INFO, designation, f
               })}
             </div>
           }
-          <TransportationIconCommon mode={mode} className="mt-[4px]" />
+          <TransportationIconCommon mode={mode} className="mt-[2px] w-[20px] h-[20px]" />
         </div>
         {!hideDesignation && mode !== TransportationMode.WALKING && mode !== TransportationMode.UNKNOWN &&
           <LineDesignationBadge
