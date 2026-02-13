@@ -4,11 +4,12 @@ import {SldJourneyTitle} from "./sld-journey-title.tsx";
 import {findJourneyLegs, isFootPathForLeg} from "../../util/journey-utils.ts";
 import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
 import {SldJourneyDetails} from "./sld-journey-details.tsx";
-import {useState} from "react";
+import {useContext, useState} from "react";
 import classNames from "classnames";
 import {SldDuration} from "./sld-duration.tsx";
 import {ModalDialog} from "../common/modal-dialog";
 import {SLButton} from "../common/sl-button";
+import InDebugModeContext from "../../contexts/debug-context.ts";
 
 type Props = {
   journey: Journey
@@ -17,6 +18,7 @@ type Props = {
 export function SldJourney({journey}: Props) {
   const [showLegs, setShowLegs] = useState<boolean>(false);
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
+  const {inDebugMode} = useContext(InDebugModeContext);
 
   function adjustInitialWalks(legs: Leg[]) {
     const result = legs.slice();
@@ -51,7 +53,7 @@ export function SldJourney({journey}: Props) {
         scrollable={true}
       >
         <pre>
-          {JSON.stringify(headerLegs.origin.leg.origin,null, 2)}
+          {JSON.stringify(headerLegs.origin.leg.origin, null, 2)}
         </pre>
       </ModalDialog>
 
@@ -63,7 +65,9 @@ export function SldJourney({journey}: Props) {
         <SldJourneyTitle headerLegs={headerLegs} />
         <div className="flex justify-between gap-2">
           <SldBreadCrumbs legs={adjustedLegs} />
-          <SLButton onClick={() => setJsonOpen(true)} thin>JSON</SLButton>
+          {inDebugMode &&
+            <SLButton onClick={() => setJsonOpen(true)} thin>JSON</SLButton>
+          }
         </div>
         <div hidden={true}>
           duration: {shortSwedishHumanizer(journey.tripDuration * 1000)} -

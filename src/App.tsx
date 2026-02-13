@@ -10,15 +10,17 @@ import {Settings} from "./components/settings";
 import {SITE_SKOGSLOPARVAGEN_16_CHAR} from "./communication/constant.ts";
 import useLocalStorageState from 'use-local-storage-state';
 import {SETTINGS_KEY} from "./types/common-constants.ts";
+import InDebugModeContext from "./contexts/debug-context.ts";
 
 function App() {
   const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
   const [error, setError] = useState<string>("");
   const [navbarHeight, setNavbarHeight] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
-  const [settingsData, setSettingsData, { removeItem, isPersistent }] = useLocalStorageState<SettingsData>(SETTINGS_KEY, {
+  const [settingsData, setSettingsData, {removeItem, isPersistent}] = useLocalStorageState<SettingsData>(SETTINGS_KEY, {
     defaultValue: {stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen"}
   })
+  const [inDebugMode, setInDebugMode] = useState<boolean>(false);
 
   useEffect(() => {
     const navbar = document.querySelector("nav");
@@ -41,19 +43,21 @@ function App() {
   return (
     <ErrorContext.Provider value={{error, setError}}>
       <div>
-        <Navbar onManualUpdate={onManualUpdate} heading={settingsData.stopPointName} />
-        <main>
-          <div className="flex flex-col space-y-2 px-2 mb-2">
-            <div style={{minHeight: `${navbarHeight}px`}} />
-            <ErrorHandler></ErrorHandler>
-            <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
-            <NextCity settingsData={settingsData}/>
-            <div className="flex justify-end">
-              <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
+        <InDebugModeContext.Provider value={{inDebugMode, setInDebugMode}}>
+          <Navbar onManualUpdate={onManualUpdate} heading={settingsData.stopPointName} />
+          <main>
+            <div className="flex flex-col space-y-2 px-2 mb-2">
+              <div style={{minHeight: `${navbarHeight}px`}} />
+              <ErrorHandler></ErrorHandler>
+              <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
+              <NextCity settingsData={settingsData} />
+              <div className="flex justify-end">
+                <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
+              </div>
             </div>
-          </div>
-          <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem}/>
-        </main>
+            <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem} />
+          </main>
+        </InDebugModeContext.Provider>
       </div>
     </ErrorContext.Provider>
   )

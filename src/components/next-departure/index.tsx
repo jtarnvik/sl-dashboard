@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useImperativeHandle, useRef, useState} from "react";
+import {useCallback, useContext, useEffect, useImperativeHandle, useRef, useState} from "react";
 import axios from 'axios';
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../communication/constant.ts";
 import {DateTime, Duration} from "luxon";
@@ -15,6 +15,7 @@ import {ModalDialog} from "../common/modal-dialog";
 import {destinations, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
 import {AbortControllerState, createAbortController, isAbortError} from "../../types/communication.ts";
+import InDebugModeContext from "../../contexts/debug-context.ts";
 
 type Props = {
   performManualUpdate?: React.Ref<ScheduleOperations>,
@@ -22,6 +23,8 @@ type Props = {
 }
 
 export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
+  const {inDebugMode} = useContext(InDebugModeContext);
+
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
   const lastDepartures = useRef<Departure[] | undefined>(undefined);
   const [departing, setDeparting] = useState<Set<string>>(new Set());
@@ -59,7 +62,7 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
         const lastDepts = lastDepartures.current;
         if (lastDepts) {
           const lastIds = lastDepts.map(dep => getUniqueId(dep));
-          const newIds = response.data.departures.map(dep =>getUniqueId(dep));
+          const newIds = response.data.departures.map(dep => getUniqueId(dep));
           const newIdSet = new Set(newIds);
           const removedIds = lastIds.filter(id => !newIdSet.has(id));
 
@@ -101,7 +104,8 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
         if (isAbortError(error)) {
           return;
         }
-        console.log("Axios error" ,error);      })
+        console.log("Axios error", error);
+      })
       .finally(function () {
         // Clear ONLY if this request is still the latest one
         if (latestRequest.current === controller) {
@@ -120,7 +124,7 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
     updateDepartures();
     const intervalId = setInterval(() => {
       updateDepartures();
-      }, 60 * 1000);
+    }, 60 * 1000);
     return () => clearInterval(intervalId);
   }, [updateDepartures]);
 
@@ -183,7 +187,9 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
           }
         )}
       <div className="w-full flex justify-end space-x-1">
-        <SLButton onClick={handleJSON} thin>JSON</SLButton>
+        {inDebugMode &&
+          <SLButton onClick={handleJSON} thin>JSON</SLButton>
+        }
         <SLButton onClick={handleLegend} thin>Symboler</SLButton>
       </div>
       <ModalDialog

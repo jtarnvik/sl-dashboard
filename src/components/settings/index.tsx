@@ -1,11 +1,12 @@
 import {ModalDialog} from "../common/modal-dialog";
-import {useMemo, useState} from "react";
+import {useContext, useMemo, useState} from "react";
 import {URL_GET_STOP_POINT} from "../../communication/constant.ts";
 import axios from "axios";
 import {StopFinderResponse} from "../../types/sl-journeyplaner-responses.ts";
 import {SLButton} from "../common/sl-button";
 import {IoCloseCircle} from "react-icons/io5";
 import "./input.css"
+import InDebugModeContext from "../../contexts/debug-context.ts";
 
 type Props = {
   settingsOpen: boolean,
@@ -17,6 +18,7 @@ type Props = {
 export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSettings}: Props) {
   const MAX_RESULTS = 5;
 
+  const {inDebugMode, setInDebugMode} = useContext(InDebugModeContext);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResponse, setSearchResponse] = useState<StopFinderResponse | undefined>(undefined);
   const [searchInProgress, setSearchInProgress] = useState<boolean>(false);
@@ -78,17 +80,17 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
     <ModalDialog isOpen={settingsOpen} onClose={close} title="Inställningar">
       <div className="flex flex-col gap-5 font-size-settings">
 
-        {/*<div className="space-y-2">*/}
-        {/*  <label className="flex items-center gap-2 cursor-pointer">*/}
-        {/*    <input*/}
-        {/*      type="checkbox"*/}
-        {/*      checked={debugMode}*/}
-        {/*      onChange={(e) => applyDebugMode(e.target.checked)}*/}
-        {/*      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"*/}
-        {/*    />*/}
-        {/*    <span className="font-medium text-gray-700">Debug-läge</span>*/}
-        {/*  </label>*/}
-        {/*</div>*/}
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={inDebugMode}
+              onChange={(e) => setInDebugMode(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+            />
+            <span className="font-medium text-gray-700">Debug-läge</span>
+          </label>
+        </div>
 
         <div className="space-y-2">
           <label className="block font-medium text-gray-700">
