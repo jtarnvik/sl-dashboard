@@ -16,6 +16,8 @@ import {destinations, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
 import {AbortControllerState, createAbortController, isAbortError} from "../../types/communication.ts";
 import InDebugModeContext from "../../contexts/debug-context.ts";
+import {convertDeviations, DeviationModal} from "../common/deviation-modal";
+import classNames from "classnames";
 
 type Props = {
   performManualUpdate?: React.Ref<ScheduleOperations>,
@@ -34,6 +36,8 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
+  const [deviationOpen, setDeviationOpen] = useState<boolean>(false);
+  const [deviations, setDeviations] = useState<Deviation[]>([]);
 
   function getUniqueId(dept: Departure): string {
     return `${dept.line.id}-${dept.journey.id}`;
@@ -156,6 +160,10 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
         departurePres.map((departure) => {
             const uniqueId = getUniqueId(departure);
             const showAsDeparting = departing.has(getUniqueId(departure));
+            const timeClasses = classNames({
+              'text-orange-500': departure.deviations && departure.deviations.length > 0
+              }
+            );
 
             return (
               <div key={uniqueId} className={"departures-grid " + ((showAsDeparting) ? "departure-row-removing" : "")}>
@@ -171,7 +179,8 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
                   <Destination journey={departure.journey} destination={departure.destination} />
                 </div>
                 <div className="grid-time justify-self-end departure-row">
-                  <div className="relative">
+                  <div className={"relative cursor-pointer " + timeClasses} onClick={() => {
+                    setDeviationOpen(true); setDeviations(departure.deviations)}} >
                     {departure.display}
                     {departure.deviations && departure.deviations.length > 0 &&
                       <div className="absolute top-[0px] -right-[1px] w-0 h-0
@@ -210,6 +219,11 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
           {JSON.stringify(departures, null, 2)}
         </pre>
       </ModalDialog>
+      <DeviationModal
+        onClose={() => setDeviationOpen(false)}
+        open={deviationOpen}
+        deviation={convertDeviations(deviations)}
+      />
     </Card>
   )
 }

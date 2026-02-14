@@ -68,7 +68,7 @@ interface Line {
 
 interface Deviation {
   importance_level: number; // e.g., 5
-  consequence?: string; // Optional, e.g., "INFORMATION"
+  consequence?: string; // CANCELLED | INFORMATION
   message: string; // e.g., "Resa förbi Arlanda C kräver både UL- och SL- biljett."
 }
 
