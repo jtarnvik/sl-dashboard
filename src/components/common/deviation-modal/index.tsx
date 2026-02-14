@@ -1,4 +1,6 @@
 import {ModalDialog} from "../modal-dialog";
+import { IoMdInformationCircleOutline } from "react-icons/io";
+import { MdOutlineCancel } from "react-icons/md";
 
 export enum DeviationType {
   INFORMATION = 1,
@@ -45,6 +47,27 @@ export function DeviationModal({onClose, open, deviation}: Props) {
     return null;
   }
 
+  const getIcon = (type: DeviationType) => {
+    switch (type) {
+      case DeviationType.INFORMATION:
+        return <IoMdInformationCircleOutline size={24} />;
+      case DeviationType.CANCELLED:
+        return <MdOutlineCancel size={24} />;
+      default:
+        return <IoMdInformationCircleOutline size={24} />;
+    }
+  };
+
+  const sortedDeviations = [...deviation].sort((a, b) => {
+    if (a.type === DeviationType.CANCELLED && b.type !== DeviationType.CANCELLED) {
+      return -1;
+    }
+    if (a.type !== DeviationType.CANCELLED && b.type === DeviationType.CANCELLED) {
+      return 1;
+    }
+    return 0;
+  });
+
   return (
     <ModalDialog
       isOpen={open}
@@ -52,11 +75,16 @@ export function DeviationModal({onClose, open, deviation}: Props) {
       title={"Avvikelse"}
       scrollable={true}
     >
-      {deviation.map((deviationInfo, index) => (
-        <div key={index}>
-          {deviationInfo.type} - {deviationInfo.message}
-        </div>
-      ))}
+      <table className="border-separate border-spacing-y-2">
+        <tbody>
+          {sortedDeviations.map((deviationInfo, index) => (
+            <tr key={index}>
+              <td className="align-top">{getIcon(deviationInfo.type)}</td>
+              <td className="align-top">{deviationInfo.message}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </ModalDialog>
   );
 }

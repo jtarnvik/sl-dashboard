@@ -188,13 +188,13 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
                     }}
                   >
                     {departure.display}
-                    {departure.deviations && departure.deviations.length > 0 &&
-                      <div className="absolute top-[0px] -right-[1px] w-0 h-0
-                      border-l-[4px] border-l-transparent
-                      border-r-[4px] border-r-transparent
-                      border-b-[7px] border-b-orange-500">
-                      </div>
-                    }
+                    {/*{departure.deviations && departure.deviations.length > 0 &&*/}
+                    {/*  <div className="absolute top-[0px] -right-[1px] w-0 h-0*/}
+                    {/*  border-l-[4px] border-l-transparent*/}
+                    {/*  border-r-[4px] border-r-transparent*/}
+                    {/*  border-b-[7px] border-b-orange-500">*/}
+                    {/*  </div>*/}
+                    {/*}*/}
                   </div>
                 </div>
               </div>
