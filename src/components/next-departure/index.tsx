@@ -160,7 +160,8 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
             const uniqueId = getUniqueId(departure);
             const showAsDeparting = departing.has(getUniqueId(departure));
             const timeClasses = classNames({
-              'text-orange-500': departure.deviations && departure.deviations.length > 0
+              'text-orange-500': departure.deviations && departure.deviations.length > 0,
+              'cursor-pointer': departure.deviations && departure.deviations.length > 0
               }
             );
 
@@ -178,7 +179,14 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
                   <Destination journey={departure.journey} destination={departure.destination} />
                 </div>
                 <div className="grid-time justify-self-end departure-row">
-                  <div className={"relative cursor-pointer " + timeClasses} onClick={() => setSelectedDeviations(departure.deviations)}>
+                  <div
+                    className={"relative " + timeClasses}
+                    onClick={() => {
+                      if (departure.deviations && departure.deviations.length > 0) {
+                        setSelectedDeviations(departure.deviations);
+                      }
+                    }}
+                  >
                     {departure.display}
                     {departure.deviations && departure.deviations.length > 0 &&
                       <div className="absolute top-[0px] -right-[1px] w-0 h-0
