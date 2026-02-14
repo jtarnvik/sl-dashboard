@@ -29,3 +29,8 @@ body {
   @apply font-sans;
 }
 
+.deviation-info {
+  color: rgb(249, 115, 22);
+  cursor: pointer;
+}
+

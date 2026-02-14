@@ -159,11 +159,7 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
         departurePres.map((departure) => {
             const uniqueId = getUniqueId(departure);
             const showAsDeparting = departing.has(getUniqueId(departure));
-            const timeClasses = classNames({
-              'text-orange-500': departure.deviations && departure.deviations.length > 0,
-              'cursor-pointer': departure.deviations && departure.deviations.length > 0
-              }
-            );
+            const timeClasses = classNames({'deviation-info': departure.deviations && departure.deviations.length > 0,});
 
             return (
               <div key={uniqueId} className={"departures-grid " + ((showAsDeparting) ? "departure-row-removing" : "")}>
@@ -188,13 +184,6 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
                     }}
                   >
                     {departure.display}
-                    {/*{departure.deviations && departure.deviations.length > 0 &&*/}
-                    {/*  <div className="absolute top-[0px] -right-[1px] w-0 h-0*/}
-                    {/*  border-l-[4px] border-l-transparent*/}
-                    {/*  border-r-[4px] border-r-transparent*/}
-                    {/*  border-b-[7px] border-b-orange-500">*/}
-                    {/*  </div>*/}
-                    {/*}*/}
                   </div>
                 </div>
               </div>
