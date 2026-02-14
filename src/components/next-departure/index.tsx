@@ -36,8 +36,7 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
-  const [deviationOpen, setDeviationOpen] = useState<boolean>(false);
-  const [deviations, setDeviations] = useState<Deviation[]>([]);
+  const [selectedDeviations, setSelectedDeviations] = useState<Deviation[] | null>(null);
 
   function getUniqueId(dept: Departure): string {
     return `${dept.line.id}-${dept.journey.id}`;
@@ -179,8 +178,7 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
                   <Destination journey={departure.journey} destination={departure.destination} />
                 </div>
                 <div className="grid-time justify-self-end departure-row">
-                  <div className={"relative cursor-pointer " + timeClasses} onClick={() => {
-                    setDeviationOpen(true); setDeviations(departure.deviations)}} >
+                  <div className={"relative cursor-pointer " + timeClasses} onClick={() => setSelectedDeviations(departure.deviations)}>
                     {departure.display}
                     {departure.deviations && departure.deviations.length > 0 &&
                       <div className="absolute top-[0px] -right-[1px] w-0 h-0
@@ -220,9 +218,9 @@ export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
         </pre>
       </ModalDialog>
       <DeviationModal
-        onClose={() => setDeviationOpen(false)}
-        open={deviationOpen}
-        deviation={convertDeviations(deviations)}
+        onClose={() => setSelectedDeviations(null)}
+        open={selectedDeviations !== null}
+        deviation={convertDeviations(selectedDeviations ?? [])}
       />
     </Card>
   )
