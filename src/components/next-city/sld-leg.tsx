@@ -25,6 +25,5 @@ export function SldLeg({leg}: Props) {
         </div>
       }
     </div>
-  )
-    ;
+  );
 }

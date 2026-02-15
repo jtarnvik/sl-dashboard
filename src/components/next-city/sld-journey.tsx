@@ -10,6 +10,7 @@ import {SldDuration} from "./sld-duration.tsx";
 import {ModalDialog} from "../common/modal-dialog";
 import {SLButton} from "../common/sl-button";
 import InDebugModeContext from "../../contexts/debug-context.ts";
+import { IoWarningOutline } from "react-icons/io5";
 
 type Props = {
   journey: Journey
@@ -30,6 +31,12 @@ export function SldJourney({journey}: Props) {
       result[0].extraInterchange = removedLegs[0];
     }
     return result;
+  }
+
+  function journeyDeviation(): boolean {
+    return journey.legs
+      .filter(itm => itm.infos.length > 0)
+      .length > 0;
   }
 
   const adjustedLegs = adjustInitialWalks(journey.legs);
@@ -62,11 +69,20 @@ export function SldJourney({journey}: Props) {
         onClick={() => setShowLegs(!showLegs)}
       >
         <SldDuration headerLegs={headerLegs} />
-        <SldJourneyTitle headerLegs={headerLegs} />
-        <div className="flex justify-between gap-2">
-          <SldBreadCrumbs legs={adjustedLegs} />
-          {inDebugMode &&
-            <SLButton onClick={() => setJsonOpen(true)} thin>JSON</SLButton>
+        <div className="flex justify-between">
+          <div>
+            <SldJourneyTitle headerLegs={headerLegs} />
+            <div className="flex justify-between gap-2">
+              <SldBreadCrumbs legs={adjustedLegs} />
+              {inDebugMode &&
+                <SLButton onClick={() => setJsonOpen(true)} thin>JSON</SLButton>
+              }
+            </div>
+          </div>
+          {journeyDeviation() &&
+            <div className="deviation-color">
+              <IoWarningOutline size={24} />
+            </div>
           }
         </div>
         <div hidden={true}>

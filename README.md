@@ -1,8 +1,8 @@
 # Todo itme 
 
-- Show deviations for departures 
-- Show deviations for departures StopPoints, tydoigen kan stoppointen i säg ha deviations 
 - Show deviations for next-city
+- Show deviations using deviations API
+- Deviation modal should have minimal width
 - Fix Next city gui, nicer buttons and maybe hide them after selection.
 - Make better gui for drop down for next-city.
 - Plot map.

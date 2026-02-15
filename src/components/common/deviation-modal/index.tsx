@@ -1,6 +1,7 @@
 import {ModalDialog} from "../modal-dialog";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { MdOutlineCancel } from "react-icons/md";
+import {InfoMessage} from "../../../types/sl-journeyplaner-responses.ts";
 
 export enum DeviationType {
   INFORMATION = 1,
@@ -11,6 +12,24 @@ export enum DeviationType {
 export interface DeviationInfo {
   message: string,
   type: DeviationType
+}
+export function convertInfoMessages(infos: InfoMessage[]): DeviationInfo[] {
+  if (!infos){
+    return [];
+  }
+
+  const result : DeviationInfo[] = [];
+  infos.forEach(info => {
+    if (info?.text) {
+      result.push({message: info.text, type: DeviationType.INFORMATION});
+    }
+    if (info.infoLinks && info.infoLinks.length > 0) {
+      info.infoLinks.forEach(link => {
+        result.push({message: link.title, type: DeviationType.INFORMATION});
+      })
+    }
+  });
+  return result;
 }
 
 export function convertDeviations(deviations: Deviation[]): DeviationInfo[] {

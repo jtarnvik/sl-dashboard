@@ -177,9 +177,14 @@ export interface FootPathAttributes {
   elevWidth: number;
 }
 
+export interface InfoLink {
+  title: string;
+}
+
 export interface InfoMessage {
   priority?: number;
   text?: string;
+  infoLinks?: InfoLink[]
 }
 
 export type Coordinate = [number, number]; // [lat, lon]

@@ -34,3 +34,7 @@ body {
   cursor: pointer;
 }
 
+.deviation-color {
+  color: rgb(249, 115, 22);
+}
+
