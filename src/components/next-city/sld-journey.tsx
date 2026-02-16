@@ -10,7 +10,9 @@ import {SldDuration} from "./sld-duration.tsx";
 import {ModalDialog} from "../common/modal-dialog";
 import {SLButton} from "../common/sl-button";
 import InDebugModeContext from "../../contexts/debug-context.ts";
-import { IoWarningOutline } from "react-icons/io5";
+import {IoWarningOutline} from "react-icons/io5";
+import {SldSchedule} from "./sld-schedule.tsx";
+import {convertInfoMessages} from "../common/deviation-modal";
 
 type Props = {
   journey: Journey
@@ -35,7 +37,8 @@ export function SldJourney({journey}: Props) {
 
   function journeyDeviation(): boolean {
     return journey.legs
-      .filter(itm => itm.infos.length > 0)
+      .map(leg => convertInfoMessages(leg.infos))
+      .filter(itm => itm.length > 0)
       .length > 0;
   }
 
@@ -68,7 +71,10 @@ export function SldJourney({journey}: Props) {
         className={journeyClasses}
         onClick={() => setShowLegs(!showLegs)}
       >
-        <SldDuration headerLegs={headerLegs} />
+        <div className="flex justify-between">
+          <SldSchedule headerLegs={headerLegs} />
+          <SldDuration headerLegs={headerLegs} />
+        </div>
         <div className="flex justify-between">
           <div>
             <SldJourneyTitle headerLegs={headerLegs} />

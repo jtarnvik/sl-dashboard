@@ -4,6 +4,8 @@ import {findJourneyLegs} from "../../util/journey-utils.ts";
 import {SldDuration} from "./sld-duration.tsx";
 import {LineTransportation} from "../common/line";
 import {capitalizeFirst} from "../../util/util.ts";
+import {SldSchedule} from "./sld-schedule.tsx";
+import {DeviationWrapper} from "../common/deviation-wrapper";
 
 type Props = {
   leg: Leg
@@ -14,7 +16,12 @@ export function SldLeg({leg}: Props) {
 
   return (
     <div>
-      <SldDuration headerLegs={headerLegs} highlightDiff={true} />
+      <div className="flex justify-between">
+        <SldSchedule headerLegs={headerLegs} highlightDiff={true} />
+        <DeviationWrapper leg={leg}>
+          <SldDuration headerLegs={headerLegs} />
+        </DeviationWrapper >
+      </div>
       <SldLegTitle headerLegs={headerLegs} />
       {leg.transportation &&
         <div className="flex gap-2">
@@ -25,5 +32,5 @@ export function SldLeg({leg}: Props) {
         </div>
       }
     </div>
-  );
+);
 }

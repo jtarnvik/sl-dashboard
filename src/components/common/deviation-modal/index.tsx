@@ -1,6 +1,6 @@
 import {ModalDialog} from "../modal-dialog";
-import { IoMdInformationCircleOutline } from "react-icons/io";
-import { MdOutlineCancel } from "react-icons/md";
+import {IoMdInformationCircleOutline} from "react-icons/io";
+import {MdOutlineCancel} from "react-icons/md";
 import {InfoMessage} from "../../../types/sl-journeyplaner-responses.ts";
 
 export enum DeviationType {
@@ -9,22 +9,38 @@ export enum DeviationType {
   UNKNOWN,
 };
 
+export function ignoreDeviation(msg: string): boolean {
+  if (msg.toLowerCase().includes("hissen är avstängd")) {
+    return true;
+  } else if (msg.toLowerCase().includes("en av hissarna")){
+    return true;
+  }
+  return false;
+}
+
 export interface DeviationInfo {
   message: string,
   type: DeviationType
 }
+
 export function convertInfoMessages(infos: InfoMessage[]): DeviationInfo[] {
-  if (!infos){
+  if (!infos) {
     return [];
   }
 
-  const result : DeviationInfo[] = [];
+  const result: DeviationInfo[] = [];
   infos.forEach(info => {
     if (info?.text) {
+      if (ignoreDeviation(info.text)) {
+        return;
+      }
       result.push({message: info.text, type: DeviationType.INFORMATION});
     }
     if (info.infoLinks && info.infoLinks.length > 0) {
       info.infoLinks.forEach(link => {
+        if (ignoreDeviation(link.title)) {
+          return;
+        }
         result.push({message: link.title, type: DeviationType.INFORMATION});
       })
     }
@@ -38,18 +54,26 @@ export function convertDeviations(deviations: Deviation[]): DeviationInfo[] {
       return DeviationType.UNKNOWN;
     }
     switch (consequence) {
-      case "INFORMATION": return DeviationType.INFORMATION;
-      case "CANCELLED": return DeviationType.CANCELLED;
-      default: return DeviationType.UNKNOWN;
+      case "INFORMATION":
+        return DeviationType.INFORMATION;
+      case "CANCELLED":
+        return DeviationType.CANCELLED;
+      default:
+        return DeviationType.UNKNOWN;
     }
   }
-  if (!deviations){
+
+  if (!deviations) {
     return [];
   }
 
-  const result : DeviationInfo[] = [];
+  const result: DeviationInfo[] = [];
   deviations.forEach(deviation => {
-    const type  = getDeviationType(deviation.consequence);
+    if (ignoreDeviation(deviation.message)) {
+      return;
+    }
+
+    const type = getDeviationType(deviation.consequence);
     result.push({message: deviation.message, type});
   });
   return result;
@@ -96,12 +120,12 @@ export function DeviationModal({onClose, open, deviation}: Props) {
     >
       <table className="border-separate border-spacing-y-2">
         <tbody>
-          {sortedDeviations.map((deviationInfo, index) => (
-            <tr key={index}>
-              <td className="align-top">{getIcon(deviationInfo.type)}</td>
-              <td className="align-top">{deviationInfo.message}</td>
-            </tr>
-          ))}
+        {sortedDeviations.map((deviationInfo, index) => (
+          <tr key={index}>
+            <td className="align-top">{getIcon(deviationInfo.type)}</td>
+            <td className="align-top">{deviationInfo.message}</td>
+          </tr>
+        ))}
         </tbody>
       </table>
     </ModalDialog>

@@ -31,7 +31,7 @@ export function NextCity({settingsData}: Props) {
   const [systemMessages, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined)
   const [response, setResponse] = useState<string>("");
 
-  const [location, setLocation] = useState<Location | undefined >(undefined);
+  const [location, setLocation] = useState<Location | undefined>(undefined);
   const [geoInfo, setGeoInfo] = useState<string | undefined>(undefined);
   const [routePlanningInProgress, setRoutePlanningInProgress] = useState<boolean>(false);
   const [state, setState] = useState<string>("");
@@ -56,7 +56,7 @@ export function NextCity({settingsData}: Props) {
   }, []);
 
   function updateDepartures(maxWalk: number) {
-    function generateRoute(lat:number, long:number, maxInitialWalkTime: number){
+    function generateRoute(lat: number, long: number, maxInitialWalkTime: number) {
       if (latestRequest.current) {
         latestRequest.current.abort("Previous request contains stale data");
       }
@@ -81,7 +81,7 @@ export function NextCity({settingsData}: Props) {
           if (isAbortError(error)) {
             return;
           }
-          console.log("Axios error" ,error);
+          console.log("Axios error", error);
           setResponse("Error: " + error);
         })
         .finally(function () {
@@ -141,7 +141,7 @@ export function NextCity({settingsData}: Props) {
   return (
     <Card>
       Ta mig hem <SLButton onClick={() => tempButtonUpdate(15)} thin>15 min</SLButton>&nbsp;
-                 <SLButton onClick={() => tempButtonUpdate(60)} thin>60 min</SLButton> Max promenadtid
+      <SLButton onClick={() => tempButtonUpdate(60)} thin>60 min</SLButton> Max promenadtid
       {state}
       {geoInfo ?
         <div>
