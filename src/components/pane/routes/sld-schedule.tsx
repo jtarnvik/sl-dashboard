@@ -1,5 +1,5 @@
-import {LegsForJourney} from "../../util/journey-utils.ts";
-import {BreadCrumbArrow} from "../common/base/bread-crumb-arrow.tsx";
+import {LegsForJourney} from "../../../util/journey-utils.ts";
+import {BreadCrumbArrow} from "../../common/base/bread-crumb-arrow.tsx";
 
 type Props = {
   headerLegs: LegsForJourney,

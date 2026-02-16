@@ -1,10 +1,10 @@
 import {useEffect, useRef, useState} from 'react'
 import './App.css'
 import ErrorContext from "./contexts/error-context.ts";
-import {NextDeparture} from "./components/next-departure";
+import {Departures} from "./components/pane/departures";
 import {ErrorHandler} from "./components/error-handler";
 import {Navbar} from "./components/navbar";
-import {NextCity} from "./components/next-city";
+import {Routes} from "./components/pane/routes";
 import {SLButton} from "./components/common/sl-button";
 import {Settings} from "./components/settings";
 import {SITE_SKOGSLOPARVAGEN_16_CHAR} from "./communication/constant.ts";
@@ -49,8 +49,8 @@ function App() {
             <div className="flex flex-col space-y-2 px-2 mb-2">
               <div style={{minHeight: `${navbarHeight}px`}} />
               <ErrorHandler></ErrorHandler>
-              <NextDeparture performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
-              <NextCity settingsData={settingsData} />
+              <Departures performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
+              <Routes settingsData={settingsData} />
               <div className="flex justify-end">
                 <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
               </div>

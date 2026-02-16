@@ -1,29 +1,29 @@
 import {useCallback, useContext, useEffect, useImperativeHandle, useRef, useState} from "react";
 import axios from 'axios';
-import {URL_GET_DEPARTURES_FROM_SITE} from "../../communication/constant.ts";
+import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
 import {DateTime, Duration} from "luxon";
-import {shortSwedishHumanizer} from "../../util/humanizer.ts";
-import {sortDeparturesByDestination} from "../../util/sorters.ts";
-import {useVisibility} from "../../hook/use-visibility.ts";
-import {LineJourney} from "../common/line";
-import {Card} from "../common/card";
+import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
+import {sortDeparturesByDestination} from "../../../util/sorters.ts";
+import {useVisibility} from "../../../hook/use-visibility.ts";
+import {LineJourney} from "../../common/line";
+import {Card} from "../../common/card";
 
 import "./index.css"
 import {Destination} from "./destination.tsx";
-import {SLButton} from "../common/sl-button";
-import {ModalDialog} from "../common/modal-dialog";
+import {SLButton} from "../../common/sl-button";
+import {ModalDialog} from "../../common/modal-dialog";
 import {destinations, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
-import {AbortControllerState, createAbortController, isAbortError} from "../../types/communication.ts";
-import InDebugModeContext from "../../contexts/debug-context.ts";
-import {DeviationWrapper} from "../common/deviation-wrapper";
+import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
+import InDebugModeContext from "../../../contexts/debug-context.ts";
+import {DeviationWrapper} from "../../common/deviation-wrapper";
 
 type Props = {
   performManualUpdate?: React.Ref<ScheduleOperations>,
   stopPoint16Chars: string
 }
 
-export function NextDeparture({performManualUpdate, stopPoint16Chars}: Props) {
+export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
   const {inDebugMode} = useContext(InDebugModeContext);
 
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);

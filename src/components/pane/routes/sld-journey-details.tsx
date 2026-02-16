@@ -1,9 +1,9 @@
-import {Leg} from "../../types/sl-journeyplaner-responses.ts";
+import {Leg} from "../../../types/sl-journeyplaner-responses.ts";
 import React, {JSX} from "react";
 import {SldWalk} from "./sld-walk.tsx";
 import {SldInterchange} from "./sld-interchange.tsx";
 import {SldLeg} from "./sld-leg.tsx";
-import {isFootPathForLeg} from "../../util/journey-utils.ts";
+import {isFootPathForLeg} from "../../../util/journey-utils.ts";
 
 type GeneralLegComponentProps = {
   leg: Leg,

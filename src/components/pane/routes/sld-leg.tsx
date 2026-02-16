@@ -1,11 +1,11 @@
-import {Leg} from "../../types/sl-journeyplaner-responses";
+import {Leg} from "../../../types/sl-journeyplaner-responses";
 import {SldLegTitle} from "./sld-leg-title.tsx";
-import {findJourneyLegs} from "../../util/journey-utils.ts";
+import {findJourneyLegs} from "../../../util/journey-utils.ts";
 import {SldDuration} from "./sld-duration.tsx";
-import {LineTransportation} from "../common/line";
-import {capitalizeFirst} from "../../util/util.ts";
+import {LineTransportation} from "../../common/line";
+import {capitalizeFirst} from "../../../util/util.ts";
 import {SldSchedule} from "./sld-schedule.tsx";
-import {DeviationWrapper} from "../common/deviation-wrapper";
+import {DeviationWrapper} from "../../common/deviation-wrapper";
 
 type Props = {
   leg: Leg

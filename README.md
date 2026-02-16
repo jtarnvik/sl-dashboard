@@ -1,6 +1,5 @@
 # Todo itme 
 
-- Show deviations for next-city
 - Show deviations using deviations API
 - Deviation modal should have minimal width
 - Fix Next city gui, nicer buttons and maybe hide them after selection.

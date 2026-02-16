@@ -1,4 +1,4 @@
-import {LineJourney} from "../common/line";
+import {LineJourney} from "../../common/line";
 import {Destination} from "./destination.tsx";
 
 export const symbols: { symbol: React.ReactNode; legend: React.ReactNode; }[] = [

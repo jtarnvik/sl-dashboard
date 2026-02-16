@@ -1,4 +1,4 @@
-import {LegsForJourney} from "../../util/journey-utils.ts";
+import {LegsForJourney} from "../../../util/journey-utils.ts";
 
 type Props = {
   headerLegs: LegsForJourney,

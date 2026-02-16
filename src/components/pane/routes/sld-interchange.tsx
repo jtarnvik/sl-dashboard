@@ -1,8 +1,8 @@
-import {Leg} from "../../types/sl-journeyplaner-responses";
-import {LegStopPoint} from "../common/model/leg-stop-point.ts";
-import {LegType} from "../common/model/leg-type.ts";
-import {LegDuration} from "../common/model/leg-duration.ts";
-import {LegName} from "../common/model/leg-name.ts";
+import {Leg} from "../../../types/sl-journeyplaner-responses";
+import {LegStopPoint} from "../../common/model/leg-stop-point.ts";
+import {LegType} from "../../common/model/leg-type.ts";
+import {LegDuration} from "../../common/model/leg-duration.ts";
+import {LegName} from "../../common/model/leg-name.ts";
 
 type Props = {
   leg: Leg

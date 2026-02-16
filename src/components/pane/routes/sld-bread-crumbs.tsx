@@ -1,8 +1,8 @@
 import React from 'react';
-import {Leg, Transportation} from "../../types/sl-journeyplaner-responses.ts";
-import {LineTransportation} from "../common/line";
-import {BreadCrumbChevron} from "../common/base/bread-crumb-chevron.tsx";
-import {isFootPathForLeg} from "../../util/journey-utils.ts";
+import {Leg, Transportation} from "../../../types/sl-journeyplaner-responses.ts";
+import {LineTransportation} from "../../common/line";
+import {BreadCrumbChevron} from "../../common/base/bread-crumb-chevron.tsx";
+import {isFootPathForLeg} from "../../../util/journey-utils.ts";
 
 export type Props = {
   legs: Leg[]

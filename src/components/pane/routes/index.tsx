@@ -1,13 +1,13 @@
 import {useEffect, useRef, useState} from "react";
-import {Card} from "../common/card";
+import {Card} from "../../common/card";
 import {
   URL_GET_TRAVEL_COORD_TO_v2,
-} from "../../communication/constant.ts";
+} from "../../../communication/constant.ts";
 import axios from "axios";
-import {Journey, SystemMessage} from "../../types/sl-journeyplaner-responses";
+import {Journey, SystemMessage} from "../../../types/sl-journeyplaner-responses";
 import {SldJourney} from "./sld-journey.tsx";
-import {AbortControllerState, createAbortController, isAbortError} from "../../types/communication.ts";
-import {SLButton} from "../common/sl-button";
+import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
+import {SLButton} from "../../common/sl-button";
 
 type Location = {
   latitude: number,
@@ -24,7 +24,7 @@ type Props = {
   settingsData: SettingsData
 }
 
-export function NextCity({settingsData}: Props) {
+export function Routes({settingsData}: Props) {
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
 
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
