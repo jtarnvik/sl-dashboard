@@ -1,0 +1,108 @@
+[
+  {
+    "version": 3,
+    "created": "2026-01-25T08:13:04.087+01:00",
+    "deviation_case_id": 9986864,
+    "publish": {
+      "from": "2026-02-23T09:00:00.000+01:00",
+      "upto": "2026-02-27T04:45:00.000+01:00"
+    },
+    "priority": {
+      "importance_level": 7,
+      "influence_level": 5,
+      "urgency_level": 1
+    },
+    "message_variants": [
+      {
+        "header": "Pendeltågen avgår från Stockholms centralstation natt och tidig morgon den 24-27 februari ",
+        "details": "Pendeltågen avgår från Stockholms centralstation spår 13/14 och 15/16 i stället för Stockholm City natt och tidig morgon ca kl 00:45-04:30 från natt mot tisdag den 24 februari till tidig morgon fredag den 27 februari. Pendeltågen stannar inte vid stationerna Stockholm Odenplan, Stockholms södra och Årstaberg. \n\nPendeltågen går som vanligt under dag- och kvällstid. Övrig SL-trafik ersätter de inställda avgångarna. Detta beror på banarbete. \n\nFörsta tåget som avgår som vanligt från Stockholm City under dessa morgnar är pendeltåg linje 40 mot Uppsala kl. 04:38.  \n\nDu som ska resa från Stockholm centralstation mot Bålsta/Kungsängen eller Märsta/Uppsala hänvisas till fjärrtågens spår 15/16. \nDu som ska resa mot Tumba/Södertälje centrum eller Västerhaninge/Nynäshamn hänvisas till fjärrtågens spår 13/14. Undantag för tidiga morgonavgångar kan förekomma. Var därför extra uppmärksam på skyltning och utrop på Stockholms centralstation.  \n\nSå här reser du till och från de andra stationerna: \n\n- Stockholm Odenplan: ta tunnelbanans gröna linje mellan T-centralen (Stockholms centralstation) och Odenplan. \n- Stockholms södra: ta tunnelbanans röda eller gröna linje mellan T-centralen (Stockholms centralstation) och Mariatorget eller Medborgarplatsen. Där byter du till ordinarie SL-buss till Stockholms södra. \n- Årstaberg: ta tunnelbanans gröna linje mellan T-Centralen (Stockholms centralstation) och Gullmarsplan eller Liljeholmen. Där byter du till tvärbanans linje 30 eller ordinarie SL-buss till Årstaberg. \n\nTänk på att din resa kommer ta längre tid än vanligt. Sök din resa i reseplaneraren på sl.se eller i appen för att hitta det bästa alternativet för dig. ",
+        "scope_alias": "Pendeltåg 40, 41, 43",
+        "language": "sv"
+      }
+    ],
+    "scope": {
+      "stop_areas": [
+        {
+          "id": 5320,
+          "name": "Stockholm Odenplan",
+          "type": "RAILWSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 5131,
+          "name": "Stockholms södra",
+          "type": "RAILWSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 5310,
+          "name": "Stockholm City",
+          "type": "RAILWSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 5135,
+          "name": "Årstaberg",
+          "type": "RAILWSTN",
+          "transport_authority": 1
+        }
+      ],
+      "lines": [
+        {
+          "id": 40,
+          "transport_authority": 1,
+          "designation": "40",
+          "transport_mode": "TRAIN",
+          "group_of_lines": "Pendeltåg"
+        },
+        {
+          "id": 41,
+          "transport_authority": 1,
+          "designation": "41",
+          "transport_mode": "TRAIN",
+          "group_of_lines": "Pendeltåg"
+        },
+        {
+          "id": 43,
+          "transport_authority": 1,
+          "designation": "43",
+          "transport_mode": "TRAIN",
+          "group_of_lines": "Pendeltåg"
+        }
+      ]
+    }
+  },
+  {
+    "version": 8,
+    "created": "2026-02-11T15:43:56.903+01:00",
+    "deviation_case_id": 10196347,
+    "publish": {
+      "from": "2026-02-11T15:43:56.900+01:00",
+      "upto": "2026-02-28T23:30:00.000+01:00"
+    },
+    "priority": {
+      "importance_level": 7,
+      "influence_level": 5,
+      "urgency_level": 1
+    },
+    "message_variants": [
+      {
+        "header": "Inställda tåg förekommer",
+        "details": "Inställda tåg förekommer på linje 43 med destination Handen/Kallhäll/Bro under måndag-fredag mellan cirka kl 06:00-09:00 och kl 15:00-18:00 på grund av tekniska problem i depå.\n \nPrognos saknas för när trafiken åter kan köras som vanligt.\n \nSök din resa i Reseplaneraren på sl.se eller i SL-appen för att hitta det bästa alternativet för dig.",
+        "scope_alias": "Pendeltåg 43",
+        "language": "sv"
+      }
+    ],
+    "scope": {
+      "lines": [
+        {
+          "id": 43,
+          "transport_authority": 1,
+          "designation": "43",
+          "transport_mode": "TRAIN",
+          "group_of_lines": "Pendeltåg"
+        }
+      ]
+    }
+  }
+]

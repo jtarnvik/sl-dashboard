@@ -8,7 +8,7 @@ interface LegendData {
 type PropsLegend = {
   legendData: LegendData[],
   title: String,
-  useColumns?: boolean
+  useColumns?: boolean,
 }
 
 export function Legend({legendData, title, useColumns}: PropsLegend) {
@@ -21,7 +21,7 @@ export function Legend({legendData, title, useColumns}: PropsLegend) {
       <p className="font-semibold">{title}</p>
       <div className={columnStyling}>
         {legendData.map((itm, index) =>
-          <div className="flex items-center space-x-2" id={"" + index}>
+          <div className="flex items-center space-x-2" key={index}>
             {itm.symbol}
             {itm.legend}
           </div>

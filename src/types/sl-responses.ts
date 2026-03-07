@@ -1,4 +1,4 @@
-type JourneyState =
+export type JourneyState =
   | "NOTEXPECTED" // Do not show departure at all. Some systems might instead indicate that this departure is available only if ordered.
   | "NOTRUN" // If a not expected dated vehicle journey is never run, it should at some point in time be considered as not run.
   | "EXPECTED" // Normally show target time for departure.
@@ -15,26 +15,26 @@ type JourneyState =
   | "COMPLETED" // If the vehicle reaches its destination, the vehicle journey receives the state completed.
   | "ASSUMEDCOMPLETED"; // If an expected vehicle journey is not cancelled and never becomes in progress, it should eventually be considered as assumed completed.
 
-type JourneyPredictState =
+export type JourneyPredictState =
   | "NORMAL"
   | "LOSTCONTACT"
   | "UNRELIABLE";
 
-type JourneyPassengerLevel =
+export type JourneyPassengerLevel =
   | "EMPTY"
   | "SEATSAVAILABLE"
   | "STANDINGPASSENGERS"
   | "PASSENGERSLEFTBEHIND"
   | "UNKNOWN"
 
-interface Journey {
+export interface Journey {
   id: number;
   state: JourneyState;                      // Verified
   prediction_state?: JourneyPredictState;   // Verified
   passenger_level?: JourneyPassengerLevel;  // Verified
 }
 
-type StopAreaType =
+export type StopAreaType =
   | "BUSTERM"
   | "METROSTN"
   | "TRAMSTN"
@@ -45,47 +45,47 @@ type StopAreaType =
   | "TAXITERM"
   | "UNKNOWN";
 
-interface StopArea {
+export interface StopArea {
   id: number;
   name: string; // e.g., "Abborrkroksvägen"
   sname?: string; // Optional short name, e.g., "string"
   type: StopAreaType;                       // Verified
 }
 
-interface StopPoint {
+export interface StopPoint {
   id: number;
   name: string; // e.g., "Universitetet"
   designation?: string; // Optional, e.g., "D", "1"
 }
 
-type TransportMode = "BUS" | "TRAM" | "METRO" | "TRAIN" | "FERRY" | "SHIP" | "TAXI";
-interface Line {
+export type TransportMode = "BUS" | "TRAM" | "METRO" | "TRAIN" | "FERRY" | "SHIP" | "TAXI";
+export interface Line {
   id: number;
   designation: string; // e.g., "13X", "17"
   transport_mode: TransportMode;            // Verofied
   group_of_lines?: string; // Optional, e.g., "Tunnelbanans gröna linje"
 }
 
-interface Deviation {
+export interface Deviation {
   importance_level: number; // e.g., 5
   consequence?: string; // CANCELLED | INFORMATION
   message: string; // e.g., "Resa förbi Arlanda C kräver både UL- och SL- biljett."
 }
 
-interface Scope {
+export interface Scope {
   lines?: Line; // Optional, scope can include line-specific details
   stop_areas?: StopArea; // Optional, scope can include specific stop areas
   stop_points?: StopPoint; // Optional, scope can include specific stop points
 }
 
-interface StopDeviation {
+export interface StopDeviation {
   id: number; // e.g., 26170662
   importance_level: number; // e.g., 5
   message: string; // e.g., "Tack för att du följer Folkhälsomyndighetens rekommendationer..."
   scope?: Scope; // Optional, includes details on affected lines, stop areas, or stop points
 }
 
-type DepartureState =
+export type DepartureState =
   | "NOTEXPECTED"
   | "NOTCALLED"
   | "EXPECTED"
@@ -100,7 +100,7 @@ type DepartureState =
   | "REPLACED"
   | "ASSUMEDDEPARTED";
 
-interface Departure {
+export interface Departure {
   destination: string; // e.g., "string"
   direction_code: number; // e.g., 2
   direction: string; // e.g., "string"
@@ -116,7 +116,7 @@ interface Departure {
   deviations: Deviation[]; // Now explicitly an array of deviation objects
 }
 
-interface SlDeparturesResponse {
+export interface SlDeparturesResponse {
   departures: Departure[];
   stop_deviations: StopDeviation[];
 }

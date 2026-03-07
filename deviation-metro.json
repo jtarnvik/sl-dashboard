@@ -1,0 +1,278 @@
+[
+  {
+    "version": 2,
+    "created": "2026-02-24T06:36:14.043+01:00",
+    "deviation_case_id": 10398732,
+    "publish": {
+      "from": "2026-02-24T06:36:14.037+01:00",
+      "upto": "2026-03-03T23:30:00.000+01:00"
+    },
+    "priority": {
+      "importance_level": 2,
+      "influence_level": 3,
+      "urgency_level": 1
+    },
+    "message_variants": [
+      {
+        "header": "Avstängd hiss vid S:t Eriksplan",
+        "details": "En av hissarna vid S:t Eriksplan, entrén mot Torsgatan, är avstängd på grund av tekniskt fel. Resenärer i behov av hiss hänvisas till den andra entrén, mot S:t Eriksplan.\n \nVi saknar prognos för när hissen åter kan vara i drift.\n\nHissen omfattas av tillgänglighetsgarantin. För mer information om tillgänglighet, kontakta SL på telefonnummer 020-120 20 22.",
+        "scope_alias": "Tunnelbanans gröna linje 17, 18, 19",
+        "language": "sv"
+      }
+    ],
+    "scope": {
+      "stop_areas": [
+        {
+          "id": 1141,
+          "name": "S:t Eriksplan",
+          "type": "METROSTN",
+          "transport_authority": 1
+        }
+      ],
+      "lines": [
+        {
+          "id": 18,
+          "transport_authority": 1,
+          "designation": "18",
+          "transport_mode": "METRO",
+          "name": "Gröna linjen",
+          "group_of_lines": "tunnelbanans gröna linje"
+        },
+        {
+          "id": 19,
+          "transport_authority": 1,
+          "designation": "19",
+          "transport_mode": "METRO",
+          "name": "Gröna linjen",
+          "group_of_lines": "tunnelbanans gröna linje"
+        },
+        {
+          "id": 17,
+          "transport_authority": 1,
+          "designation": "17",
+          "transport_mode": "METRO",
+          "name": "Gröna linjen",
+          "group_of_lines": "tunnelbanans gröna linje"
+        }
+      ]
+    },
+    "categories": [
+      {
+        "group": "FACILITY",
+        "type": "LIFT"
+      }
+    ]
+  },
+  {
+    "version": 1,
+    "created": "2026-02-23T14:36:15.27+01:00",
+    "deviation_case_id": 10390936,
+    "publish": {
+      "from": "2026-02-23T14:36:15.263+01:00",
+      "upto": "2026-03-02T23:30:00.000+01:00"
+    },
+    "priority": {
+      "importance_level": 2,
+      "influence_level": 3,
+      "urgency_level": 1
+    },
+    "message_variants": [
+      {
+        "header": "Avstängd hiss vid Fridhemsplan",
+        "details": "En av hissarna vid Fridhemsplan, entrén mot Fleminggatan, är avstängd på grund av tekniskt fel. Resenärer i behov av hiss hänvisas till entrén mot Drottningholmsvägen. \n\nVi saknar prognos för när hissen åter kan vara i drift.\n\nHissen omfattas av tillgänglighetsgarantin. För mer information om tillgänglighet, kontakta SL på telefonnummer 020-120 20 22.",
+        "scope_alias": "Tunnelbanans blå linje 10, 11; tunnelbanans gröna linje 17, 18, 19",
+        "language": "sv"
+      }
+    ],
+    "scope": {
+      "stop_areas": [
+        {
+          "id": 1151,
+          "name": "Fridhemsplan",
+          "type": "METROSTN",
+          "transport_authority": 1
+        }
+      ],
+      "lines": [
+        {
+          "id": 11,
+          "transport_authority": 1,
+          "designation": "11",
+          "transport_mode": "METRO",
+          "name": "Blå linjen",
+          "group_of_lines": "tunnelbanans blå linje"
+        },
+        {
+          "id": 19,
+          "transport_authority": 1,
+          "designation": "19",
+          "transport_mode": "METRO",
+          "name": "Gröna linjen",
+          "group_of_lines": "tunnelbanans gröna linje"
+        },
+        {
+          "id": 17,
+          "transport_authority": 1,
+          "designation": "17",
+          "transport_mode": "METRO",
+          "name": "Gröna linjen",
+          "group_of_lines": "tunnelbanans gröna linje"
+        },
+        {
+          "id": 10,
+          "transport_authority": 1,
+          "designation": "10",
+          "transport_mode": "METRO",
+          "name": "Blå linjen",
+          "group_of_lines": "tunnelbanans blå linje"
+        },
+        {
+          "id": 18,
+          "transport_authority": 1,
+          "designation": "18",
+          "transport_mode": "METRO",
+          "name": "Gröna linjen",
+          "group_of_lines": "tunnelbanans gröna linje"
+        }
+      ]
+    },
+    "categories": [
+      {
+        "group": "FACILITY",
+        "type": "LIFT"
+      }
+    ]
+  },
+  {
+    "version": 1,
+    "created": "2026-02-24T06:12:54.82+01:00",
+    "deviation_case_id": 10398369,
+    "publish": {
+      "from": "2026-02-24T06:12:54.817+01:00",
+      "upto": "2026-02-24T07:12:44.450+01:00"
+    },
+    "priority": {
+      "importance_level": 5,
+      "influence_level": 5,
+      "urgency_level": 1
+    },
+    "message_variants": [
+      {
+        "header": "Stannade inte vid station",
+        "details": "Tåget från Hässelby strand kl 5:20 mot Hagsätra stannade inte vid Svedmyra kl 6:08 på grund av hala spår.",
+        "scope_alias": "Tunnelbanans gröna linje 19",
+        "language": "sv"
+      }
+    ],
+    "scope": {
+      "stop_areas": [
+        {
+          "id": 1641,
+          "name": "Svedmyra",
+          "type": "METROSTN",
+          "transport_authority": 1
+        }
+      ],
+      "lines": [
+        {
+          "id": 19,
+          "transport_authority": 1,
+          "designation": "19",
+          "transport_mode": "METRO",
+          "name": "Gröna linjen",
+          "group_of_lines": "tunnelbanans gröna linje"
+        }
+      ]
+    }
+  },
+  {
+    "version": 2,
+    "created": "2026-01-26T11:59:07.823+01:00",
+    "deviation_case_id": 10020857,
+    "publish": {
+      "from": "2026-01-27T04:20:00.000+01:00",
+      "upto": "2026-04-01T01:30:00.000+02:00"
+    },
+    "priority": {
+      "importance_level": 2,
+      "influence_level": 3,
+      "urgency_level": 1
+    },
+    "message_variants": [
+      {
+        "header": "Något ändrade avgångstider från Hagsätra mot Gullmarsplan",
+        "details": "Tidtabellen för linje 19 från Hagsätra justeras något på grund av hastighetsbegränsningar i banan. Tågen från Hagsätra avgår ca 1½  minut tidigare, det gäller dock inte första tåget på morgonen eller sista tåget på kvällen. Förändringen gäller tills vidare. Sök din resa i förväg på sl.se eller i SL-appen för exakta tider.",
+        "scope_alias": "Tunnelbanans gröna linje 19",
+        "language": "sv"
+      }
+    ],
+    "scope": {
+      "stop_areas": [
+        {
+          "id": 1651,
+          "name": "Stureby",
+          "type": "METROSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 1621,
+          "name": "Enskede gård",
+          "type": "METROSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 1701,
+          "name": "Högdalen",
+          "type": "METROSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 1641,
+          "name": "Svedmyra",
+          "type": "METROSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 1721,
+          "name": "Hagsätra",
+          "type": "METROSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 1611,
+          "name": "Globen",
+          "type": "METROSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 1661,
+          "name": "Bandhagen",
+          "type": "METROSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 1631,
+          "name": "Sockenplan",
+          "type": "METROSTN",
+          "transport_authority": 1
+        },
+        {
+          "id": 1711,
+          "name": "Rågsved",
+          "type": "METROSTN",
+          "transport_authority": 1
+        }
+      ],
+      "lines": [
+        {
+          "id": 19,
+          "transport_authority": 1,
+          "designation": "19",
+          "transport_mode": "METRO",
+          "name": "Gröna linjen",
+          "group_of_lines": "tunnelbanans gröna linje"
+        }
+      ]
+    }
+  }
+]

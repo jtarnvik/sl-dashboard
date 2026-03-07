@@ -1,7 +1,9 @@
 import {ModalDialog} from "../modal-dialog";
 import {IoMdInformationCircleOutline} from "react-icons/io";
 import {MdOutlineCancel} from "react-icons/md";
-import {InfoMessage} from "../../../types/sl-journeyplaner-responses.ts";
+import {InfoMessage} from "../../../types/sl-journeyplaner-responses";
+import {Deviation} from "../../../types/sl-responses";
+import { Deviation as DeviationSearch } from "../../../types/deviations";
 
 export enum DeviationType {
   INFORMATION = 1,
@@ -13,6 +15,8 @@ export function ignoreDeviation(msg: string): boolean {
   if (msg.toLowerCase().includes("hissen är avstängd")) {
     return true;
   } else if (msg.toLowerCase().includes("en av hissarna")){
+    return true;
+  } else if (/Hissen.*avstängd på grund av tekniskt fel/i.test(msg)) {
     return true;
   }
   return false;
@@ -46,6 +50,10 @@ export function convertInfoMessages(infos: InfoMessage[]): DeviationInfo[] {
     }
   });
   return result;
+}
+
+export function convertDeviationSearch(deviations: DeviationSearch[]): DeviationInfo[] {
+
 }
 
 export function convertDeviations(deviations: Deviation[]): DeviationInfo[] {

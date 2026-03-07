@@ -11,6 +11,9 @@ import {SITE_SKOGSLOPARVAGEN_16_CHAR} from "./communication/constant.ts";
 import useLocalStorageState from 'use-local-storage-state';
 import {SETTINGS_KEY} from "./types/common-constants.ts";
 import InDebugModeContext from "./contexts/debug-context.ts";
+import {Deviations} from "./components/pane/deviations";
+import {ErrorBoundary} from "react-error-boundary";
+import {ErrorBoundryFallback} from "./components/error-boundry-fallback";
 
 function App() {
   const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
@@ -45,18 +48,21 @@ function App() {
       <div>
         <InDebugModeContext.Provider value={{inDebugMode, setInDebugMode}}>
           <Navbar onManualUpdate={onManualUpdate} heading={settingsData.stopPointName} />
-          <main>
-            <div className="flex flex-col space-y-2 px-2 mb-2">
-              <div style={{minHeight: `${navbarHeight}px`}} />
-              <ErrorHandler></ErrorHandler>
-              <Departures performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
-              <Routes settingsData={settingsData} />
-              <div className="flex justify-end">
-                <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
+          <ErrorBoundary FallbackComponent={ErrorBoundryFallback}>
+            <main>
+              <div className="flex flex-col space-y-2 px-2 mb-2">
+                <div style={{minHeight: `${navbarHeight}px`}} />
+                <ErrorHandler></ErrorHandler>
+                <Deviations />
+                <Departures performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
+                <Routes settingsData={settingsData} />
+                <div className="flex justify-end">
+                  <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
+                </div>
               </div>
-            </div>
-            <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem} />
-          </main>
+              <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem} />
+            </main>
+          </ErrorBoundary>
         </InDebugModeContext.Provider>
       </div>
     </ErrorContext.Provider>

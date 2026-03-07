@@ -7,8 +7,6 @@ import {sortDeparturesByDestination} from "../../../util/sorters.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
 import {LineJourney} from "../../common/line";
 import {Card} from "../../common/card";
-
-import "./index.css"
 import {Destination} from "./destination.tsx";
 import {SLButton} from "../../common/sl-button";
 import {ModalDialog} from "../../common/modal-dialog";
@@ -17,6 +15,9 @@ import {Legend} from "./legend.tsx";
 import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
+import {Departure, SlDeparturesResponse} from "../../../types/sl-responses.ts";
+
+import "./index.css"
 
 type Props = {
   performManualUpdate?: React.Ref<ScheduleOperations>,
@@ -193,7 +194,7 @@ export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
         onClose={() => setLegendOpen(false)}
         title={"Symboler"}
       >
-        <Legend legendData={symbols} title="Linjesymbol" useColumns />
+        <Legend legendData={symbols} title="Linjesymbol"  />
         <Legend legendData={destinations} title="Destination" />
       </ModalDialog>
       <ModalDialog

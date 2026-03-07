@@ -1,6 +1,7 @@
 import {ReactNode, useState} from "react";
 import {convertDeviations, convertInfoMessages, DeviationInfo, DeviationModal} from "../deviation-modal";
 import {Leg} from "../../../types/sl-journeyplaner-responses.ts";
+import {Departure} from "../../../types/sl-responses.ts";
 
 type Props = {
   children: ReactNode,

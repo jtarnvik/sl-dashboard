@@ -9,6 +9,10 @@ export const SITE_BROMMAPLAN_16_CHAR = "9091001000009109";
 export const URL_GET_STOP_POINT = (term: string) => "https://journeyplanner.integration.sl.se/v2/stop-finder?name_sf=" + term + "&any_obj_filter_sf=2&type_sf=any" ;
 export const URL_GET_DEPARTURES_FROM_SITE = (stop: string) => "https://transport.integration.sl.se/v1/sites/" + stop + "/departures";
 
+export const URL_GET_DEVIATION_TRAIN = 'https://deviations.integration.sl.se/v1/messages?future=false&line=43&line=44&transport_mode=TRAIN';
+export const URL_GET_DEVIATION_BUS = 'https://deviations.integration.sl.se/v1/messages?future=false&line=117&transport_mode=BUS';
+export const URL_GET_DEVIATION_SUBWAY = 'https://deviations.integration.sl.se/v1/messages?future=false&line=17&line=18&line=19&transport_mode=METRO';
+
 export const URL_GET_TRAVEL_FROM_TO_v2 = (origin: string, dest: string) =>
   "https://journeyplanner.integration.sl.se/v2/trips" +
   "?type_origin=any" +

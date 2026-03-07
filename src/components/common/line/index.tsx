@@ -11,6 +11,7 @@ import classNames from "classnames";
 import {PRODUCT_CLASS_BUS, PRODUCT_CLASS_BUS_LOCAL, PRODUCT_CLASS_FOOTPATH, PRODUCT_CLASS_FOOTPATH_2, PRODUCT_CLASS_SUBWAY, PRODUCT_CLASS_TRAIN, PRODUCT_CLASS_TRAM, Transportation} from "../../../types/sl-journeyplaner-responses.ts";
 
 import "./index.css"
+import {Journey, Line} from "../../../types/sl-responses.ts";
 
 export enum SldProgress {
   FAST = 1,
@@ -20,7 +21,7 @@ export enum SldProgress {
 }
 
 // @ts-ignore
-function getColorRef(mode: TransportationMode, designation: string) {
+export function getColorRef(mode: TransportationMode, designation: string) {
   if (mode === TransportationMode.TRAIN) {
     return "#CC417F";
   } else if (mode === TransportationMode.SUBWAY) {
@@ -132,29 +133,30 @@ export enum TransportationMode {
 type TransportationIconCommonProps = {
   mode: TransportationMode,
   className?: string
+  inlineStyle?: React.CSSProperties
 }
 
-export function TransportationIconCommon({mode, className = ""}: TransportationIconCommonProps) {
+export function TransportationIconCommon({mode, className = "", inlineStyle}: TransportationIconCommonProps) {
   if (mode === TransportationMode.BUS_AT_STOPPOINT) {
-    return (<TbBusStop className={className } />);
+    return (<TbBusStop className={className} style={inlineStyle} />);
   } else if (mode === TransportationMode.BUS) {
-    return (<TbBus className={className } />);
+    return (<TbBus className={className} style={inlineStyle} />);
   } else if (mode === TransportationMode.SUBWAY) {
-    return (<PiSubwayBold className={className} />);
+    return (<PiSubwayBold className={className} style={inlineStyle} />);
   } else if (mode === TransportationMode.TRAIN) {
-    return (<TbTrain className={className} />);
+    return (<TbTrain className={className} style={inlineStyle} />);
   } else if (mode === TransportationMode.TRAM) {
-    return (<PiTramBold className={className} />);
+    return (<PiTramBold className={className} style={inlineStyle} />);
   } else if (mode === TransportationMode.FERRY) {
-    return (<TbFerry className={className} />);
+    return (<TbFerry className={className} style={inlineStyle} />);
   } else if (mode === TransportationMode.SHIP) {
-    return (<TbFerry className={className} />);
+    return (<TbFerry className={className} style={inlineStyle} />);
   } else if (mode === TransportationMode.TAXI) {
-    return (<PiTaxi className={className} />);
+    return (<PiTaxi className={className} style={inlineStyle} />);
   } else if (mode === TransportationMode.WALKING) {
-    return (<LiaWalkingSolid className={className} />);
+    return (<LiaWalkingSolid className={className} style={inlineStyle} />);
   } else {
-    return (<TbUfo className={className} />);
+    return (<TbUfo className={className} style={inlineStyle} />);
   }
 }
 
