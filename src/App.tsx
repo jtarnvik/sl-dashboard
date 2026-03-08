@@ -53,11 +53,15 @@ function App() {
               <div className="flex flex-col space-y-2 px-2 mb-2">
                 <div style={{minHeight: `${navbarHeight}px`}} />
                 <ErrorHandler></ErrorHandler>
-                <Deviations />
                 <Departures performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
                 <Routes settingsData={settingsData} />
-                <div className="flex justify-end">
-                  <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
+                <div className="flex justify-between">
+                  <div className="w-1/2">
+                    <Deviations />
+                  </div>
+                  <div className="flex justify-end items-start">
+                    <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
+                  </div>
                 </div>
               </div>
               <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem} />
