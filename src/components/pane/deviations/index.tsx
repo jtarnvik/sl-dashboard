@@ -8,6 +8,7 @@ import {getColorRef, TransportationIconCommon, TransportationMode} from "../../c
 import classNames from "classnames";
 import {SLButton} from "../../common/sl-button";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
+import {convertDeviationSearch, DeviationModal} from "../../common/deviation-modal";
 
 /**
  * Aktuella pendeltåg: 43, 43X, 44
@@ -27,6 +28,8 @@ export function Deviations() {
   const [busDeviations, setBusDeviations] = useState<Deviation[]>([]);
   const [trainDeviations, setTrainDeviations] = useState<Deviation[]>([]);
   const [subwayDeviations, setSubwayDeviations] = useState<Deviation[]>([]);
+
+  const [openModal, setOpenModal] = useState<'bus' | 'train' | 'subway' | null>(null);
 
   const getDeviations = useCallback((url: string, refAborter: RefObject<AbortControllerState>, setDeviation: React.Dispatch<React.SetStateAction<Deviation[]>>) => {
     if (refAborter.current) {
@@ -97,21 +100,21 @@ export function Deviations() {
   return (
     <Card>
       <div className="flex justify-between">
-        <div>
+        <div onClick={() => { if (trainDeviations.length > 0) { setOpenModal('train'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.TRAIN}
             className={trainAdjustments}
             inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainInProgress, trainDeviations)}
           />
         </div>
-        <div>
+        <div onClick={() => { if (subwayDeviations.length > 0) { setOpenModal('subway'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.SUBWAY}
             className={subwayAdjustments}
             inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayInProgress, subwayDeviations)}
           />
         </div>
-        <div>
+        <div onClick={() => { if (busDeviations.length > 0) { setOpenModal('bus'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.BUS}
             className={busAdjustments}
@@ -125,6 +128,21 @@ export function Deviations() {
         }
         <SLButton onClick={() => {}} thin>Symboler</SLButton>
       </div>
+      <DeviationModal
+        open={openModal === 'train'}
+        onClose={() => setOpenModal(null)}
+        deviation={convertDeviationSearch(trainDeviations)}
+      />
+      <DeviationModal
+        open={openModal === 'subway'}
+        onClose={() => setOpenModal(null)}
+        deviation={convertDeviationSearch(subwayDeviations)}
+      />
+      <DeviationModal
+        open={openModal === 'bus'}
+        onClose={() => setOpenModal(null)}
+        deviation={convertDeviationSearch(busDeviations)}
+      />
     </Card>
   );
 }

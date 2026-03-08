@@ -1,6 +1,6 @@
 # Todo itme 
-
-- Show deviations using deviations API
+                                                  
+- Deviations should be filtered on stops (if available) 
 - Deviation modal should have max width on a phone
 - Fix Next city gui, nicer buttons and maybe hide them after selection.
 - Make better gui for drop down for next-city.

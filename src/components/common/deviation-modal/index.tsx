@@ -18,6 +18,10 @@ export function ignoreDeviation(msg: string): boolean {
     return true;
   } else if (/Hissen.*avstängd på grund av tekniskt fel/i.test(msg)) {
     return true;
+  } else if (/Hissen.*är avstängd/i.test(msg)) {
+    return true;
+  } else if (/Hissarna.*är avstängda/i.test(msg)) {
+    return true;
   }
   return false;
 }
@@ -53,7 +57,23 @@ export function convertInfoMessages(infos: InfoMessage[]): DeviationInfo[] {
 }
 
 export function convertDeviationSearch(deviations: DeviationSearch[]): DeviationInfo[] {
+  if (!deviations) {
+    return [];
+  }
 
+  const result: DeviationInfo[] = [];
+  deviations.forEach(deviation => {
+    const variant = deviation.message_variants.find(v => v.language === 'sv') ?? deviation.message_variants[0];
+    if (!variant) {
+      return;
+    }
+    const message = variant.details || variant.header;
+    if (!message || ignoreDeviation(message)) {
+      return;
+    }
+    result.push({ message, type: DeviationType.INFORMATION });
+  });
+  return result;
 }
 
 export function convertDeviations(deviations: Deviation[]): DeviationInfo[] {
