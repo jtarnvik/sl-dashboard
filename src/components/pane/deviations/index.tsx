@@ -9,6 +9,9 @@ import classNames from "classnames";
 import {SLButton} from "../../common/sl-button";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {convertDeviationSearch, DeviationModal} from "../../common/deviation-modal";
+import {ModalDialog} from "../../common/modal-dialog";
+import {Legend} from "../departures/legend.tsx";
+import {deviationIcons, normalIcons} from "./legend-data.tsx";
 
 /**
  * Aktuella pendeltåg: 43, 43X, 44
@@ -30,6 +33,7 @@ export function Deviations() {
   const [subwayDeviations, setSubwayDeviations] = useState<Deviation[]>([]);
 
   const [openModal, setOpenModal] = useState<'bus' | 'train' | 'subway' | null>(null);
+  const [legendOpen, setLegendOpen] = useState<boolean>(false);
 
   const getDeviations = useCallback((url: string, refAborter: RefObject<AbortControllerState>, setDeviation: React.Dispatch<React.SetStateAction<Deviation[]>>) => {
     if (refAborter.current) {
@@ -126,8 +130,12 @@ export function Deviations() {
         {inDebugMode &&
           <SLButton onClick={() => {}} thin>JSON</SLButton>
         }
-        <SLButton onClick={() => {}} thin>Symboler</SLButton>
+        <SLButton onClick={() => setLegendOpen(true)} thin>Symboler</SLButton>
       </div>
+      <ModalDialog isOpen={legendOpen} onClose={() => setLegendOpen(false)} title="Symboler" scrollable={false}>
+        <Legend legendData={normalIcons} title="Normalt läge"/>
+        <Legend legendData={deviationIcons} title="Avvikelser finns"/>
+      </ModalDialog>
       <DeviationModal
         open={openModal === 'train'}
         onClose={() => setOpenModal(null)}
