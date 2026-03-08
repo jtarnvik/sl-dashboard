@@ -25,7 +25,7 @@ export const symbols: { symbol: React.ReactNode; legend: React.ReactNode; }[] = 
   {
     symbol: <LineJourney journey={{id: 177, state: "ATORIGIN"}}
                   line={{id: 117, designation: "117", transport_mode: "BUS"}} />,
-    legend: <div>Avgångsstation</div>
+    legend: <div>Vid avgångsstation</div>
   },
 ];
 export const destinations: { symbol: React.ReactNode; legend: React.ReactNode; }[] = [
