@@ -1,3 +1,5 @@
+import {Departure} from "../types/sl-responses.ts";
+
 /**
  * Sorts an array of departures by the `destination` property.
  * @param departures - The array of departures to sort.

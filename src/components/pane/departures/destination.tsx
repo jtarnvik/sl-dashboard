@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import {Journey, JourneyState} from "../../../types/sl-responses.ts";
 
 type Props = {
   journey: Journey,
