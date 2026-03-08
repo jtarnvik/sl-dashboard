@@ -48,6 +48,8 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 
 Stop IDs come in multiple formats (4-char, 9-char, 16-char). The departures endpoint uses the last 4 chars of the 16-char ID.
 
+Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-apis/sl/.
+
 ### Key patterns
 
 - **Axios + AbortController**: All API calls store the controller in a `useRef`. New requests abort the previous one. `isAbortError()` in `src/types/communication.ts` suppresses abort errors.
