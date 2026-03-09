@@ -143,17 +143,17 @@ export function Deviations() {
       <DeviationModal
         open={openModal === 'train'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(filteredTrainDeviations)}
+        deviation={convertDeviationSearch(filteredTrainDeviations, DEVIATION_FOCUS_STOPS_TRAIN)}
       />
       <DeviationModal
         open={openModal === 'subway'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(filteredSubwayDeviations)}
+        deviation={convertDeviationSearch(filteredSubwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY)}
       />
       <DeviationModal
         open={openModal === 'bus'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(filteredBusDeviations)}
+        deviation={convertDeviationSearch(filteredBusDeviations, DEVIATION_FOCUS_STOPS_BUS)}
       />
     </Card>
   );

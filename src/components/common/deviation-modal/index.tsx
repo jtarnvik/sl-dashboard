@@ -17,6 +17,7 @@ const IGNORED_DEVIATION_PATTERNS: RegExp[] = [
   /hissen.*avstängd på grund av tekniskt fel/i,
   /hissen.*är avstängd/i,
   /hissarna.*är avstängda/i,
+  /Rulltrapporna.*ska bytas ut/i,
 ];
 
 export function ignoreDeviation(msg: string): boolean {
@@ -37,6 +38,7 @@ export function filterDeviationsByStops(deviations: DeviationSearch[], focusStop
 }
 
 export interface DeviationInfo {
+  heading?: string,
   message: string,
   type: DeviationType
 }
@@ -66,7 +68,24 @@ export function convertInfoMessages(infos: InfoMessage[]): DeviationInfo[] {
   return result;
 }
 
-export function convertDeviationSearch(deviations: DeviationSearch[]): DeviationInfo[] {
+function buildDeviationHeading(deviation: DeviationSearch, variant: { scope_alias: string }, focusStops: number[]): string | undefined {
+  const stopAreas = deviation.scope?.stop_areas;
+  if (stopAreas && stopAreas.length > 0) {
+    const relevantStops = focusStops.length > 0
+      ? stopAreas.filter(s => focusStops.includes(s.id))
+      : stopAreas;
+    if (relevantStops.length > 0) {
+      return relevantStops.map(s => s.name).join(', ');
+    }
+  }
+  const lines = deviation.scope?.lines;
+  if (lines && lines.length > 0) {
+    return variant.scope_alias;
+  }
+  return undefined;
+}
+
+export function convertDeviationSearch(deviations: DeviationSearch[], focusStops: number[] = []): DeviationInfo[] {
   if (!deviations) {
     return [];
   }
@@ -81,7 +100,8 @@ export function convertDeviationSearch(deviations: DeviationSearch[]): Deviation
     if (!message || ignoreDeviation(message)) {
       return;
     }
-    result.push({ message, type: DeviationType.INFORMATION });
+    const heading = buildDeviationHeading(deviation, variant, focusStops);
+    result.push({ heading, message, type: DeviationType.INFORMATION });
   });
   return result;
 }
@@ -161,7 +181,10 @@ export function DeviationModal({onClose, open, deviation}: Props) {
         {sortedDeviations.map((deviationInfo, index) => (
           <tr key={index}>
             <td className="align-top">{getIcon(deviationInfo.type)}</td>
-            <td className="align-top">{deviationInfo.message}</td>
+            <td className="align-top">
+              {deviationInfo.heading && <div className="font-semibold">{deviationInfo.heading}</div>}
+              {deviationInfo.message}
+            </td>
           </tr>
         ))}
         </tbody>
