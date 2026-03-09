@@ -1,16 +1,16 @@
 import {RefObject, useCallback, useContext, useEffect, useRef, useState} from "react";
-import {Deviation} from "../../../types/deviations.ts";
-import {URL_GET_DEVIATION_BUS, URL_GET_DEVIATION_SUBWAY, URL_GET_DEVIATION_TRAIN} from "../../../communication/constant.ts";
 import axios from "axios";
-import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
+import classNames from "classnames";
+import {URL_GET_DEVIATION_BUS, URL_GET_DEVIATION_SUBWAY, URL_GET_DEVIATION_TRAIN} from "../../../communication/constant.ts";
+import {convertDeviationSearch, DeviationModal} from "../../common/deviation-modal";
 import {Card} from "../../common/card";
 import {getColorRef, TransportationIconCommon, TransportationMode} from "../../common/line";
-import classNames from "classnames";
+import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
-import {convertDeviationSearch, DeviationModal} from "../../common/deviation-modal";
-import {ModalDialog} from "../../common/modal-dialog";
 import {Legend} from "../departures/legend.tsx";
+import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
+import {Deviation} from "../../../types/deviations.ts";
 import {deviationIcons, normalIcons} from "./legend-data.tsx";
 
 /**

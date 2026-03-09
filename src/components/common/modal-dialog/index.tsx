@@ -1,5 +1,5 @@
-import {Dialog, DialogBackdrop, DialogPanel, DialogTitle} from '@headlessui/react'
 import {ReactNode} from "react";
+import {Dialog, DialogBackdrop, DialogPanel, DialogTitle} from '@headlessui/react';
 import {SLButton} from "../sl-button";
 
 type Props = {

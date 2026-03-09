@@ -107,3 +107,8 @@ Two custom font classes are defined in `tailwind.config.js`:
 - Prefer maintainability over performance.
 - Prefer simplicity over complexity.
 - If statements and all other constrol flow constructs should use curly braces even if they are followed by just a single statement.
+- I prefer the imports section sorted in the following order:
+  - React
+  - Third-party
+  - Local
+  - css files.

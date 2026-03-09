@@ -1,13 +1,11 @@
 import {useEffect, useRef, useState} from "react";
-import {Card} from "../../common/card";
-import {
-  URL_GET_TRAVEL_COORD_TO_v2,
-} from "../../../communication/constant.ts";
 import axios from "axios";
-import {Journey, SystemMessage} from "../../../types/sl-journeyplaner-responses";
+import {URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
+import {Card} from "../../common/card";
+import {SLButton} from "../../common/sl-button";
 import {SldJourney} from "./sld-journey.tsx";
 import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
-import {SLButton} from "../../common/sl-button";
+import {Journey, SystemMessage} from "../../../types/sl-journeyplaner-responses";
 
 type Location = {
   latitude: number,

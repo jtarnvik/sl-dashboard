@@ -1,9 +1,9 @@
-import {ModalDialog} from "../modal-dialog";
 import {IoMdInformationCircleOutline} from "react-icons/io";
 import {MdOutlineCancel} from "react-icons/md";
+import {ModalDialog} from "../modal-dialog";
+import { Deviation as DeviationSearch } from "../../../types/deviations";
 import {InfoMessage} from "../../../types/sl-journeyplaner-responses";
 import {Deviation} from "../../../types/sl-responses";
-import { Deviation as DeviationSearch } from "../../../types/deviations";
 
 export enum DeviationType {
   INFORMATION = 1,

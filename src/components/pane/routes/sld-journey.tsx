@@ -1,18 +1,18 @@
-import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
-import {Journey, Leg} from "../../../types/sl-journeyplaner-responses.ts";
-import {SldJourneyTitle} from "./sld-journey-title.tsx";
-import {findJourneyLegs, isFootPathForLeg} from "../../../util/journey-utils.ts";
-import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
-import {SldJourneyDetails} from "./sld-journey-details.tsx";
 import {useContext, useState} from "react";
 import classNames from "classnames";
-import {SldDuration} from "./sld-duration.tsx";
+import {IoWarningOutline} from "react-icons/io5";
+import {convertInfoMessages} from "../../common/deviation-modal";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
-import InDebugModeContext from "../../../contexts/debug-context.ts";
-import {IoWarningOutline} from "react-icons/io5";
+import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
+import {SldDuration} from "./sld-duration.tsx";
+import {SldJourneyDetails} from "./sld-journey-details.tsx";
+import {SldJourneyTitle} from "./sld-journey-title.tsx";
 import {SldSchedule} from "./sld-schedule.tsx";
-import {convertInfoMessages} from "../../common/deviation-modal";
+import InDebugModeContext from "../../../contexts/debug-context.ts";
+import {findJourneyLegs, isFootPathForLeg} from "../../../util/journey-utils.ts";
+import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
+import {Journey, Leg} from "../../../types/sl-journeyplaner-responses.ts";
 
 type Props = {
   journey: Journey

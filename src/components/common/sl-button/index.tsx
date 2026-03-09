@@ -1,6 +1,6 @@
+import {ReactNode} from "react";
 import {Button} from "@headlessui/react";
 import classNames from "classnames";
-import {ReactNode} from "react";
 
 type Props = {
   onClick: () => void,

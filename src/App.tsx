@@ -1,19 +1,19 @@
-import {useEffect, useRef, useState} from 'react'
-import './App.css'
-import ErrorContext from "./contexts/error-context.ts";
-import {Departures} from "./components/pane/departures";
+import {useEffect, useRef, useState} from 'react';
+import {ErrorBoundary} from "react-error-boundary";
+import useLocalStorageState from 'use-local-storage-state';
+import {SITE_SKOGSLOPARVAGEN_16_CHAR} from "./communication/constant.ts";
+import {ErrorBoundryFallback} from "./components/error-boundry-fallback";
 import {ErrorHandler} from "./components/error-handler";
 import {Navbar} from "./components/navbar";
-import {Routes} from "./components/pane/routes";
-import {SLButton} from "./components/common/sl-button";
-import {Settings} from "./components/settings";
-import {SITE_SKOGSLOPARVAGEN_16_CHAR} from "./communication/constant.ts";
-import useLocalStorageState from 'use-local-storage-state';
-import {SETTINGS_KEY} from "./types/common-constants.ts";
-import InDebugModeContext from "./contexts/debug-context.ts";
+import {Departures} from "./components/pane/departures";
 import {Deviations} from "./components/pane/deviations";
-import {ErrorBoundary} from "react-error-boundary";
-import {ErrorBoundryFallback} from "./components/error-boundry-fallback";
+import {Routes} from "./components/pane/routes";
+import {Settings} from "./components/settings";
+import {SLButton} from "./components/common/sl-button";
+import ErrorContext from "./contexts/error-context.ts";
+import InDebugModeContext from "./contexts/debug-context.ts";
+import {SETTINGS_KEY} from "./types/common-constants.ts";
+import './App.css';
 
 function App() {
   const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);

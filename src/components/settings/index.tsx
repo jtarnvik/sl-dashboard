@@ -1,12 +1,12 @@
-import {ModalDialog} from "../common/modal-dialog";
 import {useContext, useMemo, useState} from "react";
-import {URL_GET_STOP_POINT} from "../../communication/constant.ts";
 import axios from "axios";
-import {StopFinderResponse} from "../../types/sl-journeyplaner-responses.ts";
-import {SLButton} from "../common/sl-button";
 import {IoCloseCircle} from "react-icons/io5";
-import "./input.css"
+import {URL_GET_STOP_POINT} from "../../communication/constant.ts";
+import {ModalDialog} from "../common/modal-dialog";
+import {SLButton} from "../common/sl-button";
 import InDebugModeContext from "../../contexts/debug-context.ts";
+import {StopFinderResponse} from "../../types/sl-journeyplaner-responses.ts";
+import "./input.css";
 
 type Props = {
   settingsOpen: boolean,

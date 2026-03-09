@@ -9,9 +9,8 @@ import {TbUfo} from "react-icons/tb";
 import {LiaWalkingSolid} from "react-icons/lia";
 import classNames from "classnames";
 import {PRODUCT_CLASS_BUS, PRODUCT_CLASS_BUS_LOCAL, PRODUCT_CLASS_FOOTPATH, PRODUCT_CLASS_FOOTPATH_2, PRODUCT_CLASS_SUBWAY, PRODUCT_CLASS_TRAIN, PRODUCT_CLASS_TRAM, Transportation} from "../../../types/sl-journeyplaner-responses.ts";
-
-import "./index.css"
 import {Journey, Line} from "../../../types/sl-responses.ts";
+import "./index.css";
 
 export enum SldProgress {
   FAST = 1,

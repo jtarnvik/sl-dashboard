@@ -1,23 +1,22 @@
 import {useCallback, useContext, useEffect, useImperativeHandle, useRef, useState} from "react";
 import axios from 'axios';
-import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
 import {DateTime, Duration} from "luxon";
+import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
+import {Card} from "../../common/card";
+import {LineJourney} from "../../common/line";
+import {ModalDialog} from "../../common/modal-dialog";
+import {SLButton} from "../../common/sl-button";
+import {DeviationWrapper} from "../../common/deviation-wrapper";
+import InDebugModeContext from "../../../contexts/debug-context.ts";
+import {useVisibility} from "../../../hook/use-visibility.ts";
+import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
+import {Departure, SlDeparturesResponse} from "../../../types/sl-responses.ts";
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../../util/sorters.ts";
-import {useVisibility} from "../../../hook/use-visibility.ts";
-import {LineJourney} from "../../common/line";
-import {Card} from "../../common/card";
 import {Destination} from "./destination.tsx";
-import {SLButton} from "../../common/sl-button";
-import {ModalDialog} from "../../common/modal-dialog";
 import {destinations, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
-import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
-import InDebugModeContext from "../../../contexts/debug-context.ts";
-import {DeviationWrapper} from "../../common/deviation-wrapper";
-import {Departure, SlDeparturesResponse} from "../../../types/sl-responses.ts";
-
-import "./index.css"
+import "./index.css";
 
 type Props = {
   performManualUpdate?: React.Ref<ScheduleOperations>,
