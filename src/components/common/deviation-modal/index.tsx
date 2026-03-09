@@ -11,19 +11,16 @@ export enum DeviationType {
   UNKNOWN,
 };
 
+const IGNORED_DEVIATION_PATTERNS: RegExp[] = [
+  /hissen är avstängd/i,
+  /en av hissarna/i,
+  /hissen.*avstängd på grund av tekniskt fel/i,
+  /hissen.*är avstängd/i,
+  /hissarna.*är avstängda/i,
+];
+
 export function ignoreDeviation(msg: string): boolean {
-  if (msg.toLowerCase().includes("hissen är avstängd")) {
-    return true;
-  } else if (msg.toLowerCase().includes("en av hissarna")){
-    return true;
-  } else if (/Hissen.*avstängd på grund av tekniskt fel/i.test(msg)) {
-    return true;
-  } else if (/Hissen.*är avstängd/i.test(msg)) {
-    return true;
-  } else if (/Hissarna.*är avstängda/i.test(msg)) {
-    return true;
-  }
-  return false;
+  return IGNORED_DEVIATION_PATTERNS.some(pattern => pattern.test(msg));
 }
 
 export interface DeviationInfo {
