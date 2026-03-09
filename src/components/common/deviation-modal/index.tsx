@@ -1,4 +1,6 @@
+import {useState} from "react";
 import {IoMdInformationCircleOutline} from "react-icons/io";
+import {IoChevronDown, IoChevronUp} from "react-icons/io5";
 import {MdOutlineCancel} from "react-icons/md";
 import {ModalDialog} from "../modal-dialog";
 import { Deviation as DeviationSearch } from "../../../types/deviations";
@@ -139,6 +141,48 @@ export function convertDeviations(deviations: Deviation[]): DeviationInfo[] {
   return result;
 }
 
+function getDeviationIcon(type: DeviationType) {
+  switch (type) {
+    case DeviationType.INFORMATION:
+      return <IoMdInformationCircleOutline size={24} />;
+    case DeviationType.CANCELLED:
+      return <MdOutlineCancel size={24} />;
+    default:
+      return <IoMdInformationCircleOutline size={24} />;
+  }
+}
+
+type DeviationRowProps = {
+  deviationInfo: DeviationInfo
+};
+
+function DeviationRow({deviationInfo}: DeviationRowProps) {
+  const [expanded, setExpanded] = useState(false);
+  const hasExpandable = Boolean(deviationInfo.shortMessage && deviationInfo.message);
+
+  return (
+    <tr>
+      <td className="align-top">{getDeviationIcon(deviationInfo.type)}</td>
+      <td className="align-top">
+        {deviationInfo.heading && <div className="font-semibold">{deviationInfo.heading}</div>}
+        {hasExpandable ? (
+          <>
+            <div className="flex items-start justify-between gap-2">
+              <span>{deviationInfo.shortMessage}</span>
+              <button onClick={() => setExpanded(!expanded)} className="shrink-0 mt-[2px]">
+                {expanded ? <IoChevronUp size={16} /> : <IoChevronDown size={16} />}
+              </button>
+            </div>
+            {expanded && <div className="mt-1 text-sm text-gray-700">{deviationInfo.message}</div>}
+          </>
+        ) : (
+          deviationInfo.message
+        )}
+      </td>
+    </tr>
+  );
+}
+
 type Props = {
   onClose: () => void,
   open: boolean,
@@ -149,17 +193,6 @@ export function DeviationModal({onClose, open, deviation}: Props) {
   if (!open) {
     return null;
   }
-
-  const getIcon = (type: DeviationType) => {
-    switch (type) {
-      case DeviationType.INFORMATION:
-        return <IoMdInformationCircleOutline size={24} />;
-      case DeviationType.CANCELLED:
-        return <MdOutlineCancel size={24} />;
-      default:
-        return <IoMdInformationCircleOutline size={24} />;
-    }
-  };
 
   const sortedDeviations = [...deviation].sort((a, b) => {
     if (a.type === DeviationType.CANCELLED && b.type !== DeviationType.CANCELLED) {
@@ -181,13 +214,7 @@ export function DeviationModal({onClose, open, deviation}: Props) {
       <table className="border-separate border-spacing-y-2">
         <tbody>
         {sortedDeviations.map((deviationInfo, index) => (
-          <tr key={index}>
-            <td className="align-top">{getIcon(deviationInfo.type)}</td>
-            <td className="align-top">
-              {deviationInfo.heading && <div className="font-semibold">{deviationInfo.heading}</div>}
-              {deviationInfo.message}
-            </td>
-          </tr>
+          <DeviationRow key={index} deviationInfo={deviationInfo} />
         ))}
         </tbody>
       </table>
