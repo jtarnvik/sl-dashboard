@@ -9,7 +9,7 @@ export enum DeviationType {
   INFORMATION = 1,
   CANCELLED,
   UNKNOWN,
-};
+}
 
 const IGNORED_DEVIATION_PATTERNS: RegExp[] = [
   /hissen är avstängd/i,
@@ -39,6 +39,7 @@ export function filterDeviationsByStops(deviations: DeviationSearch[], focusStop
 
 export interface DeviationInfo {
   heading?: string,
+  shortMessage?: string,
   message: string,
   type: DeviationType
 }
@@ -101,7 +102,8 @@ export function convertDeviationSearch(deviations: DeviationSearch[], focusStops
       return;
     }
     const heading = buildDeviationHeading(deviation, variant, focusStops);
-    result.push({ heading, message, type: DeviationType.INFORMATION });
+    const shortMessage = variant.header || undefined;
+    result.push({ heading, shortMessage, message, type: DeviationType.INFORMATION });
   });
   return result;
 }
