@@ -1,8 +1,8 @@
 import {RefObject, useCallback, useContext, useEffect, useRef, useState} from "react";
 import axios from "axios";
 import classNames from "classnames";
-import {URL_GET_DEVIATION_BUS, URL_GET_DEVIATION_SUBWAY, URL_GET_DEVIATION_TRAIN} from "../../../communication/constant.ts";
-import {convertDeviationSearch, DeviationModal} from "../../common/deviation-modal";
+import {DEVIATION_FOCUS_STOPS_BUS, DEVIATION_FOCUS_STOPS_SUBWAY, DEVIATION_FOCUS_STOPS_TRAIN, URL_GET_DEVIATION_BUS, URL_GET_DEVIATION_SUBWAY, URL_GET_DEVIATION_TRAIN} from "../../../communication/constant.ts";
+import {convertDeviationSearch, DeviationModal, filterDeviationsByStops} from "../../common/deviation-modal";
 import {Card} from "../../common/card";
 import {getColorRef, TransportationIconCommon, TransportationMode} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
@@ -79,17 +79,21 @@ export function Deviations() {
   const subwayInProgress = latestSubwayRequest.current !== undefined;
   const trainInProgress = latestTrainRequest.current !== undefined;
 
+  const filteredTrainDeviations = filterDeviationsByStops(trainDeviations, DEVIATION_FOCUS_STOPS_TRAIN);
+  const filteredSubwayDeviations = filterDeviationsByStops(subwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY);
+  const filteredBusDeviations = filterDeviationsByStops(busDeviations, DEVIATION_FOCUS_STOPS_BUS);
+
   // style={{ backgroundColor: modeColor, color: '#FFFFFF' }}
 
   const commonAdjustments = classNames(
     "w-[24px] h-[24px] p-[3px]",
     "rounded", "text-white");
   const busAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": busDeviations && busDeviations.length > 0});
+    {"cursor-pointer": filteredBusDeviations.length > 0});
   const subwayAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": subwayDeviations && subwayDeviations.length > 0});
+    {"cursor-pointer": filteredSubwayDeviations.length > 0});
   const trainAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": trainDeviations && trainDeviations.length > 0});
+    {"cursor-pointer": filteredTrainDeviations.length > 0});
 
   function getModeBackgroundColor(mode: TransportationMode, designation: string, inProgress: boolean, deviations: Deviation[]): { backgroundColor: string } {
     if (inProgress) {
@@ -104,25 +108,25 @@ export function Deviations() {
   return (
     <Card>
       <div className="flex justify-between">
-        <div onClick={() => { if (trainDeviations.length > 0) { setOpenModal('train'); } }}>
+        <div onClick={() => { if (filteredTrainDeviations.length > 0) { setOpenModal('train'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.TRAIN}
             className={trainAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainInProgress, trainDeviations)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainInProgress, filteredTrainDeviations)}
           />
         </div>
-        <div onClick={() => { if (subwayDeviations.length > 0) { setOpenModal('subway'); } }}>
+        <div onClick={() => { if (filteredSubwayDeviations.length > 0) { setOpenModal('subway'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.SUBWAY}
             className={subwayAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayInProgress, subwayDeviations)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayInProgress, filteredSubwayDeviations)}
           />
         </div>
-        <div onClick={() => { if (busDeviations.length > 0) { setOpenModal('bus'); } }}>
+        <div onClick={() => { if (filteredBusDeviations.length > 0) { setOpenModal('bus'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.BUS}
             className={busAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busInProgress, busDeviations)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busInProgress, filteredBusDeviations)}
           />
         </div>
       </div>
@@ -139,17 +143,17 @@ export function Deviations() {
       <DeviationModal
         open={openModal === 'train'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(trainDeviations)}
+        deviation={convertDeviationSearch(filteredTrainDeviations)}
       />
       <DeviationModal
         open={openModal === 'subway'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(subwayDeviations)}
+        deviation={convertDeviationSearch(filteredSubwayDeviations)}
       />
       <DeviationModal
         open={openModal === 'bus'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(busDeviations)}
+        deviation={convertDeviationSearch(filteredBusDeviations)}
       />
     </Card>
   );

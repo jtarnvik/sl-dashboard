@@ -23,6 +23,19 @@ export function ignoreDeviation(msg: string): boolean {
   return IGNORED_DEVIATION_PATTERNS.some(pattern => pattern.test(msg));
 }
 
+export function filterDeviationsByStops(deviations: DeviationSearch[], focusStops: number[]): DeviationSearch[] {
+  if (focusStops.length === 0) {
+    return deviations;
+  }
+  return deviations.filter(deviation => {
+    const stopAreas = deviation.scope?.stop_areas;
+    if (!stopAreas || stopAreas.length === 0) {
+      return true;
+    }
+    return stopAreas.some(stop => focusStops.includes(stop.id));
+  });
+}
+
 export interface DeviationInfo {
   message: string,
   type: DeviationType

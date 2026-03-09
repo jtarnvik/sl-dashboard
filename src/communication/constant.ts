@@ -13,6 +13,14 @@ export const URL_GET_DEVIATION_TRAIN = 'https://deviations.integration.sl.se/v1/
 export const URL_GET_DEVIATION_BUS = 'https://deviations.integration.sl.se/v1/messages?future=false&line=117&transport_mode=BUS';
 export const URL_GET_DEVIATION_SUBWAY = 'https://deviations.integration.sl.se/v1/messages?future=false&line=17&line=18&line=19&transport_mode=METRO';
 
+// Focus stops for deviation filtering (StopArea.id from the deviations API).
+// When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.
+// Deviations with no stop scope (line-wide) are always shown.
+// When empty, no stop filtering is applied and all deviations are shown.
+export const DEVIATION_FOCUS_STOPS_TRAIN: number[] = [];
+export const DEVIATION_FOCUS_STOPS_SUBWAY: number[] = [];
+export const DEVIATION_FOCUS_STOPS_BUS: number[] = [];
+
 export const URL_GET_TRAVEL_FROM_TO_v2 = (origin: string, dest: string) =>
   "https://journeyplanner.integration.sl.se/v2/trips" +
   "?type_origin=any" +
