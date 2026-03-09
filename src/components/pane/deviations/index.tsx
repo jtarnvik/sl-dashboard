@@ -12,6 +12,7 @@ import {Legend} from "../departures/legend.tsx";
 import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
 import {Deviation} from "../../../types/deviations.ts";
 import {deviationIcons, normalIcons} from "./legend-data.tsx";
+import ErrorContext from "../../../contexts/error-context.ts";
 
 /**
  * Aktuella pendeltåg: 43, 43X, 44
@@ -23,6 +24,7 @@ import {deviationIcons, normalIcons} from "./legend-data.tsx";
  */
 export function Deviations() {
   const {inDebugMode} = useContext(InDebugModeContext);
+  const {setError} = useContext(ErrorContext);
 
   const latestBusRequest = useRef<AbortControllerState | undefined>(undefined);
   const latestTrainRequest = useRef<AbortControllerState | undefined>(undefined);
@@ -54,7 +56,7 @@ export function Deviations() {
         if (isAbortError(error)) {
           return;
         }
-        console.log("Axios error", error);
+        setError(error);
       })
       .finally(function () {
         // Clear ONLY if this request is still the latest one

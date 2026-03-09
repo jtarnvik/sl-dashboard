@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react";
+import {useContext, useEffect, useRef, useState} from "react";
 import axios from "axios";
 import {URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
 import {Card} from "../../common/card";
@@ -6,6 +6,7 @@ import {SLButton} from "../../common/sl-button";
 import {SldJourney} from "./sld-journey.tsx";
 import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
 import {Journey, SystemMessage} from "../../../types/sl-journeyplaner-responses";
+import ErrorContext from "../../../contexts/error-context.ts";
 
 type Location = {
   latitude: number,
@@ -23,11 +24,11 @@ type Props = {
 }
 
 export function Routes({settingsData}: Props) {
+  const {setError} = useContext(ErrorContext);
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
 
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined)
-  const [response, setResponse] = useState<string>("");
 
   const [location, setLocation] = useState<Location | undefined>(undefined);
   const [geoInfo, setGeoInfo] = useState<string | undefined>(undefined);
@@ -36,7 +37,6 @@ export function Routes({settingsData}: Props) {
 
   if (false) {
     console.log(systemMessages);
-    console.log(response);
     console.log(location);
     console.log(routePlanningInProgress);
   }
@@ -79,8 +79,7 @@ export function Routes({settingsData}: Props) {
           if (isAbortError(error)) {
             return;
           }
-          console.log("Axios error", error);
-          setResponse("Error: " + error);
+          setError(error);
         })
         .finally(function () {
           // Clear ONLY if this request is still the latest one

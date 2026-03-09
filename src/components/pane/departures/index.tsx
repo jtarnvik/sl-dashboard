@@ -17,6 +17,7 @@ import {Destination} from "./destination.tsx";
 import {destinations, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
 import "./index.css";
+import ErrorContext from "../../../contexts/error-context.ts";
 
 type Props = {
   performManualUpdate?: React.Ref<ScheduleOperations>,
@@ -25,6 +26,7 @@ type Props = {
 
 export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
   const {inDebugMode} = useContext(InDebugModeContext);
+  const {setError} = useContext(ErrorContext);
 
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
   const lastDepartures = useRef<Departure[] | undefined>(undefined);
@@ -97,15 +99,13 @@ export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
           setLastUpdated(DateTime.now());
           setDiffSinceLastUpdated(DateTime.now().diffNow())
         }
-
-        // console.log(response);
       })
       .catch(function (error) {
         // Treat aborts as "expected"
         if (isAbortError(error)) {
           return;
         }
-        console.log("Axios error", error);
+        setError(error);
       })
       .finally(function () {
         // Clear ONLY if this request is still the latest one
