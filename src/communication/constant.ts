@@ -17,8 +17,10 @@ export const URL_GET_DEVIATION_SUBWAY = 'https://deviations.integration.sl.se/v1
 // When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.
 // Deviations with no stop scope (line-wide) are always shown.
 // When empty, no stop filtering is applied and all deviations are shown.
-export const DEVIATION_FOCUS_STOPS_TRAIN: number[] = [];
-export const DEVIATION_FOCUS_STOPS_SUBWAY: number[] = [];
+export const DEVIATION_FOCUS_STOPS_TRAIN: number[] = [6041, 12138, 3431, 6031, 12346, 50242, 4543, 1131, 10151, 5320, 1051, 5011, 5901, 10291, 80055, 10910, 4301, 5300, 5310];
+//                                                    Spånga,      Sundbyberg,                     Odenplan,          Centralen
+export const DEVIATION_FOCUS_STOPS_SUBWAY: number[] = [1231, 12217, 15339, 1221, 12001, 1211, 12029, 12579, 1201, 4201, 4525, 12025, 1171, 10437, 1161, 12977, 17308, 1151, 10369, 1141, 10363, 1131, 10151, 5320, 10545, 1121, 1111, 10024, 11525, 1051, 5011, 5901, 10291, 80055, 10910, 4301, 5300, 5310, 1021, 10387, 8012];
+//                                                     Brommaplan,         Abrahamsberg,Stora Mossen,       Alvik,                   Kristineb,   Thorildsplan,       Fridhemspla, St Erikspl,  Odenplan,          Rådmansgat,  Hötorget            T-Centralen                                              Gamla stan
 export const DEVIATION_FOCUS_STOPS_BUS: number[] = [];
 
 export const URL_GET_TRAVEL_FROM_TO_v2 = (origin: string, dest: string) =>
