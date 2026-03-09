@@ -79,9 +79,9 @@ export function Deviations() {
   const subwayInProgress = latestSubwayRequest.current !== undefined;
   const trainInProgress = latestTrainRequest.current !== undefined;
 
-  const filteredTrainDeviations = filterDeviationsByStops(trainDeviations, DEVIATION_FOCUS_STOPS_TRAIN);
-  const filteredSubwayDeviations = filterDeviationsByStops(subwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY);
-  const filteredBusDeviations = filterDeviationsByStops(busDeviations, DEVIATION_FOCUS_STOPS_BUS);
+  const trainDeviationInfos = convertDeviationSearch(filterDeviationsByStops(trainDeviations, DEVIATION_FOCUS_STOPS_TRAIN), DEVIATION_FOCUS_STOPS_TRAIN);
+  const subwayDeviationInfos = convertDeviationSearch(filterDeviationsByStops(subwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY), DEVIATION_FOCUS_STOPS_SUBWAY);
+  const busDeviationInfos = convertDeviationSearch(filterDeviationsByStops(busDeviations, DEVIATION_FOCUS_STOPS_BUS), DEVIATION_FOCUS_STOPS_BUS);
 
   // style={{ backgroundColor: modeColor, color: '#FFFFFF' }}
 
@@ -89,17 +89,17 @@ export function Deviations() {
     "w-[24px] h-[24px] p-[3px]",
     "rounded", "text-white");
   const busAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": filteredBusDeviations.length > 0});
+    {"cursor-pointer": busDeviationInfos.length > 0});
   const subwayAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": filteredSubwayDeviations.length > 0});
+    {"cursor-pointer": subwayDeviationInfos.length > 0});
   const trainAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": filteredTrainDeviations.length > 0});
+    {"cursor-pointer": trainDeviationInfos.length > 0});
 
-  function getModeBackgroundColor(mode: TransportationMode, designation: string, inProgress: boolean, deviations: Deviation[]): { backgroundColor: string } {
+  function getModeBackgroundColor(mode: TransportationMode, designation: string, inProgress: boolean, hasDeviations: boolean): { backgroundColor: string } {
     if (inProgress) {
       return {backgroundColor: "bg-gray-400"};
     }
-    if (deviations && deviations.length > 0) {
+    if (hasDeviations) {
       return {backgroundColor: "#F97316"};
     }
     return {backgroundColor: getColorRef(mode, designation)};
@@ -108,25 +108,25 @@ export function Deviations() {
   return (
     <Card>
       <div className="flex justify-between">
-        <div onClick={() => { if (filteredTrainDeviations.length > 0) { setOpenModal('train'); } }}>
+        <div onClick={() => { if (trainDeviationInfos.length > 0) { setOpenModal('train'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.TRAIN}
             className={trainAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainInProgress, filteredTrainDeviations)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainInProgress, trainDeviationInfos.length > 0)}
           />
         </div>
-        <div onClick={() => { if (filteredSubwayDeviations.length > 0) { setOpenModal('subway'); } }}>
+        <div onClick={() => { if (subwayDeviationInfos.length > 0) { setOpenModal('subway'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.SUBWAY}
             className={subwayAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayInProgress, filteredSubwayDeviations)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayInProgress, subwayDeviationInfos.length > 0)}
           />
         </div>
-        <div onClick={() => { if (filteredBusDeviations.length > 0) { setOpenModal('bus'); } }}>
+        <div onClick={() => { if (busDeviationInfos.length > 0) { setOpenModal('bus'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.BUS}
             className={busAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busInProgress, filteredBusDeviations)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busInProgress, busDeviationInfos.length > 0)}
           />
         </div>
       </div>
@@ -143,17 +143,17 @@ export function Deviations() {
       <DeviationModal
         open={openModal === 'train'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(filteredTrainDeviations, DEVIATION_FOCUS_STOPS_TRAIN)}
+        deviation={trainDeviationInfos}
       />
       <DeviationModal
         open={openModal === 'subway'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(filteredSubwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY)}
+        deviation={subwayDeviationInfos}
       />
       <DeviationModal
         open={openModal === 'bus'}
         onClose={() => setOpenModal(null)}
-        deviation={convertDeviationSearch(filteredBusDeviations, DEVIATION_FOCUS_STOPS_BUS)}
+        deviation={busDeviationInfos}
       />
     </Card>
   );
