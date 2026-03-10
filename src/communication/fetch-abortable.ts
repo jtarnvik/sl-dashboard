@@ -16,20 +16,29 @@ export function fetchAbortable<T>(
   const controller = createAbortController();
   controllerRef.current = controller;
 
-  axios.get<T>(url, { signal: controller.signal })
-    .then(function (response) {
-      onSuccess(response.data);
-    })
-    .catch(function (error) {
-      if (isAbortError(error)) {
-        return;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      onError(message);
-    })
-    .finally(function () {
-      if (controllerRef.current === controller) {
-        controllerRef.current = undefined;
-      }
-    });
+  function attempt(isRetry: boolean): void {
+    axios.get<T>(url, { signal: controller.signal })
+      .then(function (response) {
+        onSuccess(response.data);
+      })
+      .catch(function (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+        if (!isRetry && axios.isAxiosError(error) && error.response?.status === 429) {
+          const timeoutId = setTimeout(function () { attempt(true); }, 500);
+          controller.signal.addEventListener("abort", function () { clearTimeout(timeoutId); });
+          return;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        onError(message);
+      })
+      .finally(function () {
+        if (controllerRef.current === controller) {
+          controllerRef.current = undefined;
+        }
+      });
+  }
+
+  attempt(false);
 }
