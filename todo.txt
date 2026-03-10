@@ -1,3 +1,6 @@
+- error 429. Deviations always calls twice (the first is cancelled) can you tell why? Somtimes we get a 429 here,
+  should the twice call be fixed or should we retry with a standoff on 429.
+- The routes pane has some kind of own error handling via a setState??? Or what does this do?
 - Deviation modal should have max width on a phone
 - Fix Next city gui, nicer buttons and maybe hide them after selection.
 - Make better gui for drop down for next-city.

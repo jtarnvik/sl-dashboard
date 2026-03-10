@@ -1,7 +1,7 @@
-import {RefObject, useCallback, useContext, useEffect, useRef, useState} from "react";
-import axios from "axios";
+import {useContext, useEffect, useRef, useState} from "react";
 import classNames from "classnames";
 import {DEVIATION_FOCUS_STOPS_BUS, DEVIATION_FOCUS_STOPS_SUBWAY, DEVIATION_FOCUS_STOPS_TRAIN, URL_GET_DEVIATION_BUS, URL_GET_DEVIATION_SUBWAY, URL_GET_DEVIATION_TRAIN} from "../../../communication/constant.ts";
+import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {convertDeviationSearch, DeviationModal, filterDeviationsByStops} from "../../common/deviation-modal";
 import {Card} from "../../common/card";
 import {getColorRef, TransportationIconCommon, TransportationMode} from "../../common/line";
@@ -9,7 +9,7 @@ import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {Legend} from "../departures/legend.tsx";
-import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
+import {AbortControllerState} from "../../../types/communication.ts";
 import {Deviation} from "../../../types/deviations.ts";
 import {deviationIcons, normalIcons} from "./legend-data.tsx";
 import ErrorContext from "../../../contexts/error-context.ts";
@@ -37,44 +37,14 @@ export function Deviations() {
   const [openModal, setOpenModal] = useState<'bus' | 'train' | 'subway' | null>(null);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
 
-  const getDeviations = useCallback((url: string, refAborter: RefObject<AbortControllerState>, setDeviation: React.Dispatch<React.SetStateAction<Deviation[]>>) => {
-    if (refAborter.current) {
-      refAborter.current.abort("Previous request contains stale data");
-    }
-    const controller = createAbortController();
-    refAborter.current = controller;
-
-    axios.get<Deviation[]>(url, {
-      signal: controller.signal,
-    })
-      .then(function (response) {
-        setDeviation(response.data);
-        // console.log(response);
-      })
-      .catch(function (error) {
-        // Treat aborts as "expected"
-        if (isAbortError(error)) {
-          return;
-        }
-        setError(error);
-      })
-      .finally(function () {
-        // Clear ONLY if this request is still the latest one
-        if (refAborter.current === controller) {
-          refAborter.current = undefined;
-        }
-      })
-
-  }, []);
-
   useEffect(() => {
-    getDeviations(URL_GET_DEVIATION_BUS, latestBusRequest, setBusDeviations);
+    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_BUS, latestBusRequest, setBusDeviations, setError);
   }, []);
   useEffect(() => {
-    getDeviations(URL_GET_DEVIATION_TRAIN, latestTrainRequest, setTrainDeviations);
+    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_TRAIN, latestTrainRequest, setTrainDeviations, setError);
   }, []);
   useEffect(() => {
-    getDeviations(URL_GET_DEVIATION_SUBWAY, latestSubwayRequest, setSubwayDeviations);
+    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_SUBWAY, latestSubwayRequest, setSubwayDeviations, setError);
   }, []);
 
   const busInProgress = latestBusRequest.current !== undefined;

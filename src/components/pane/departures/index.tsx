@@ -1,7 +1,7 @@
 import {useCallback, useContext, useEffect, useImperativeHandle, useRef, useState} from "react";
-import axios from 'axios';
 import {DateTime, Duration} from "luxon";
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
+import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {Card} from "../../common/card";
 import {LineJourney} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
@@ -9,7 +9,7 @@ import {SLButton} from "../../common/sl-button";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
-import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
+import {AbortControllerState} from "../../../types/communication.ts";
 import {Departure, SlDeparturesResponse} from "../../../types/sl-responses.ts";
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../../util/sorters.ts";
@@ -51,68 +51,46 @@ export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
   }, []);
 
   const updateDepartures = useCallback(() => {
-    if (latestRequest.current) {
-      latestRequest.current.abort("Previous request contains stale data");
-    }
-    const controller = createAbortController();
-    latestRequest.current = controller;
-
     const url = URL_GET_DEPARTURES_FROM_SITE(stopPoint16Chars.slice(-4));
-    axios.get<SlDeparturesResponse>(url, {
-      signal: controller.signal,
-    })
-      .then(function (response) {
-        const lastDepts = lastDepartures.current;
-        if (lastDepts) {
-          const lastIds = lastDepts.map(dep => getUniqueId(dep));
-          const newIds = response.data.departures.map(dep => getUniqueId(dep));
-          const newIdSet = new Set(newIds);
-          const removedIds = lastIds.filter(id => !newIdSet.has(id));
+    fetchAbortable<SlDeparturesResponse>(url, latestRequest, (data) => {
+      const lastDepts = lastDepartures.current;
+      if (lastDepts) {
+        const lastIds = lastDepts.map(dep => getUniqueId(dep));
+        const newIds = data.departures.map(dep => getUniqueId(dep));
+        const newIdSet = new Set(newIds);
+        const removedIds = lastIds.filter(id => !newIdSet.has(id));
 
-          // console.log("removedIds", removedIds);
-          if (removedIds.length === 0) {
-            lastDepartures.current = response.data.departures;
-            setDeparting(new Set([]));
-            setDepartures(response.data);
-            setLastUpdated(DateTime.now());
-            setDiffSinceLastUpdated(DateTime.now().diffNow())
-          } else if (removedIds.length > 2) {
-            // too many, just update
-            lastDepartures.current = response.data.departures;
-            setDeparting(new Set([]));
-            setDepartures(response.data);
-            setLastUpdated(DateTime.now());
-            setDiffSinceLastUpdated(DateTime.now().diffNow())
-          } else {
-            setDeparting(new Set(removedIds));
-            setTimeout(() => {
-              lastDepartures.current = response.data.departures;
-              setDeparting(new Set([]));
-              setDepartures(response.data);
-              setLastUpdated(DateTime.now());
-              setDiffSinceLastUpdated(DateTime.now().diffNow())
-            }, 1250)
-          }
-        } else {
-          lastDepartures.current = response.data.departures;
-          setDepartures(response.data);
+        // console.log("removedIds", removedIds);
+        if (removedIds.length === 0) {
+          lastDepartures.current = data.departures;
+          setDeparting(new Set([]));
+          setDepartures(data);
           setLastUpdated(DateTime.now());
           setDiffSinceLastUpdated(DateTime.now().diffNow())
+        } else if (removedIds.length > 2) {
+          // too many, just update
+          lastDepartures.current = data.departures;
+          setDeparting(new Set([]));
+          setDepartures(data);
+          setLastUpdated(DateTime.now());
+          setDiffSinceLastUpdated(DateTime.now().diffNow())
+        } else {
+          setDeparting(new Set(removedIds));
+          setTimeout(() => {
+            lastDepartures.current = data.departures;
+            setDeparting(new Set([]));
+            setDepartures(data);
+            setLastUpdated(DateTime.now());
+            setDiffSinceLastUpdated(DateTime.now().diffNow())
+          }, 1250)
         }
-      })
-      .catch(function (error) {
-        // Treat aborts as "expected"
-        if (isAbortError(error)) {
-          return;
-        }
-        setError(error);
-      })
-      .finally(function () {
-        // Clear ONLY if this request is still the latest one
-        if (latestRequest.current === controller) {
-          latestRequest.current = undefined;
-        }
-      });
+      } else {
+        lastDepartures.current = data.departures;
+        setDepartures(data);
+        setLastUpdated(DateTime.now());
+        setDiffSinceLastUpdated(DateTime.now().diffNow())
+      }
+    }, setError);
   }, [stopPoint16Chars]);
 
   useVisibility({onVisible: updateDepartures});

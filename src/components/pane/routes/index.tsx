@@ -1,10 +1,10 @@
 import {useContext, useEffect, useRef, useState} from "react";
-import axios from "axios";
 import {URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
+import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {Card} from "../../common/card";
 import {SLButton} from "../../common/sl-button";
 import {SldJourney} from "./sld-journey.tsx";
-import {AbortControllerState, createAbortController, isAbortError} from "../../../types/communication.ts";
+import {AbortControllerState} from "../../../types/communication.ts";
 import {Journey, SystemMessage} from "../../../types/sl-journeyplaner-responses";
 import ErrorContext from "../../../contexts/error-context.ts";
 
@@ -55,38 +55,14 @@ export function Routes({settingsData}: Props) {
 
   function updateDepartures(maxWalk: number) {
     function generateRoute(lat: number, long: number, maxInitialWalkTime: number) {
-      if (latestRequest.current) {
-        latestRequest.current.abort("Previous request contains stale data");
-      }
-
-      const controller = createAbortController();
-      latestRequest.current = controller;
-
       const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId, maxInitialWalkTime);
-      axios.get(url, {
-        signal: controller.signal,
-      })
-        .then(function (response) {
-          setJourneys(response.data.journeys);
-          setSystemMessages(response.data.systemMessages);
-          if (!response.data.journeys) {
-            setState("No routes, are you already there?")
-          }
-          console.log("journey", response.data);
-        })
-        .catch(function (error) {
-          // Treat aborts as "expected"
-          if (isAbortError(error)) {
-            return;
-          }
-          setError(error);
-        })
-        .finally(function () {
-          // Clear ONLY if this request is still the latest one
-          if (latestRequest.current === controller) {
-            latestRequest.current = undefined;
-          }
-        });
+      fetchAbortable<{journeys: Journey[], systemMessages: SystemMessage[]}>(url, latestRequest, (data) => {
+        setJourneys(data.journeys);
+        setSystemMessages(data.systemMessages);
+        if (!data.journeys) {
+          setState("No routes, are you already there?")
+        }
+      }, setError);
     }
 
     setRoutePlanningInProgress(true);
@@ -115,7 +91,6 @@ export function Routes({settingsData}: Props) {
           timestamp: position.timestamp
         });
         setRoutePlanningInProgress(false);
-        console.log("position", position);
         generateRoute(position.coords.latitude, position.coords.longitude, maxWalk);
       },
       (err) => {
