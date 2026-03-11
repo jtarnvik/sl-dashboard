@@ -17,7 +17,13 @@ import './App.css';
 
 function App() {
   const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
-  const [error, setError] = useState<string>("");
+  const [error, setErrorMsg] = useState<string>("");
+  const [retry, setRetry] = useState<(() => void) | null>(null);
+
+  function setError(message: string, retryFn?: () => void) {
+    setErrorMsg(message);
+    setRetry(retryFn ? () => retryFn : null);
+  }
   const [navbarHeight, setNavbarHeight] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [settingsData, setSettingsData, {removeItem, isPersistent}] = useLocalStorageState<SettingsData>(SETTINGS_KEY, {
@@ -44,7 +50,7 @@ function App() {
   }
 
   return (
-    <ErrorContext.Provider value={{error, setError}}>
+    <ErrorContext.Provider value={{error, retry, setError}}>
       <div>
         <InDebugModeContext.Provider value={{inDebugMode, setInDebugMode}}>
           <Navbar onManualUpdate={onManualUpdate} heading={settingsData.stopPointName} />
@@ -64,6 +70,13 @@ function App() {
                   </div>
                 </div>
               </div>
+              {inDebugMode && (
+                <div className="px-2 mb-2">
+                  <SLButton thin onClick={() => setError("Testfel: något gick snett.", () => { /* no-op retry */ })}>
+                    Utlös testfel
+                  </SLButton>
+                </div>
+              )}
               <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem} />
             </main>
           </ErrorBoundary>

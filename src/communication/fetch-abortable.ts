@@ -7,7 +7,7 @@ export function fetchAbortable<T>(
   url: string,
   controllerRef: RefObject<AbortControllerState>,
   onSuccess: (data: T) => void,
-  onError: (error: string) => void,
+  onError: (error: string, retry: () => void) => void,
 ): void {
   if (controllerRef.current) {
     controllerRef.current.abort("Previous request contains stale data");
@@ -31,7 +31,7 @@ export function fetchAbortable<T>(
           return;
         }
         const message = error instanceof Error ? error.message : String(error);
-        onError(message);
+        onError(message, () => attempt(false));
       })
       .finally(function () {
         if (controllerRef.current === controller) {

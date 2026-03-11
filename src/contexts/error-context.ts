@@ -2,7 +2,8 @@ import { createContext } from 'react';
 
 const ErrorContext = createContext({
   error: "",
-  setError: (_: string) => {
+  retry: null as (() => void) | null,
+  setError: (_error: string, _retry?: () => void) => {
     // Empty by design
   }
 });
