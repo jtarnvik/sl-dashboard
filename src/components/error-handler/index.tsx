@@ -19,13 +19,13 @@ export function ErrorHandler() {
   }
 
   return (
-    <div className="flex items-center p-4 text-red-800 border-t-4 border-red-300 bg-red-50 rounded-lg"
+    <div className="flex items-center px-4 py-3 bg-red-50 border border-red-200 rounded-lg shadow text-gray-800"
          role="alert">
-      <div className="ms-3 text-sm font-medium flex items-center gap-3">
+      <div className="text-sm flex items-center gap-3 flex-1">
         <span>{error}</span>
         {retry && (
           <button type="button"
-                  className="underline hover:no-underline font-semibold"
+                  className="text-[#184fc2] underline hover:no-underline font-medium shrink-0"
                   onClick={retryAndDismiss}
           >
             Prova igen
@@ -33,7 +33,7 @@ export function ErrorHandler() {
         )}
       </div>
       <button type="button"
-              className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8"
+              className="ml-3 text-gray-400 hover:text-gray-600 shrink-0"
               onClick={dismiss}
       >
         <RxCross2 className="w-4 h-4" />
