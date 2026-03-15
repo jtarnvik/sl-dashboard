@@ -1,4 +1,5 @@
-import {useCallback, useContext, useEffect, useImperativeHandle, useRef, useState} from "react";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
+import {MdRefresh} from "react-icons/md";
 import {DateTime, Duration} from "luxon";
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
@@ -20,11 +21,10 @@ import "./index.css";
 import ErrorContext from "../../../contexts/error-context.ts";
 
 type Props = {
-  performManualUpdate?: React.Ref<ScheduleOperations>,
   stopPoint16Chars: string
 }
 
-export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
+export function Departures({stopPoint16Chars}: Props) {
   const {inDebugMode} = useContext(InDebugModeContext);
   const {setError} = useContext(ErrorContext);
 
@@ -95,10 +95,6 @@ export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
 
   useVisibility({onVisible: updateDepartures});
 
-  function manualUpdate() {
-    updateDepartures();
-  }
-
   useEffect(() => {
     updateDepartures();
     const intervalId = setInterval(() => {
@@ -111,10 +107,6 @@ export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
     const intervalId = setInterval(updateDiffSinceLatUpdated, 1000);
     return () => clearInterval(intervalId);
   }, [updateDiffSinceLatUpdated]);
-
-  useImperativeHandle(performManualUpdate, () => ({
-    manualUpdate: manualUpdate,
-  }));
 
   function handleLegend() {
     setLegendOpen(true);
@@ -164,6 +156,7 @@ export function Departures({performManualUpdate, stopPoint16Chars}: Props) {
         {inDebugMode &&
           <SLButton onClick={handleJSON} thin>JSON</SLButton>
         }
+        <SLButton onClick={updateDepartures} thin><MdRefresh className="size-4" /></SLButton>
         <SLButton onClick={handleLegend} thin>Symboler</SLButton>
       </div>
       <ModalDialog

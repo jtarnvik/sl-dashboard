@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {ErrorBoundary} from "react-error-boundary";
 import useLocalStorageState from 'use-local-storage-state';
 import {SITE_SKOGSLOPARVAGEN_16_CHAR, URL_BACKEND_GET_CHECK_AUTH} from "./communication/constant.ts";
@@ -18,8 +18,7 @@ import {User} from "./types/backend.ts";
 import backend from "./communication/backend.ts";
 
 function App() {
-  const performManualUpdateNextDepartureRef = useRef<ScheduleOperations>(null);
-  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [_user, setUser] = useState<User | null | undefined>(undefined);
   const [error, setErrorMsg] = useState<string>("");
   const [retry, setRetry] = useState<(() => void) | null>(null);
 
@@ -59,12 +58,6 @@ function App() {
     return () => window.removeEventListener("unauthorized", handleUnauthorized);
   }, []);
 
-  function onManualUpdate() {
-    if (performManualUpdateNextDepartureRef.current) {
-      performManualUpdateNextDepartureRef.current.manualUpdate();
-    }
-  }
-
   if (!isPersistent) {
     console.log("Settings data not persistent");
     setError("Settings data not persistent. Please reload the page.");
@@ -74,13 +67,13 @@ function App() {
     <ErrorContext.Provider value={{error, retry, setError}}>
       <div>
         <InDebugModeContext.Provider value={{inDebugMode, setInDebugMode}}>
-          <Navbar onManualUpdate={onManualUpdate} heading={settingsData.stopPointName} />
+          <Navbar heading={settingsData.stopPointName} />
           <ErrorBoundary FallbackComponent={ErrorBoundryFallback}>
             <main>
               <div className="flex flex-col space-y-2 px-2 mb-2">
                 <div style={{minHeight: `${navbarHeight}px`}} />
                 <ErrorHandler></ErrorHandler>
-                <Departures performManualUpdate={performManualUpdateNextDepartureRef} stopPoint16Chars={settingsData.stopPointId} />
+                <Departures stopPoint16Chars={settingsData.stopPointId} />
                 <Routes settingsData={settingsData} />
                 <div className="flex justify-between">
                   <div className="w-1/2">
