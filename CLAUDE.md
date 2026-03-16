@@ -143,7 +143,26 @@ The login() and logout() and checkLoginStatus() methods should feed the context 
 undefined == loading, null == no logged in, state present = user logged in. Hook should return a enum with these states.
 Suggest a solution hook/helper depending on what is appropriate.
 
-3. Create a login button in the navigation bar. Should show a logout button if logged in, login button if not
+3. BE, today approved users are specified in the property app.allowed-emails. This list of emails shall be moved to a database table.
+- The current approved emails shall be entered into the database table.
+- The table shall contain the email and name of the user. The email shall be unique. 
+- For the current test users jtarnvik@gmail.com shall have the name Jesper Tärnvik, and htarnvik@gmail.com shall be Helen Tärnvik.
+- The back end shall be updated to check the database table, instead of the property.
+
+4. FE, Create a login button in the navigation bar. Should show a logout button if logged in, login button if not. 
+- The button shall be located a the right side of the navigation bar. 
+- The button shall use the button component SLButton.
+
+5. BE, If the user is denied login due to the email not being in the approved list, the user email and name
+shall be stored in a new db table.
+
+6. FE/BE, If the user is denied he shall be redirected to a special page with information that s/he is not allowed to login.
+
+7. Send a pushover (specific iOS application) notification if any user is denied login. Requires a pushover API key. 
+
+8. FE, The Not allowed to login page shall be created. It shall contain a ling to a mail page where the user can request access.
+
+9. Investigate/Discuss: When/If shall the google login be changed from test.
                                
 ## About me
 
