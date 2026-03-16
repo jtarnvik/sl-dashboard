@@ -14,6 +14,8 @@ export const URL_GET_DEVIATION_BUS = 'https://deviations.integration.sl.se/v1/me
 export const URL_GET_DEVIATION_SUBWAY = 'https://deviations.integration.sl.se/v1/messages?future=false&line=17&line=18&line=19&transport_mode=METRO';
 
 export const URL_BACKEND_GET_CHECK_AUTH = "/api/auth/me";
+export const URL_BACKEND_LOGIN = "/oauth2/authorization/google";
+export const URL_BACKEND_LOGOUT = "/api/auth/logout";
 
 // Focus stops for deviation filtering (StopArea.id from the deviations API).
 // When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.

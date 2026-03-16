@@ -31,7 +31,6 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 **`App.tsx`** is the root. It manages:
 - `SettingsData` (persisted to localStorage via `use-local-storage-state`) containing the selected stop point ID (16-char SL format) and name
 - Two React contexts: `ErrorContext` (global error string) and `InDebugModeContext` (debug mode toggle)
-- A `useImperativeHandle` ref (`performManualUpdateNextDepartureRef`) that lets the Navbar reload button trigger a manual refresh in `<Departures>`
 
 ### Three main panes
 
@@ -64,7 +63,7 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 - `src/types/sl-responses.ts` — types for the departures API (`Departure`, `Line`, `Journey`, `SlDeparturesResponse`)
 - `src/types/sl-journeyplaner-responses.ts` — types for the journey planner API (`Journey` as trips, `Leg`, `Transportation`)
 - `src/types/deviations.ts` — types for the deviations API
-- `src/types/common.d.ts` — global ambient types (`SettingsData`, `ScheduleOperations`)
+- `src/types/common.d.ts` — global ambient types (`SettingsData`)
 - `src/types/common-constants.ts` — `SETTINGS_KEY` for localStorage
 
 ### `Deviation` type name collision
@@ -114,3 +113,51 @@ Two custom font classes are defined in `tailwind.config.js`:
   - Third-party
   - Local
   - css files.
+
+## Future plans
+
+This front end react application (including its accompanion backend project), 
+is to be considered a learning tool first (both for technologies and how to work with an AI helper), 
+which means that the focus is not on
+quickly shipping features but for me to experiment with and learn new technologies as we go.
+This means that this plan is broken up into small steps, perhaps more steps than is
+strictly neccessary, but which will help me understand both the proposed changes better and improve my 
+AI cooperation skills.
+
+Regarding the actual planned steps:
+Where a preferred approach is given, use it unless there is a clearly better alternative — in that case, 
+propose it before implementing. I may default to Java-style patterns without realizing it, so
+this especially applies to TypeScript and React idioms. 
+   
+FE - means frontend
+BE - means backend
+
+Implementation Steps
+1. Design/discuss: How should the unauthorized state reset work? Implemented as a "unauthorized" event today, is an appropriate
+solution to handle resetting the User LoginState. Present options, recommend one, wait for approval.
+
+2. FE, The rest of the react application need to use the login-state. For example Buttons should later show either "Login" or "Logout",
+but creating these button will be done in later steps.
+Set up a React Context so that the user login state is available in the entire application. In further steps,
+components will behave differently, depending on the login state.
+The login() and logout() and checkLoginStatus() methods should feed the context with user login state.
+
+3. FE, create a hook or a helper function to make it easier to parse the UserState status,
+undefined == loading, null == no logged in, state present = user logged in. Hook should return a enum with these states.
+Suggest a solution hook/helper depending on what is appropriate.
+
+4. Create a login button in the navigation bar. Should show a logout button if logged in, login button if not
+                               
+## About me
+
+I have been a programmer for more than 30 years, the last 20 of them programming i Java. I mostly work with 
+microservices using spring boot. I have also some experiance with writing React web applications.
+I have been creating web application for 7 years using React and Typescript for about 50% of my 
+time at work. But I have probably approached the React/Typescript worlds from the Java/Spring boot
+way of doing things so it is very possible I write web apps more in a java way. I dont mind pointers
+when that is the case.
+
+I work in a enterprice environment and this project is mostly for my personal use, including for a few friends. The front
+end at work is quite restrictive and I want to play around with more new technologies, programing-for-fun if you will. 
+This is also an attempt at learning to code with AI assistance. I am quite convinced that I could solve all issues on 
+my own, but it would take some time and effort.

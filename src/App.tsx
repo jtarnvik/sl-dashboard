@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import {ErrorBoundary} from "react-error-boundary";
 import useLocalStorageState from 'use-local-storage-state';
-import {SITE_SKOGSLOPARVAGEN_16_CHAR, URL_BACKEND_GET_CHECK_AUTH} from "./communication/constant.ts";
+import {SITE_SKOGSLOPARVAGEN_16_CHAR} from "./communication/constant.ts";
 import {ErrorBoundryFallback} from "./components/error-boundry-fallback";
 import {ErrorHandler} from "./components/error-handler";
 import {Navbar} from "./components/navbar";
@@ -15,7 +15,7 @@ import InDebugModeContext from "./contexts/debug-context.ts";
 import {SETTINGS_KEY} from "./types/common-constants.ts";
 import './App.css';
 import {User} from "./types/backend.ts";
-import backend from "./communication/backend.ts";
+import {checkLoginStatus} from "./communication/backend.ts";
 
 function App() {
   const [_user, setUser] = useState<User | null | undefined>(undefined);
@@ -41,19 +41,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        const response = await backend.get(URL_BACKEND_GET_CHECK_AUTH);
-        setUser(response.data);
-      } catch {
-        setUser(null);
-      }
-    }
-
     const handleUnauthorized = () => setUser(null);
     window.addEventListener("unauthorized", handleUnauthorized);
 
-    checkAuth();
+    checkLoginStatus(setError).then(setUser);
 
     return () => window.removeEventListener("unauthorized", handleUnauthorized);
   }, []);
