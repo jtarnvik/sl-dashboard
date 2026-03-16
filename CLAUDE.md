@@ -133,20 +133,17 @@ FE - means frontend
 BE - means backend
 
 Implementation Steps
-1. Design/discuss: How should the unauthorized state reset work? Implemented as a "unauthorized" event today, is an appropriate
-solution to handle resetting the User LoginState. Present options, recommend one, wait for approval.
-
-2. FE, The rest of the react application need to use the login-state. For example Buttons should later show either "Login" or "Logout",
+1. FE, The rest of the react application need to use the login-state. For example Buttons should later show either "Login" or "Logout",
 but creating these button will be done in later steps.
 Set up a React Context so that the user login state is available in the entire application. In further steps,
 components will behave differently, depending on the login state.
 The login() and logout() and checkLoginStatus() methods should feed the context with user login state.
 
-3. FE, create a hook or a helper function to make it easier to parse the UserState status,
+2. FE, create a hook or a helper function to make it easier to parse the UserState status,
 undefined == loading, null == no logged in, state present = user logged in. Hook should return a enum with these states.
 Suggest a solution hook/helper depending on what is appropriate.
 
-4. Create a login button in the navigation bar. Should show a logout button if logged in, login button if not
+3. Create a login button in the navigation bar. Should show a logout button if logged in, login button if not
                                
 ## About me
 
