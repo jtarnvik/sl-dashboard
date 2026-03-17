@@ -12,13 +12,14 @@ import {Settings} from "./components/settings";
 import {SLButton} from "./components/common/sl-button";
 import ErrorContext from "./contexts/error-context.ts";
 import InDebugModeContext from "./contexts/debug-context.ts";
+import UserContext from "./contexts/user-context.ts";
 import {SETTINGS_KEY} from "./types/common-constants.ts";
 import './App.css';
 import {User} from "./types/backend.ts";
-import {checkLoginStatus} from "./communication/backend.ts";
+import {checkLoginStatus, login, logout} from "./communication/backend.ts";
 
 function App() {
-  const [_user, setUser] = useState<User | null | undefined>(undefined);
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [error, setErrorMsg] = useState<string>("");
   const [retry, setRetry] = useState<(() => void) | null>(null);
 
@@ -40,6 +41,11 @@ function App() {
     }
   }, []);
 
+  async function handleLogout() {
+    await logout(setError);
+    setUser(null);
+  }
+
   useEffect(() => {
     const handleUnauthorized = () => setUser(null);
     window.addEventListener("unauthorized", handleUnauthorized);
@@ -56,6 +62,7 @@ function App() {
 
   return (
     <ErrorContext.Provider value={{error, retry, setError}}>
+      <UserContext.Provider value={{user, login, logout: handleLogout}}>
       <div>
         <InDebugModeContext.Provider value={{inDebugMode, setInDebugMode}}>
           <Navbar heading={settingsData.stopPointName} />
@@ -87,6 +94,7 @@ function App() {
           </ErrorBoundary>
         </InDebugModeContext.Provider>
       </div>
+      </UserContext.Provider>
     </ErrorContext.Provider>
   )
 }
