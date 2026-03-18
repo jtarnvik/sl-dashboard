@@ -30,7 +30,7 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 
 **`App.tsx`** is the root. It manages:
 - `SettingsData` (persisted to localStorage via `use-local-storage-state`) containing the selected stop point ID (16-char SL format) and name
-- Two React contexts: `ErrorContext` (global error string) and `InDebugModeContext` (debug mode toggle)
+- Three React contexts: `ErrorContext` (global error string), `InDebugModeContext` (debug mode toggle), and `UserContext` (logged-in user, login/logout functions)
 
 ### Three main panes
 
@@ -57,6 +57,7 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 - **`useVisibility` hook** (`src/hook/use-visibility.ts`): Refreshes data when the browser tab becomes visible again.
 - **`TransportationMode` enum** and `LineCommon` component (`src/components/common/line/`) are the central abstraction for rendering transport icons with line badges. Two variants exist: `LineJourney` (for departures, uses `sl-responses` types) and `LineTransportation` (for journey legs, uses `sl-journeyplaner-responses` types).
 - **`DeviationWrapper`** (`src/components/common/deviation-wrapper/`) wraps departure display text to show deviation indicators inline.
+- **`useUserLoginState` / `useUser`** (`src/hook/use-user.ts`): Custom hooks for consuming `UserContext`. `useUserLoginState()` returns a `UserLoginState` enum (`Loading` | `NotLoggedIn` | `LoggedIn`) derived from the `user` value (`undefined` = loading, `null` = not logged in, `User` object = logged in). `useUser()` returns the full context including `login` and `logout` actions. Prefer these hooks over calling `useContext(UserContext)` directly.
 
 ### Type files
 
@@ -102,6 +103,10 @@ Two custom font classes are defined in `tailwind.config.js`:
 - All components use **named exports**, not default exports (`App.tsx` is the only exception).
 - Each component lives in its own directory with an `index.tsx` entry point.
 
+## File management
+
+When a new file is created and the user has approved it, stage it in git with `git add <file>`.
+
 ## Code Style
 
 - Prefer readability over brevity.
@@ -133,30 +138,26 @@ FE - means frontend
 BE - means backend
 
 Implementation Steps
-1. FE, create a hook or a helper function to make it easier to parse the UserState status,
-undefined == loading, null == no logged in, state present = user logged in. Hook should return a enum with these states.
-Suggest a solution hook/helper depending on what is appropriate.
-
-2. BE, today approved users are specified in the property app.allowed-emails. This list of emails shall be moved to a database table.
+1. BE, today approved users are specified in the property app.allowed-emails. This list of emails shall be moved to a database table.
 - The current approved emails shall be entered into the database table.
 - The table shall contain the email and name of the user. The email shall be unique.
 - For the current test users jtarnvik@gmail.com shall have the name Jesper Tärnvik, and htarnvik@gmail.com shall be Helen Tärnvik.
 - The back end shall be updated to check the database table, instead of the property.
 
-3. FE, Create a login button in the navigation bar. Should show a logout button if logged in, login button if not.
+2. FE, Create a login button in the navigation bar. Should show a logout button if logged in, login button if not.
 - The button shall be located a the right side of the navigation bar.
 - The button shall use the button component SLButton.
 
-4. BE, If the user is denied login due to the email not being in the approved list, the user email and name
+3. BE, If the user is denied login due to the email not being in the approved list, the user email and name
 shall be stored in a new db table.
 
-5. FE/BE, If the user is denied he shall be redirected to a special page with information that s/he is not allowed to login.
+4. FE/BE, If the user is denied he shall be redirected to a special page with information that s/he is not allowed to login.
 
-6. Send a pushover (specific iOS application) notification if any user is denied login. Requires a pushover API key.
+5. Send a pushover (specific iOS application) notification if any user is denied login. Requires a pushover API key.
 
-7. FE, The Not allowed to login page shall be created. It shall contain a ling to a mail page where the user can request access.
+6. FE, The Not allowed to login page shall be created. It shall contain a ling to a mail page where the user can request access.
 
-8. Investigate/Discuss: When/If shall the google login be changed from test.
+7. Investigate/Discuss: When/If shall the google login be changed from test.
                                
 ## About me
 
