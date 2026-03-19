@@ -21,6 +21,8 @@ export function Navbar({heading}: Props) {
     }
   }
 
+  const loginEnabled = import.meta.env.VITE_FEATURE_LOGIN === 'true';
+
   return (
     <nav
       className="bg-[#2870f0] fixed w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
@@ -31,9 +33,11 @@ export function Navbar({heading}: Props) {
           {heading}
           </span>
         </div>
-        <SLButton onClick={handleAuthButton} disabled={isLoading}>
-          {isLoggedIn ? "Logga ut" : "Logga in"}
-        </SLButton>
+        {loginEnabled && (
+          <SLButton onClick={handleAuthButton} disabled={isLoading}>
+            {isLoggedIn ? "Logga ut" : "Logga in"}
+          </SLButton>
+        )}
       </div>
     </nav>
   );

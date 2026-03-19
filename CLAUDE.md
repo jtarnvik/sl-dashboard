@@ -158,8 +158,6 @@ or are there better alternatives?
 5. FE, The Not allowed to login page shall be created. It shall contain a ling to a mail page where the user can request access.
 
 6. Investigate/Discuss: When/If shall the google login be changed from test.
-
-7. Me: Remove email variable in Render.
                                
 ## About me
 
