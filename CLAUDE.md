@@ -139,22 +139,32 @@ BE - means backend
 ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
-1. FE, Create a login button in the navigation bar. Should show a logout button if logged in, login button if not.
+1. FE, Create a login button in the navigation bar.
 - The button shall be located a the right side of the navigation bar.
 - The button shall use the button component SLButton.
+- Should show "Logga in" if the user is not logged in, "Logga ut", otherwise. When the state is unknown the text shall be "Logga in", although the button shall be disabled.
 
 2. BE, If the user is denied login due to the email not being in the approved list, the user email and name
 shall be stored in a new db table.
+- Create a denied user table.
+- Store denied user info in the table.
+- Store only users once. But have a column to store a LastLoginAttempt date and time.
 
-3. FE/BE, If the user is denied he shall be redirected to a special page with information that s/he is not allowed to login.
+3. Discuss/design: Whats the best router to use in a single page react app. I am fairly used to "react-router-dom", is that still a valid choice
+or are there better alternatives?
 
-4. Send a pushover (specific iOS application) notification if any user is denied login. Requires a pushover API key.
+4. FE/BE, If the user is denied he shall be redirected to a special page with information that s/he is not allowed to login.
+- Add a router.
+- Create a new folder named views and move the view content from the App component into a new view called Main.
+- Create a new view for a redirect page when the user is denied entry. Explain the denial. Create a button on the page to get back to the main view.
 
-5. FE, The Not allowed to login page shall be created. It shall contain a ling to a mail page where the user can request access.
+5. Send a pushover (specific iOS application) notification if any user is denied login. Requires a pushover API key.
 
-6. Investigate/Discuss: When/If shall the google login be changed from test.
+6. FE, The Not allowed to login page shall be created. It shall contain a ling to a mail page where the user can request access.
 
-7. Me: Remove email variable in Render.
+7. Investigate/Discuss: When/If shall the google login be changed from test.
+
+8. Me: Remove email variable in Render.
                                
 ## About me
 
