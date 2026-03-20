@@ -35,7 +35,7 @@ export async function checkLoginStatus(setError: SetError): Promise<User | null>
 }
 
 export function login(): void {
-  window.location.href = URL_BACKEND_LOGIN;
+  window.location.href = import.meta.env.VITE_API_URL + URL_BACKEND_LOGIN;
 }
 
 export async function logout(setError: SetError): Promise<void> {
