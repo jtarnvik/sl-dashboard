@@ -133,6 +133,10 @@ Regarding the actual planned steps:
 Where a preferred approach is given, use it unless there is a clearly better alternative — in that case, 
 propose it before implementing. I may default to Java-style patterns without realizing it, so
 this especially applies to TypeScript and React idioms. 
+
+Implement only the current step unless told otherwise. Future steps may be read for context and direction, but 
+treat them as provisional — they may change. If the current step requires an implementation decision that a future 
+step would influence, use that step as guidance.
    
 FE - means frontend
 BE - means backend
@@ -141,8 +145,8 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 Implementation Steps
 1. BE, If the user is denied login due to the email not being in the approved list, the user email and name
 shall be stored in a new db table.
-- Create a denied user table.
-- Store denied user info in the table.
+- Create a pending user table.
+- Store pending user info in the table.
 - Store only users once. But have a column to store a LastLoginAttempt date and time which should be updated on new logins.
 
 2. Discuss/design: Whats the best router to use in a single page react app. I am fairly used to "react-router-dom", is that still a valid choice
@@ -151,14 +155,72 @@ or are there better alternatives?
 3. FE/BE, If the user is denied he shall be redirected to a special page with information that s/he is not allowed to login.
 - Add a router.
 - Create a new folder named views and move the view content from the App component into a new view called Main.
-- Create a new view for a redirect page when the user is denied entry. Explain the denial. Create a button on the page to get back to the main view.
+- Create a new view for a redirect page when the user is denied entry. 
+- The new view can be empty except for simple denied info (in swedish) and a a button on the page to get back to the main view, this will be expanded later.
 
-4. Send a pushover (specific iOS application) notification if any user is denied login. Requires a pushover API key.
+4. Send a pushover (specific iOS application, https://pushover.net/, documentation: https://pushover.net/api) 
+notification if any user is denied login. Requires a pushover API key. 
 
-5. FE, The Not allowed to login page shall be created. It shall contain a ling to a mail page where the user can request access.
+5. FE, The Not allowed to login page shall be created. It shall contain a link to a mail page where the user can request access.
+- Explain the denial. Explanation "Endast godkända användare får logga in, ansök om godkännande nedan."
 
 6. Investigate/Discuss: When/If shall the google login be changed from test.
-                               
+
+6,5. Investigate/Discuss: Which roles are needed for the app. I want an adminsitrator role, do we need a user role?
+Or is it enough with everybode else not havinga role? Is it logical to assume more roles will be implemented later, ie, 
+should a db column with roles be ROLE or ROLES?
+
+8. BE, Change the user table to include a ROLES column. 
+- Add the ROLE ADMIN to jtarnvik@gmail.com
+- Set up the role in Spring Security. I've seen this done in a few different ways, my goto would be this
+```java
+@Bean
+public OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
+  OidcUserService delegate = new OidcUserService();
+  return request -> {
+    OidcUser oidcUser = delegate.loadUser(request);
+    String email = oidcUser.getEmail();
+
+    AppUser appUser = appUserRepository.findByEmail(email)
+            .orElseThrow();
+
+    Set<GrantedAuthority> authorities = new HashSet<>(oidcUser.getAuthorities());
+    authorities.add(new SimpleGrantedAuthority("ROLE_" + appUser.getRole()));
+
+    return new DefaultOidcUser(authorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
+  };
+}
+```
+Is there a better way?
+
+9. Design/Discuss:
+- We now have three differnent types of APIs
+  - Completely open, eg ping
+  - Open to logged in users
+  - Open to logged in users with a specific role.
+Should the APIs be sorted by type in different packages or are the to restricitive? 
+Should the general security be used eg something like 
+```java
+.requestMatchers("/api/admin/**").hasRole("ADMIN")
+.requestMatchers("/api/protected/**").hasRole("USER")
+```
+or is 
+```java
+@GetMapping("/users")
+@PreAuthorize("hasRole('ADMIN')")
+public List<AppUser> listUsers() { ... }
+```
+better?
+  
+10. BE, Should the API types be sorted into their own folder by type?
+
+11, BE/FE, if an adminsitrator is logged in, show a menu with links to the admin pages.
+- Create a new menu component.
+- Create a new admin page component.
+- Create a new admin page component for the user list.
+- Make it possible to allow pending users to become a logged in user.
+
+
 ## About me
 
 I have been a programmer for more than 30 years, the last 20 of them programming i Java. I mostly work with 
