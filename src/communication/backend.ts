@@ -1,5 +1,5 @@
 import axios from "axios";
-import {URL_BACKEND_GET_CHECK_AUTH, URL_BACKEND_LOGIN, URL_BACKEND_LOGOUT} from "./constant.ts";
+import {URL_BACKEND_GET_CHECK_AUTH, URL_BACKEND_LOGIN, URL_BACKEND_LOGOUT, URL_BACKEND_NOTIFICATION_TEST} from "./constant.ts";
 import {User} from "../types/backend.ts";
 
 const backend = axios.create({
@@ -43,5 +43,13 @@ export async function logout(setError: SetError): Promise<void> {
     await backend.post(URL_BACKEND_LOGOUT);
   } catch {
     setError("Kunde inte logga ut.");
+  }
+}
+
+export async function sendTestNotification(setError: SetError): Promise<void> {
+  try {
+    await backend.post(URL_BACKEND_NOTIFICATION_TEST);
+  } catch {
+    setError("Kunde inte skicka testavisering.");
   }
 }

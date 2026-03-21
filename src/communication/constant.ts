@@ -16,6 +16,7 @@ export const URL_GET_DEVIATION_SUBWAY = 'https://deviations.integration.sl.se/v1
 export const URL_BACKEND_GET_CHECK_AUTH = "/api/auth/me";
 export const URL_BACKEND_LOGIN = "/oauth2/authorization/google";
 export const URL_BACKEND_LOGOUT = "/api/auth/logout";
+export const URL_BACKEND_NOTIFICATION_TEST = "/api/protected/notification/test";
 
 // Focus stops for deviation filtering (StopArea.id from the deviations API).
 // When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.
