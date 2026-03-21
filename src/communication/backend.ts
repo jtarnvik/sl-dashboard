@@ -1,5 +1,5 @@
 import axios from "axios";
-import {URL_BACKEND_GET_CHECK_AUTH, URL_BACKEND_LOGIN, URL_BACKEND_LOGOUT, URL_BACKEND_NOTIFICATION_TEST} from "./constant.ts";
+import {URL_BACKEND_ACCESS_REQUEST, URL_BACKEND_GET_CHECK_AUTH, URL_BACKEND_LOGIN, URL_BACKEND_LOGOUT, URL_BACKEND_NOTIFICATION_TEST} from "./constant.ts";
 import {User} from "../types/backend.ts";
 
 const backend = axios.create({
@@ -51,5 +51,15 @@ export async function sendTestNotification(setError: SetError): Promise<void> {
     await backend.post(URL_BACKEND_NOTIFICATION_TEST);
   } catch {
     setError("Kunde inte skicka testavisering.");
+  }
+}
+
+export async function requestAccess(email: string, message: string, setError: SetError): Promise<boolean> {
+  try {
+    await backend.post(URL_BACKEND_ACCESS_REQUEST, { email, message });
+    return true;
+  } catch {
+    setError("Kunde inte skicka ansökan. Försök igen senare.");
+    return false;
   }
 }

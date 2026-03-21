@@ -143,8 +143,25 @@ BE - means backend
 ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
-1. FE, The Not allowed to login page shall be created. It shall contain a link to a mail page where the user can request access.
-- Explain the denial. Explanation "Endast godkända användare får logga in, ansök om godkännande nedan."
+1. BE/FE, Implement the access request flow for denied users.
+
+Backend:
+- Create a new `access_request` table with columns: id, email, message, create_date, latest_update.
+- Create a new Liquibase changeset for the table.
+- Create a new public endpoint `POST /api/public/access-request` accepting `{ email, message }`.
+  - If the email does not exist in `pending_user`, silently drop the request (return 200).
+  - If the email already has a row in `access_request`, silently drop it (return 200).
+  - Otherwise, save the request and send a Pushover notification with the email and message.
+- On denied login, pass the email in the redirect: `/#/denied?email=user@example.com`.
+
+Frontend:
+- Create the Denied view (currently a placeholder). It shall:
+  - Show the explanation: "Endast godkända användare får logga in, ansök om godkännande nedan."
+  - Read the `email` query parameter from the URL and pre-fill the form.
+  - Show a form with a pre-filled (but editable) email field and an optional message field.
+  - On submit, POST to `/api/public/access-request`.
+  - After submission show a confirmation message (no redirect), and disable the form, show ing the message "Ansökan skickad" eller likanden.
+  - Include a button to return to the main view.
 
 2. Investigate/Discuss: When/If shall the google login be changed from test.
 
