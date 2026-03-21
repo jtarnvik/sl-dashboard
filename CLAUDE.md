@@ -143,28 +143,19 @@ BE - means backend
 ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
-1. Discuss/design: Whats the best router to use in a single page react app. I am fairly used to "react-router-dom", is that still a valid choice
-or are there better alternatives?
-
-2. FE/BE, If the user is denied he shall be redirected to a special page with information that s/he is not allowed to login.
-- Add a router.
-- Create a new folder named views and move the view content from the App component into a new view called Main.
-- Create a new view for a redirect page when the user is denied entry.
-- The new view can be empty except for simple denied info (in swedish) and a a button on the page to get back to the main view, this will be expanded later.
-
-3. BE, Send a pushover (specific iOS application, https://pushover.net/, documentation: https://pushover.net/api)
+1. BE, Send a pushover (specific iOS application, https://pushover.net/, documentation: https://pushover.net/api)
 notification if any user is denied login. Requires a pushover API key.
 
-4. FE, The Not allowed to login page shall be created. It shall contain a link to a mail page where the user can request access.
+2. FE, The Not allowed to login page shall be created. It shall contain a link to a mail page where the user can request access.
 - Explain the denial. Explanation "Endast godkända användare får logga in, ansök om godkännande nedan."
 
-5. Investigate/Discuss: When/If shall the google login be changed from test.
+3. Investigate/Discuss: When/If shall the google login be changed from test.
 
-6. Investigate/Discuss: Which roles are needed for the app. I want an adminsitrator role, do we need a user role?
+4. Investigate/Discuss: Which roles are needed for the app. I want an adminsitrator role, do we need a user role?
 Or is it enough with everybode else not havinga role? Is it logical to assume more roles will be implemented later, ie,
 should a db column with roles be ROLE or ROLES?
 
-7. BE, Change the user table to include a ROLES column.
+5. BE, Change the user table to include a ROLES column.
 - Add the ROLE ADMIN to jtarnvik@gmail.com
 - Set up the role in Spring Security. I've seen this done in a few different ways, my goto would be this
 ```java
@@ -187,7 +178,7 @@ public OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
 ```
 Is there a better way?
 
-8. Design/Discuss:
+6. Design/Discuss:
 - We now have three differnent types of APIs
   - Completely open, eg ping
   - Open to logged in users
@@ -206,9 +197,9 @@ public List<AppUser> listUsers() { ... }
 ```
 better?
 
-9. BE, Should the API types be sorted into their own folder by type?
+7. BE, Should the API types be sorted into their own folder by type?
 
-10. BE/FE, if an adminsitrator is logged in, show a menu with links to the admin pages.
+8. BE/FE, if an adminsitrator is logged in, show a menu with links to the admin pages.
 - Create a new menu component.
 - Create a new admin page component.
 - Create a new admin page component for the user list.
