@@ -143,33 +143,11 @@ BE - means backend
 ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
-1. BE/FE, Implement the access request flow for denied users.
-
-Backend:
-- Create a new `access_request` table with columns: id, email, message, create_date, latest_update.
-- Create a new Liquibase changeset for the table.
-- Create a new public endpoint `POST /api/public/access-request` accepting `{ email, message }`.
-  - If the email does not exist in `pending_user`, silently drop the request (return 200).
-  - If the email already has a row in `access_request`, silently drop it (return 200).
-  - Otherwise, save the request and send a Pushover notification with the email and message.
-- On denied login, pass the email in the redirect: `/#/denied?email=user@example.com`.
-
-Frontend:
-- Create the Denied view (currently a placeholder). It shall:
-  - Show the explanation: "Endast godkända användare får logga in, ansök om godkännande nedan."
-  - Read the `email` query parameter from the URL and pre-fill the form.
-  - Show a form with a pre-filled (but editable) email field and an optional message field.
-  - On submit, POST to `/api/public/access-request`.
-  - After submission show a confirmation message (no redirect), and disable the form, show ing the message "Ansökan skickad" eller likanden.
-  - Include a button to return to the main view.
-
-2. Investigate/Discuss: When/If shall the google login be changed from test.
-
-3. Investigate/Discuss: Which roles are needed for the app. I want an adminsitrator role, do we need a user role?
+1. Investigate/Discuss: Which roles are needed for the app. I want an adminsitrator role, do we need a user role?
 Or is it enough with everybode else not havinga role? Is it logical to assume more roles will be implemented later, ie,
 should a db column with roles be ROLE or ROLES?
 
-4. BE, Change the user table to include a ROLES column.
+2. BE, Change the user table to include a ROLES column.
 - Add the ROLE ADMIN to jtarnvik@gmail.com
 - Set up the role in Spring Security. I've seen this done in a few different ways, my goto would be this
 ```java
@@ -192,13 +170,23 @@ public OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
 ```
 Is there a better way?
 
-5. Design/Discuss:
+3. BE/FE, if an adminsitrator is logged in, show a menu with links to the admin pages.
+- Create a new menu component.
+- Create a new admin page component.
+- Create a new admin page component for the user list.
+- Make it possible to allow pending users to become a logged in user.
+
+4. Investigate/Discuss: When/If shall the google login be changed from test.
+
+5. BE, Should the API types be sorted into their own folder by type?
+
+6. Design/Discuss:
 - We now have three differnent types of APIs
   - Completely open, eg ping
   - Open to logged in users
   - Open to logged in users with a specific role.
-Should the APIs be sorted by type in different packages or are the to restricitive?
-Should the general security be used eg something like
+    Should the APIs be sorted by type in different packages or are the to restricitive?
+    Should the general security be used eg something like
 ```java
 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 .requestMatchers("/api/protected/**").hasRole("USER")
@@ -210,14 +198,6 @@ or is
 public List<AppUser> listUsers() { ... }
 ```
 better?
-
-6. BE, Should the API types be sorted into their own folder by type?
-
-7. BE/FE, if an adminsitrator is logged in, show a menu with links to the admin pages.
-- Create a new menu component.
-- Create a new admin page component.
-- Create a new admin page component for the user list.
-- Make it possible to allow pending users to become a logged in user.
 
 ## Issues
 
