@@ -152,7 +152,7 @@ or are there better alternatives?
 - Create a new view for a redirect page when the user is denied entry.
 - The new view can be empty except for simple denied info (in swedish) and a a button on the page to get back to the main view, this will be expanded later.
 
-3. Send a pushover (specific iOS application, https://pushover.net/, documentation: https://pushover.net/api)
+3. BE, Send a pushover (specific iOS application, https://pushover.net/, documentation: https://pushover.net/api)
 notification if any user is denied login. Requires a pushover API key.
 
 4. FE, The Not allowed to login page shall be created. It shall contain a link to a mail page where the user can request access.
