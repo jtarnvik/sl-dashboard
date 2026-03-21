@@ -143,44 +143,17 @@ BE - means backend
 ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
-1. Investigate/Discuss: Which roles are needed for the app. I want an adminsitrator role, do we need a user role?
-Or is it enough with everybode else not havinga role? Is it logical to assume more roles will be implemented later, ie,
-should a db column with roles be ROLE or ROLES?
-
-2. BE, Change the user table to include a ROLES column.
-- Add the ROLE ADMIN to jtarnvik@gmail.com
-- Set up the role in Spring Security. I've seen this done in a few different ways, my goto would be this
-```java
-@Bean
-public OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
-  OidcUserService delegate = new OidcUserService();
-  return request -> {
-    OidcUser oidcUser = delegate.loadUser(request);
-    String email = oidcUser.getEmail();
-
-    AppUser appUser = appUserRepository.findByEmail(email)
-            .orElseThrow();
-
-    Set<GrantedAuthority> authorities = new HashSet<>(oidcUser.getAuthorities());
-    authorities.add(new SimpleGrantedAuthority("ROLE_" + appUser.getRole()));
-
-    return new DefaultOidcUser(authorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
-  };
-}
-```
-Is there a better way?
-
-3. BE/FE, if an adminsitrator is logged in, show a menu with links to the admin pages.
+1. BE/FE, if an adminsitrator is logged in, show a menu with links to the admin pages.
 - Create a new menu component.
 - Create a new admin page component.
 - Create a new admin page component for the user list.
 - Make it possible to allow pending users to become a logged in user.
 
-4. Investigate/Discuss: When/If shall the google login be changed from test.
+2. Investigate/Discuss: When/If shall the google login be changed from test.
 
-5. BE, Should the API types be sorted into their own folder by type?
+3. BE, Should the API types be sorted into their own folder by type?
 
-6. Design/Discuss:
+4. Design/Discuss:
 - We now have three differnent types of APIs
   - Completely open, eg ping
   - Open to logged in users
