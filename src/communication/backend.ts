@@ -9,7 +9,6 @@ import {
   URL_BACKEND_GET_CHECK_AUTH,
   URL_BACKEND_LOGIN,
   URL_BACKEND_LOGOUT,
-  URL_BACKEND_NOTIFICATION_TEST,
 } from "./constant.ts";
 import {AccessRequestItem, AllowedUserItem, User} from "../types/backend.ts";
 
@@ -57,13 +56,6 @@ export async function logout(setError: SetError): Promise<void> {
   }
 }
 
-export async function sendTestNotification(setError: SetError): Promise<void> {
-  try {
-    await backend.post(URL_BACKEND_NOTIFICATION_TEST);
-  } catch {
-    setError("Kunde inte skicka testavisering.");
-  }
-}
 
 export async function requestAccess(email: string, message: string, setError: SetError): Promise<boolean> {
   try {

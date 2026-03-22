@@ -12,7 +12,6 @@ import ErrorContext from '../contexts/error-context.ts';
 import InDebugModeContext from '../contexts/debug-context.ts';
 import PageTitleContext from '../contexts/page-title-context.ts';
 import { SETTINGS_KEY } from '../types/common-constants.ts';
-import { sendTestNotification } from '../communication/backend.ts';
 
 export function Main() {
   const { setError } = useContext(ErrorContext);
@@ -52,9 +51,6 @@ export function Main() {
           <div className="px-2 mb-2 flex gap-2">
             <SLButton thin onClick={() => setError("Testfel: något gick snett.", () => { /* no-op retry */ })}>
               Utlös testfel
-            </SLButton>
-            <SLButton thin onClick={() => sendTestNotification(setError)}>
-              Testa avisering
             </SLButton>
           </div>
         )}
