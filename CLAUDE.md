@@ -144,47 +144,43 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. FE — Refactor the menu parts of the navbar into its own component.
+1. FE — Design/Discuss: Routed application structure. Today the routing lives in `App.tsx`, with a Navbar in every view. Is that the normal way to do things? Or should the Navbar exist once in `App`, with routing only controlling the content below it?
 
 ---
 
-2. FE — Design/Discuss: Routed application structure. Today the routing lives in `App.tsx`, with a Navbar in every view. Is that the normal way to do things? Or should the Navbar exist once in `App`, with routing only controlling the content below it?
+2. BE — DTO naming convention. Classes used as DTOs (including response records) should be named with a `Dto` suffix, or not — what is idiomatic in Spring Boot? Add a rule to the backend CLAUDE.md once decided.
 
 ---
 
-3. BE — DTO naming convention. Classes used as DTOs (including response records) should be named with a `Dto` suffix, or not — what is idiomatic in Spring Boot? Add a rule to the backend CLAUDE.md once decided.
+3. BE — Design/Discuss: Should there be a dedicated `dto` package?
 
 ---
 
-4. BE — Design/Discuss: Should there be a dedicated `dto` package?
+4. BE — Use MapStruct for entity-to-DTO mapping. Add MapStruct and the MapStruct Lombok extension as dependencies. Add a rule to the backend CLAUDE.md.
 
 ---
 
-5. BE — Use MapStruct for entity-to-DTO mapping. Add MapStruct and the MapStruct Lombok extension as dependencies. Add a rule to the backend CLAUDE.md.
+5. FE — The `backend.ts` communication functions are becoming repetitive. Create a generic fetch helper that accepts a URL and optional payload and returns a typed promise with built-in error handling. Investigate what is idiomatic in a React/TypeScript project.
 
 ---
 
-6. FE — The `backend.ts` communication functions are becoming repetitive. Create a generic fetch helper that accepts a URL and optional payload and returns a typed promise with built-in error handling. Investigate what is idiomatic in a React/TypeScript project.
+6. FE — File naming: rename admin view files to kebab-case. `ExistingUsers.tsx` → `existing-users.tsx`, `PendingUsers.tsx` → `pending-users.tsx`.
 
 ---
 
-7. FE — File naming: rename admin view files to kebab-case. `ExistingUsers.tsx` → `existing-users.tsx`, `PendingUsers.tsx` → `pending-users.tsx`.
+7. FE — Shared user row component and action enum. Create a reusable component for a user row, and a component for the action buttons that takes an enum argument controlling which actions are active.
 
 ---
 
-8. FE — Shared user row component and action enum. Create a reusable component for a user row, and a component for the action buttons that takes an enum argument controlling which actions are active.
+8. FE — Add a divider line above "Logga ut" in the hamburger menu.
 
 ---
 
-9. FE — Add a divider line above "Logga ut" in the hamburger menu.
+9. FE — Make the admin views responsive and mobile-friendly. The current table layout does not work on small screens. Investigate a grid-based approach with different layouts per viewport (a list on mobile, table on desktop). Add a rule to CLAUDE.md that the app should be responsive and mobile-first.
 
 ---
 
-10. FE — Make the admin views responsive and mobile-friendly. The current table layout does not work on small screens. Investigate a grid-based approach with different layouts per viewport (a list on mobile, table on desktop). Add a rule to CLAUDE.md that the app should be responsive and mobile-first.
-
----
-
-11. FE/BE — Enhance the admin hamburger menu with pending user count.
+10. FE/BE — Enhance the admin hamburger menu with pending user count.
 
 - Disable the "Väntande användare" menu item if there are no pending access requests.
 - Show a red badge with the count on the hamburger button and the menu item when there are pending requests.
@@ -192,7 +188,7 @@ Implementation Steps
 
 ---
 
-12. Discuss/Decide — Should rejected access request users be notified?
+11. Discuss/Decide — Should rejected access request users be notified?
 
 When an admin rejects an `AccessRequest`, the record is silently deleted. Decide:
 - Should the user receive any notification (e.g. email, or a message shown on next visit)?
@@ -201,7 +197,7 @@ When an admin rejects an `AccessRequest`, the record is silently deleted. Decide
 
 ---
 
-13. BE — Scheduled cleanup of stale pending login attempts.
+12. BE — Scheduled cleanup of stale pending login attempts.
 
 **Context:** `PendingUser` records are created automatically when a user attempts to log in but is not in `AllowedUser` and has not submitted an `AccessRequest`. These records are informational (used for Pushover notifications) and should be periodically purged.
 
@@ -212,15 +208,15 @@ When an admin rejects an `AccessRequest`, the record is silently deleted. Decide
 
 ---
 
-14. Investigate/Discuss: When/If shall the Google login be changed from test mode.
+13. Investigate/Discuss: When/If shall the Google login be changed from test mode.
 
 ---
 
-15. BE — Should the API types be sorted into their own folder by type?
+14. BE — Should the API types be sorted into their own folder by type?
 
 ---
 
-16. Design/Discuss — API authorization strategy.
+15. Design/Discuss — API authorization strategy.
 
 We now have three different types of APIs:
 - Completely open (e.g. `/ping`)
@@ -240,7 +236,7 @@ Or a combination of both?
 
 ---
 
-17. FE/BE — Logged-in users should have their settings stored in the database.
+16. FE/BE — Logged-in users should have their settings stored in the database.
 
 How transparent can this be made relative to the current localStorage-based approach?
 
