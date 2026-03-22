@@ -1,15 +1,15 @@
+import { useContext } from 'react';
+
 import { SLButton } from "../common/sl-button";
 import { useUser, useUserLoginState, UserLoginState } from "../../hook/use-user";
+import PageTitleContext from '../../contexts/page-title-context';
 import { SlLogo } from "./sl-logo";
 import { NavMenu } from "./nav-menu";
 
-type Props = {
-  heading: string
-}
-
-export function Navbar({ heading }: Props) {
+export function Navbar() {
   const loginState = useUserLoginState();
   const { user, login, logout } = useUser();
+  const { heading } = useContext(PageTitleContext);
 
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
   const isLoading = loginState === UserLoginState.Loading;

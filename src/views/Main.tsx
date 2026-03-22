@@ -1,11 +1,8 @@
 import { useContext, useEffect, useState } from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
 import useLocalStorageState from 'use-local-storage-state';
 
 import { SITE_SKOGSLOPARVAGEN_16_CHAR } from '../communication/constant.ts';
-import { ErrorBoundryFallback } from '../components/error-boundry-fallback';
 import { ErrorHandler } from '../components/error-handler';
-import { Navbar } from '../components/navbar';
 import { Departures } from '../components/pane/departures';
 import { Deviations } from '../components/pane/deviations';
 import { Routes } from '../components/pane/routes';
@@ -13,12 +10,13 @@ import { Settings } from '../components/settings';
 import { SLButton } from '../components/common/sl-button';
 import ErrorContext from '../contexts/error-context.ts';
 import InDebugModeContext from '../contexts/debug-context.ts';
+import PageTitleContext from '../contexts/page-title-context.ts';
 import { SETTINGS_KEY } from '../types/common-constants.ts';
 import { sendTestNotification } from '../communication/backend.ts';
 
 export function Main() {
   const { setError } = useContext(ErrorContext);
-  const [navbarHeight, setNavbarHeight] = useState(0);
+  const { setHeading } = useContext(PageTitleContext);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [settingsData, setSettingsData, { removeItem, isPersistent }] = useLocalStorageState<SettingsData>(SETTINGS_KEY, {
     defaultValue: { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen" }
@@ -26,11 +24,8 @@ export function Main() {
   const [inDebugMode, setInDebugMode] = useState<boolean>(false);
 
   useEffect(() => {
-    const navbar = document.querySelector("nav");
-    if (navbar) {
-      setNavbarHeight(navbar.offsetHeight);
-    }
-  }, []);
+    setHeading(settingsData.stopPointName);
+  }, [settingsData.stopPointName]);
 
   if (!isPersistent) {
     console.log("Settings data not persistent");
@@ -39,36 +34,32 @@ export function Main() {
 
   return (
     <InDebugModeContext.Provider value={{ inDebugMode, setInDebugMode }}>
-      <Navbar heading={settingsData.stopPointName} />
-      <ErrorBoundary FallbackComponent={ErrorBoundryFallback}>
-        <main>
-          <div className="flex flex-col space-y-2 px-2 mb-2">
-            <div style={{ minHeight: `${navbarHeight}px` }} />
-            <ErrorHandler></ErrorHandler>
-            <Departures stopPoint16Chars={settingsData.stopPointId} />
-            <Routes settingsData={settingsData} />
-            <div className="flex justify-between">
-              <div className="w-1/2">
-                <Deviations />
-              </div>
-              <div className="flex justify-end items-start">
-                <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
-              </div>
+      <main>
+        <div className="flex flex-col space-y-2 px-2 mb-2">
+          <ErrorHandler></ErrorHandler>
+          <Departures stopPoint16Chars={settingsData.stopPointId} />
+          <Routes settingsData={settingsData} />
+          <div className="flex justify-between">
+            <div className="w-1/2">
+              <Deviations />
+            </div>
+            <div className="flex justify-end items-start">
+              <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
             </div>
           </div>
-          {inDebugMode && (
-            <div className="px-2 mb-2 flex gap-2">
-              <SLButton thin onClick={() => setError("Testfel: något gick snett.", () => { /* no-op retry */ })}>
-                Utlös testfel
-              </SLButton>
-              <SLButton thin onClick={() => sendTestNotification(setError)}>
-                Testa avisering
-              </SLButton>
-            </div>
-          )}
-          <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem} />
-        </main>
-      </ErrorBoundary>
+        </div>
+        {inDebugMode && (
+          <div className="px-2 mb-2 flex gap-2">
+            <SLButton thin onClick={() => setError("Testfel: något gick snett.", () => { /* no-op retry */ })}>
+              Utlös testfel
+            </SLButton>
+            <SLButton thin onClick={() => sendTestNotification(setError)}>
+              Testa avisering
+            </SLButton>
+          </div>
+        )}
+        <Settings settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} applySettings={setSettingsData} removeSettings={removeItem} />
+      </main>
     </InDebugModeContext.Provider>
   );
 }
