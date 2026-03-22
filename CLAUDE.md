@@ -143,34 +143,108 @@ BE - means backend
 ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
-1. BE/FE, if an adminsitrator is logged in, show a menu with links to the admin pages.
-- Create a new menu component.
-- Create a new admin page component.
-- Create a new admin page component for the user list.
-- Make it possible to allow pending users to become a logged in user.
 
-2. Investigate/Discuss: When/If shall the google login be changed from test.
+1. FE — Refactor the menu parts of the navbar into its own component.
 
-3. BE, Should the API types be sorted into their own folder by type?
+---
 
-4. Design/Discuss:
-- We now have three differnent types of APIs
-  - Completely open, eg ping
-  - Open to logged in users
-  - Open to logged in users with a specific role.
-    Should the APIs be sorted by type in different packages or are the to restricitive?
-    Should the general security be used eg something like
+2. FE — Design/Discuss: Routed application structure. Today the routing lives in `App.tsx`, with a Navbar in every view. Is that the normal way to do things? Or should the Navbar exist once in `App`, with routing only controlling the content below it?
+
+---
+
+3. BE — DTO naming convention. Classes used as DTOs (including response records) should be named with a `Dto` suffix, or not — what is idiomatic in Spring Boot? Add a rule to the backend CLAUDE.md once decided.
+
+---
+
+4. BE — Design/Discuss: Should there be a dedicated `dto` package?
+
+---
+
+5. BE — Use MapStruct for entity-to-DTO mapping. Add MapStruct and the MapStruct Lombok extension as dependencies. Add a rule to the backend CLAUDE.md.
+
+---
+
+6. FE — The `backend.ts` communication functions are becoming repetitive. Create a generic fetch helper that accepts a URL and optional payload and returns a typed promise with built-in error handling. Investigate what is idiomatic in a React/TypeScript project.
+
+---
+
+7. FE — File naming: rename admin view files to kebab-case. `ExistingUsers.tsx` → `existing-users.tsx`, `PendingUsers.tsx` → `pending-users.tsx`.
+
+---
+
+8. FE — Shared user row component and action enum. Create a reusable component for a user row, and a component for the action buttons that takes an enum argument controlling which actions are active.
+
+---
+
+9. FE — Add a divider line above "Logga ut" in the hamburger menu.
+
+---
+
+10. FE — Make the admin views responsive and mobile-friendly. The current table layout does not work on small screens. Investigate a grid-based approach with different layouts per viewport (a list on mobile, table on desktop). Add a rule to CLAUDE.md that the app should be responsive and mobile-first.
+
+---
+
+11. FE/BE — Enhance the admin hamburger menu with pending user count.
+
+- Disable the "Väntande användare" menu item if there are no pending access requests.
+- Show a red badge with the count on the hamburger button and the menu item when there are pending requests.
+- May require a new lightweight API endpoint to fetch the pending count.
+
+---
+
+12. Discuss/Decide — Should rejected access request users be notified?
+
+When an admin rejects an `AccessRequest`, the record is silently deleted. Decide:
+- Should the user receive any notification (e.g. email, or a message shown on next visit)?
+- If yes, what channel and what message?
+- If no, is silently ignoring the right UX?
+
+---
+
+13. BE — Scheduled cleanup of stale pending login attempts.
+
+**Context:** `PendingUser` records are created automatically when a user attempts to log in but is not in `AllowedUser` and has not submitted an `AccessRequest`. These records are informational (used for Pushover notifications) and should be periodically purged.
+
+- Add a scheduled Spring job that deletes `PendingUser` rows where `lastLoginAttempt` is older than 7 days.
+- The job should run once per day (e.g. at midnight).
+- Use Spring's `@Scheduled` annotation. Ensure `@EnableScheduling` is active.
+- Classes marked with `@Scheduled` should be treated as incoming requests and located in `port/incoming/scheduled`, on the same level as `port/incoming/rest`. Add this instruction to the backend CLAUDE.md.
+
+---
+
+14. Investigate/Discuss: When/If shall the Google login be changed from test mode.
+
+---
+
+15. BE — Should the API types be sorted into their own folder by type?
+
+---
+
+16. Design/Discuss — API authorization strategy.
+
+We now have three different types of APIs:
+- Completely open (e.g. `/ping`)
+- Open to logged-in users (e.g. `/api/protected/**`)
+- Open to logged-in users with a specific role (e.g. `/api/admin/**`)
+
+Should the APIs be sorted by type into different URL namespaces enforced in `SecurityConfig`:
 ```java
 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 .requestMatchers("/api/protected/**").hasRole("USER")
 ```
-or is
+Or is per-method annotation better:
 ```java
-@GetMapping("/users")
 @PreAuthorize("hasRole('ADMIN')")
-public List<AppUser> listUsers() { ... }
 ```
-better?
+Or a combination of both?
+
+---
+
+17. FE/BE — Logged-in users should have their settings stored in the database.
+
+How transparent can this be made relative to the current localStorage-based approach?
+
+
 
 ## Issues
 

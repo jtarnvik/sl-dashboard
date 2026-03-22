@@ -1,6 +1,17 @@
 import axios from "axios";
-import {URL_BACKEND_ACCESS_REQUEST, URL_BACKEND_GET_CHECK_AUTH, URL_BACKEND_LOGIN, URL_BACKEND_LOGOUT, URL_BACKEND_NOTIFICATION_TEST} from "./constant.ts";
-import {User} from "../types/backend.ts";
+import {
+  URL_BACKEND_ACCESS_REQUEST,
+  URL_BACKEND_ADMIN_ACCESS_REQUESTS,
+  URL_BACKEND_ADMIN_APPROVE_ACCESS_REQUEST,
+  URL_BACKEND_ADMIN_DELETE_USER,
+  URL_BACKEND_ADMIN_REJECT_ACCESS_REQUEST,
+  URL_BACKEND_ADMIN_USERS,
+  URL_BACKEND_GET_CHECK_AUTH,
+  URL_BACKEND_LOGIN,
+  URL_BACKEND_LOGOUT,
+  URL_BACKEND_NOTIFICATION_TEST,
+} from "./constant.ts";
+import {AccessRequestItem, AllowedUserItem, User} from "../types/backend.ts";
 
 const backend = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -60,6 +71,56 @@ export async function requestAccess(email: string, message: string, setError: Se
     return true;
   } catch {
     setError("Kunde inte skicka ansökan. Försök igen senare.");
+    return false;
+  }
+}
+
+export async function fetchAccessRequests(setError: SetError): Promise<AccessRequestItem[]> {
+  try {
+    const response = await backend.get<AccessRequestItem[]>(URL_BACKEND_ADMIN_ACCESS_REQUESTS);
+    return response.data;
+  } catch {
+    setError("Kunde inte hämta väntande förfrågningar.");
+    return [];
+  }
+}
+
+export async function approveAccessRequest(id: number, setError: SetError): Promise<boolean> {
+  try {
+    await backend.post(URL_BACKEND_ADMIN_APPROVE_ACCESS_REQUEST(id));
+    return true;
+  } catch {
+    setError("Kunde inte godkänna förfrågan.");
+    return false;
+  }
+}
+
+export async function rejectAccessRequest(id: number, setError: SetError): Promise<boolean> {
+  try {
+    await backend.delete(URL_BACKEND_ADMIN_REJECT_ACCESS_REQUEST(id));
+    return true;
+  } catch {
+    setError("Kunde inte avslå förfrågan.");
+    return false;
+  }
+}
+
+export async function fetchAllowedUsers(setError: SetError): Promise<AllowedUserItem[]> {
+  try {
+    const response = await backend.get<AllowedUserItem[]>(URL_BACKEND_ADMIN_USERS);
+    return response.data;
+  } catch {
+    setError("Kunde inte hämta användare.");
+    return [];
+  }
+}
+
+export async function deleteAllowedUser(id: number, setError: SetError): Promise<boolean> {
+  try {
+    await backend.delete(URL_BACKEND_ADMIN_DELETE_USER(id));
+    return true;
+  } catch {
+    setError("Kunde inte ta bort användare.");
     return false;
   }
 }

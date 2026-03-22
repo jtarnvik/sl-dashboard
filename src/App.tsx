@@ -7,11 +7,15 @@ import { User } from './types/backend.ts';
 import { checkLoginStatus, login, logout } from './communication/backend.ts';
 import { Denied } from './views/Denied.tsx';
 import { Main } from './views/Main.tsx';
+import { PendingUsers } from './views/admin/PendingUsers.tsx';
+import { ExistingUsers } from './views/admin/ExistingUsers.tsx';
 import './App.css';
 
 const router = createHashRouter([
   { path: '/', element: <Main /> },
   { path: '/denied', element: <Denied /> },
+  { path: '/admin/pending', element: <PendingUsers /> },
+  { path: '/admin/users', element: <ExistingUsers /> },
 ]);
 
 function App() {

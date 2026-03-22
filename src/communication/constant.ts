@@ -19,6 +19,12 @@ export const URL_BACKEND_LOGOUT = "/api/auth/logout";
 export const URL_BACKEND_NOTIFICATION_TEST = "/api/protected/notification/test";
 export const URL_BACKEND_ACCESS_REQUEST = "/api/public/access-request";
 
+export const URL_BACKEND_ADMIN_ACCESS_REQUESTS = "/api/admin/access-requests";
+export const URL_BACKEND_ADMIN_APPROVE_ACCESS_REQUEST = (id: number) => `/api/admin/access-requests/${id}/approve`;
+export const URL_BACKEND_ADMIN_REJECT_ACCESS_REQUEST = (id: number) => `/api/admin/access-requests/${id}`;
+export const URL_BACKEND_ADMIN_USERS = "/api/admin/users";
+export const URL_BACKEND_ADMIN_DELETE_USER = (id: number) => `/api/admin/users/${id}`;
+
 // Focus stops for deviation filtering (StopArea.id from the deviations API).
 // When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.
 // Deviations with no stop scope (line-wide) are always shown.
