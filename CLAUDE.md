@@ -144,7 +144,16 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. BE — Use MapStruct for entity-to-DTO mapping. Add MapStruct and the MapStruct Lombok extension as dependencies. Add a rule to the backend CLAUDE.md.
+1. BE Discuss/Design — Use of MapStruct for entity-to-DTO mapping.
+In this method
+   public ResponseEntity<List<AccessRequestResponse>> listAccessRequests() {
+   List<AccessRequestResponse> responses = adminService.listAccessRequests().stream()
+   .map(r -> new AccessRequestResponse(r.getId(), r.getEmail(), r.getName(), formatDate(r.getCreateDate())))
+   .toList();
+   return ResponseEntity.ok(responses);
+   }
+The object creation could be done with MapStruct. I usually use this package for this kinds of model to DTO conversions. Should we
+start to use it or is it too soon?
 
 ---
 
@@ -228,7 +237,12 @@ Or a combination of both?
 
 How transparent can this be made relative to the current localStorage-based approach?
 
-
+14. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
+One role is project descriprion and one is codestyle choices. Should I split this into three files
+- One project description for backend,
+- One project description for frontend,
+- One codestyle choices file for frontend and backend. Can be used for future projects with ease.
+Where should such a new file be placed? In its own gitrepo?
 
 ## Issues
 
