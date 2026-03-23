@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaCheck, FaTrash } from 'react-icons/fa';
 
 import { approveAccessRequest, fetchAccessRequests, rejectAccessRequest } from '../../communication/backend';
+import { UserRow, UserRowAction } from '../../components/admin/user-row';
 import { SLButton } from '../../components/common/sl-button';
 import { ErrorHandler } from '../../components/error-handler';
 import ErrorContext from '../../contexts/error-context';
@@ -73,27 +73,13 @@ export function PendingUsers() {
                 </thead>
                 <tbody>
                   {requests.map(r => (
-                    <tr key={r.id} className="border-b border-gray-200 last:border-0">
-                      <td className="py-2 pr-4">{r.name}</td>
-                      <td className="py-2 pr-4">{r.email}</td>
-                      <td className="py-2 pr-4">{r.createDate}</td>
-                      <td className="py-2 flex gap-2">
-                        <button
-                          className="text-green-600 hover:text-green-800 p-1"
-                          onClick={() => handleApprove(r.id)}
-                          aria-label="Godkänn"
-                        >
-                          <FaCheck />
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-800 p-1"
-                          onClick={() => handleReject(r.id)}
-                          aria-label="Avslå"
-                        >
-                          <FaTrash />
-                        </button>
-                      </td>
-                    </tr>
+                    <UserRow
+                      key={r.id}
+                      item={r}
+                      actions={[UserRowAction.Approve, UserRowAction.Reject]}
+                      onApprove={() => handleApprove(r.id)}
+                      onReject={() => handleReject(r.id)}
+                    />
                   ))}
                 </tbody>
               </table>

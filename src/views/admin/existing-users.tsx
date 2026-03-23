@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaTrash } from 'react-icons/fa';
 
 import { deleteAllowedUser, fetchAllowedUsers } from '../../communication/backend';
+import { UserRow, UserRowAction } from '../../components/admin/user-row';
 import { SLButton } from '../../components/common/sl-button';
 import { ErrorHandler } from '../../components/error-handler';
 import ErrorContext from '../../contexts/error-context';
@@ -67,23 +67,12 @@ export function ExistingUsers() {
                 </thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u.id} className="border-b border-gray-200 last:border-0">
-                      <td className="py-2 pr-4">{u.name}</td>
-                      <td className="py-2 pr-4">{u.email}</td>
-                      <td className="py-2 pr-4">{u.role ?? '—'}</td>
-                      <td className="py-2 pr-4">{u.createDate}</td>
-                      <td className="py-2">
-                        {u.role !== 'ADMIN' && (
-                          <button
-                            className="text-red-600 hover:text-red-800 p-1"
-                            onClick={() => handleDelete(u.id)}
-                            aria-label="Ta bort"
-                          >
-                            <FaTrash />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                    <UserRow
+                      key={u.id}
+                      item={u}
+                      actions={[UserRowAction.Delete]}
+                      onDelete={() => handleDelete(u.id)}
+                    />
                   ))}
                 </tbody>
               </table>

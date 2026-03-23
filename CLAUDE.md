@@ -144,8 +144,13 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. FE — Shared user row component and action enum. Create a reusable component for a user row,
-and a component for the action buttons that takes an enum argument controlling which actions are active.
+1. FE — Shared user row component. Create a reusable `<UserRow>` component used by both the pending and existing users tables.
+
+- Create a base interface `UserRowItem` with the shared fields (`id`, `email`, `name`, `createDate`). Make `AccessRequestItem` and `AllowedUserItem` extend it. Add `role?: string | null` to `AllowedUserItem`.
+- Create a fine-grained `UserRowAction` enum with values `Approve`, `Reject`, `Delete`. The component takes an `actions: UserRowAction[]` prop controlling which buttons are rendered.
+- The `role` field is optional on the base interface. The row component conditionally renders the role cell when `role` is present on the item — no explicit `showRole` prop needed.
+- Action callbacks are separate optional props: `onApprove`, `onReject`, `onDelete`. Each is `() => void`.
+- The existing guard `u.role !== 'ADMIN'` (which hides the delete button for admins) stays in the component — it is part of the row's rendering logic.
 
 ---
 

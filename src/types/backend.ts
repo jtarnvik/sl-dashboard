@@ -5,17 +5,16 @@ export interface User {
   role?: string;
 }
 
-export interface AccessRequestItem {
+export interface UserRowItem {
   id: number;
   email: string;
   name: string;
   createDate: string;
+  role?: string | null;
 }
 
-export interface AllowedUserItem {
-  id: number;
-  email: string;
-  name: string;
+export interface AccessRequestItem extends UserRowItem {}
+
+export interface AllowedUserItem extends UserRowItem {
   role: string | null;
-  createDate: string;
 }
