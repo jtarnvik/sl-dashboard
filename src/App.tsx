@@ -6,11 +6,11 @@ import PageTitleContext from './contexts/page-title-context.ts';
 import UserContext from './contexts/user-context.ts';
 import { User } from './types/backend.ts';
 import { checkLoginStatus, login, logout } from './communication/backend.ts';
-import { Denied } from './views/Denied.tsx';
-import { Layout } from './views/Layout.tsx';
-import { Main } from './views/Main.tsx';
-import { PendingUsers } from './views/admin/PendingUsers.tsx';
-import { ExistingUsers } from './views/admin/ExistingUsers.tsx';
+import { Denied } from './views/denied.tsx';
+import { Layout } from './views/layout.tsx';
+import { Main } from './views/main.tsx';
+import { PendingUsers } from './views/admin/pending-users.tsx';
+import { ExistingUsers } from './views/admin/existing-users.tsx';
 import './App.css';
 
 const router = createHashRouter([

@@ -144,40 +144,29 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. BE Discuss/Design — Use of MapStruct for entity-to-DTO mapping.
-In this method
-   public ResponseEntity<List<AccessRequestResponse>> listAccessRequests() {
-   List<AccessRequestResponse> responses = adminService.listAccessRequests().stream()
-   .map(r -> new AccessRequestResponse(r.getId(), r.getEmail(), r.getName(), formatDate(r.getCreateDate())))
-   .toList();
-   return ResponseEntity.ok(responses);
-   }
-The object creation could be done with MapStruct. I usually use this package for this kinds of model to DTO conversions. Should we
-start to use it or is it too soon?
+1. FE — File naming: The view file names are inconsistent with the rest of the application, rename view files to kebab-case. `ExistingUsers.tsx` → `existing-users.tsx`,
+`PendingUsers.tsx` → `pending-users.tsx`. The Main and Denied views should be renamed to `main.tsx` and `denied.tsx` in the same fashion.
+Similarly for the Layout component. Unless you can see a compelling reson not to rename everything?
 
 ---
 
-2. FE — The `backend.ts` communication functions are becoming repetitive. Create a generic fetch helper that accepts a URL and optional payload and returns a typed promise with built-in error handling. Investigate what is idiomatic in a React/TypeScript project.
+2. FE — Shared user row component and action enum. Create a reusable component for a user row, 
+and a component for the action buttons that takes an enum argument controlling which actions are active.
 
 ---
 
-3. FE — File naming: rename admin view files to kebab-case. `ExistingUsers.tsx` → `existing-users.tsx`, `PendingUsers.tsx` → `pending-users.tsx`.
+3. FE — Add a divider line above "Logga ut" in the hamburger menu.
 
 ---
 
-4. FE — Shared user row component and action enum. Create a reusable component for a user row, and a component for the action buttons that takes an enum argument controlling which actions are active.
+4. FE — Make the admin views responsive and mobile-friendly. 
+The current table layout does not work on small screens. 
+Investigate a grid-based approach with different layouts per viewport (a list on mobile, table on desktop). 
+Add a rule to CLAUDE.md that the app should be responsive and mobile-first.
 
 ---
 
-5. FE — Add a divider line above "Logga ut" in the hamburger menu.
-
----
-
-6. FE — Make the admin views responsive and mobile-friendly. The current table layout does not work on small screens. Investigate a grid-based approach with different layouts per viewport (a list on mobile, table on desktop). Add a rule to CLAUDE.md that the app should be responsive and mobile-first.
-
----
-
-7. FE/BE — Enhance the admin hamburger menu with pending user count.
+5. FE/BE — Enhance the admin hamburger menu with pending user count.
 
 - Disable the "Väntande användare" menu item if there are no pending access requests.
 - Show a red badge with the count on the hamburger button and the menu item when there are pending requests.
@@ -185,7 +174,7 @@ start to use it or is it too soon?
 
 ---
 
-8. Discuss/Decide — Should rejected access request users be notified?
+6. Discuss/Decide — Should rejected access request users be notified?
 
 When an admin rejects an `AccessRequest`, the record is silently deleted. Decide:
 - Should the user receive any notification (e.g. email, or a message shown on next visit)?
@@ -194,7 +183,7 @@ When an admin rejects an `AccessRequest`, the record is silently deleted. Decide
 
 ---
 
-9. BE — Scheduled cleanup of stale pending login attempts.
+7. BE — Scheduled cleanup of stale pending login attempts.
 
 **Context:** `PendingUser` records are created automatically when a user attempts to log in but is not in `AllowedUser` and has not submitted an `AccessRequest`. These records are informational (used for Pushover notifications) and should be periodically purged.
 
@@ -205,15 +194,15 @@ When an admin rejects an `AccessRequest`, the record is silently deleted. Decide
 
 ---
 
-10. Investigate/Discuss: When/If shall the Google login be changed from test mode.
+8. Investigate/Discuss: When/If shall the Google login be changed from test mode.
 
 ---
 
-11. BE — Should the API types be sorted into their own folder by type?
+9. BE — Should the API types be sorted into their own folder by type?
 
 ---
 
-12. Design/Discuss — API authorization strategy.
+10. Design/Discuss — API authorization strategy.
 
 We now have three different types of APIs:
 - Completely open (e.g. `/ping`)
@@ -233,7 +222,7 @@ Or a combination of both?
 
 ---
 
-13. FE/BE — Logged-in users should have their settings stored in the database.
+11. FE/BE — Logged-in users should have their settings stored in the database.
 
 How transparent can this be made relative to the current localStorage-based approach?
 
