@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { deleteAllowedUser, fetchAllowedUsers } from '../../communication/backend';
-import { UserRow, UserRowAction } from '../../components/admin/user-row';
+import { UserRow, UserRowAction, UserRowHeader } from '../../components/admin/user-row';
 import { SLButton } from '../../components/common/sl-button';
 import { ErrorHandler } from '../../components/error-handler';
 import ErrorContext from '../../contexts/error-context';
@@ -55,27 +55,17 @@ export function ExistingUsers() {
             {users.length === 0 ? (
               <p className="text-gray-600">Inga användare.</p>
             ) : (
-              <table className="w-full text-sm text-gray-800">
-                <thead>
-                  <tr className="border-b border-gray-300">
-                    <th className="text-left py-2 pr-4">Namn</th>
-                    <th className="text-left py-2 pr-4">Email</th>
-                    <th className="text-left py-2 pr-4">Roll</th>
-                    <th className="text-left py-2 pr-4">Datum</th>
-                    <th className="text-left py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map(u => (
-                    <UserRow
-                      key={u.id}
-                      item={u}
-                      actions={[UserRowAction.Delete]}
-                      onDelete={() => handleDelete(u.id)}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              <div>
+                <UserRowHeader />
+                {users.map(u => (
+                  <UserRow
+                    key={u.id}
+                    item={u}
+                    actions={[UserRowAction.Delete]}
+                    onDelete={() => handleDelete(u.id)}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}

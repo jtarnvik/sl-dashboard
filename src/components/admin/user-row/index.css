@@ -1,0 +1,71 @@
+.user-row {
+  display: grid;
+  grid-template-areas:
+    "name  role  actions"
+    "email date  actions";
+  grid-template-columns: 1fr 140px 72px;
+  column-gap: 8px;
+  row-gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  color: #1f2937;
+}
+
+.user-row:last-child {
+  border-bottom: none;
+}
+
+.user-row-name    { grid-area: name; font-weight: 500; }
+.user-row-role    { grid-area: role; }
+.user-row-email   { grid-area: email; color: #6b7280; }
+.user-row-date    { grid-area: date; color: #6b7280; }
+.user-row-actions { grid-area: actions; display: flex; align-items: center; gap: 4px; }
+
+.user-row-role span {
+  display: inline-block;
+  background-color: #e5e7eb;
+  color: #4b5563;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+}
+
+.user-row-header {
+  display: none;
+  border-bottom-color: #d1d5db;
+}
+
+.user-row-header .user-row-name,
+.user-row-header .user-row-role,
+.user-row-header .user-row-email,
+.user-row-header .user-row-date {
+  font-weight: 600;
+  color: #374151;
+}
+
+@media (min-width: 768px) {
+  .user-row-header {
+    display: grid;
+  }
+
+  .user-row {
+    grid-template-areas: "name email role date actions";
+    grid-template-columns: 2fr 3fr 80px 140px 72px;
+    align-items: center;
+    row-gap: 0;
+  }
+
+  .user-row-email { color: #1f2937; }
+  .user-row-date  { color: #1f2937; }
+
+  .user-row-role span {
+    background-color: transparent;
+    color: #1f2937;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    padding: 0;
+    border-radius: 0;
+  }
+}

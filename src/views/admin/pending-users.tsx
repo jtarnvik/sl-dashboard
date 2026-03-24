@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { approveAccessRequest, fetchAccessRequests, rejectAccessRequest } from '../../communication/backend';
-import { UserRow, UserRowAction } from '../../components/admin/user-row';
+import { UserRow, UserRowAction, UserRowHeader } from '../../components/admin/user-row';
 import { SLButton } from '../../components/common/sl-button';
 import { ErrorHandler } from '../../components/error-handler';
 import ErrorContext from '../../contexts/error-context';
@@ -62,27 +62,18 @@ export function PendingUsers() {
             {requests.length === 0 ? (
               <p className="text-gray-600">Inga väntande förfrågningar.</p>
             ) : (
-              <table className="w-full text-sm text-gray-800">
-                <thead>
-                  <tr className="border-b border-gray-300">
-                    <th className="text-left py-2 pr-4">Namn</th>
-                    <th className="text-left py-2 pr-4">Email</th>
-                    <th className="text-left py-2 pr-4">Datum</th>
-                    <th className="text-left py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map(r => (
-                    <UserRow
-                      key={r.id}
-                      item={r}
-                      actions={[UserRowAction.Approve, UserRowAction.Reject]}
-                      onApprove={() => handleApprove(r.id)}
-                      onReject={() => handleReject(r.id)}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              <div>
+                <UserRowHeader />
+                {requests.map(r => (
+                  <UserRow
+                    key={r.id}
+                    item={r}
+                    actions={[UserRowAction.Approve, UserRowAction.Reject]}
+                    onApprove={() => handleApprove(r.id)}
+                    onReject={() => handleReject(r.id)}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}

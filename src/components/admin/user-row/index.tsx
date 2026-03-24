@@ -1,6 +1,7 @@
 import { FaCheck, FaTrash } from 'react-icons/fa';
 
 import { UserRowItem } from '../../../types/backend';
+import './index.css';
 
 export enum UserRowAction {
   Approve,
@@ -16,6 +17,18 @@ type Props = {
   onDelete?: () => void;
 }
 
+export function UserRowHeader() {
+  return (
+    <div className="user-row user-row-header">
+      <div className="user-row-name">Namn</div>
+      <div className="user-row-role">Roll</div>
+      <div className="user-row-email">Email</div>
+      <div className="user-row-date">Datum</div>
+      <div className="user-row-actions"></div>
+    </div>
+  );
+}
+
 export function UserRow({ item, actions, onApprove, onReject, onDelete }: Props) {
   if (actions.includes(UserRowAction.Approve) && onApprove === undefined) {
     throw new Error('UserRow: Approve action requires onApprove callback');
@@ -28,14 +41,14 @@ export function UserRow({ item, actions, onApprove, onReject, onDelete }: Props)
   }
 
   return (
-    <tr className="border-b border-gray-200 last:border-0">
-      <td className="py-2 pr-4">{item.name}</td>
-      <td className="py-2 pr-4">{item.email}</td>
-      {item.role !== undefined && (
-        <td className="py-2 pr-4">{item.role ?? '—'}</td>
-      )}
-      <td className="py-2 pr-4">{item.createDate}</td>
-      <td className="py-2 flex gap-2">
+    <div className="user-row">
+      <div className="user-row-name">{item.name}</div>
+      <div className="user-row-role">
+        {item.role != null && <span>{item.role}</span>}
+      </div>
+      <div className="user-row-email">{item.email}</div>
+      <div className="user-row-date">{item.createDate}</div>
+      <div className="user-row-actions">
         {actions.includes(UserRowAction.Approve) && (
           <button
             className="text-green-600 hover:text-green-800 p-1"
@@ -63,7 +76,7 @@ export function UserRow({ item, actions, onApprove, onReject, onDelete }: Props)
             <FaTrash />
           </button>
         )}
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
