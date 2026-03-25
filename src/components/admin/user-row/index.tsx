@@ -17,11 +17,15 @@ type Props = {
   onDelete?: () => void;
 }
 
-export function UserRowHeader() {
+type HeaderProps = {
+  showRoleLabel?: boolean;
+}
+
+export function UserRowHeader({ showRoleLabel = true }: HeaderProps) {
   return (
     <div className="user-row user-row-header">
       <div className="user-row-name">Namn</div>
-      <div className="user-row-role">Roll</div>
+      <div className="user-row-role">{showRoleLabel ? 'Roll' : ''}</div>
       <div className="user-row-email">Email</div>
       <div className="user-row-date">Datum</div>
       <div className="user-row-actions"></div>
@@ -47,7 +51,10 @@ export function UserRow({ item, actions, onApprove, onReject, onDelete }: Props)
         {item.role != null && <span>{item.role}</span>}
       </div>
       <div className="user-row-email">{item.email}</div>
-      <div className="user-row-date">{item.createDate}</div>
+      <div className="user-row-date">
+        <span className="date-short">{item.createDate.substring(0, 10)}</span>
+        <span className="date-full">{item.createDate}</span>
+      </div>
       <div className="user-row-actions">
         {actions.includes(UserRowAction.Approve) && (
           <button

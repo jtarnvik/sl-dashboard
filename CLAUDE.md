@@ -98,6 +98,12 @@ Two custom font classes are defined in `tailwind.config.js`:
 - `font-signage` — Bitter (serif), used for line number badges to mimic real SL signage
 - `font-sans` — Roboto, the default body font
 
+### Responsive design
+
+The app is mobile-first. Default styles target mobile (iPhone-sized screens). Use `md:` (≥ 768px) and larger breakpoints to adapt for tablet and desktop. Do not write desktop-only styles without a mobile baseline.
+
+For simple spacing or visibility changes, Tailwind responsive prefixes (`md:`, `lg:`) are fine. For complex multi-column layouts where column alignment across rows matters, use `grid-template-areas` in a companion `index.css` file with plain CSS `@media` queries — Tailwind utility classes do not guarantee cross-row column alignment.
+
 ### Component conventions
 
 - All components use **named exports**, not default exports (`App.tsx` is the only exception).
@@ -144,24 +150,11 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. FE — Shared user row component. Create a reusable `<UserRow>` component used by both the pending and existing users tables.
-
-- Create a base interface `UserRowItem` with the shared fields (`id`, `email`, `name`, `createDate`). Make `AccessRequestItem` and `AllowedUserItem` extend it. Add `role?: string | null` to `AllowedUserItem`.
-- Create a fine-grained `UserRowAction` enum with values `Approve`, `Reject`, `Delete`. The component takes an `actions: UserRowAction[]` prop controlling which buttons are rendered.
-- The `role` field is optional on the base interface. The row component conditionally renders the role cell when `role` is present on the item — no explicit `showRole` prop needed.
-- Action callbacks are separate optional props: `onApprove`, `onReject`, `onDelete`. Each is `() => void`.
-- The existing guard `u.role !== 'ADMIN'` (which hides the delete button for admins) stays in the component — it is part of the row's rendering logic.
+1. FE — Show the message as a popup for pending users.   
 
 ---
 
-2. FE — Make the admin views responsive and mobile-friendly.
-The current table layout does not work on small screens.
-Investigate a grid-based approach with different layouts per viewport (a list on mobile, table on desktop).
-Add a rule to CLAUDE.md that the app should be responsive and mobile-first.
-
----
-
-3. FE/BE — Enhance the admin hamburger menu with pending user count.
+2. FE/BE — Enhance the admin hamburger menu with pending user count.
 
 - Disable the "Väntande användare" menu item if there are no pending access requests.
 - Show a red badge with the count on the hamburger button and the menu item when there are pending requests.
@@ -169,16 +162,17 @@ Add a rule to CLAUDE.md that the app should be responsive and mobile-first.
 
 ---
 
-4. Discuss/Decide — Should rejected access request users be notified?
+3. Discuss/Decide — Should rejected access request users be notified?
 
 When an admin rejects an `AccessRequest`, the record is silently deleted. Decide:
 - Should the user receive any notification (e.g. email, or a message shown on next visit)?
 - If yes, what channel and what message?
 - If no, is silently ignoring the right UX?
+- Similarly, should accpted users be notified?
 
 ---
 
-5. BE — Scheduled cleanup of stale pending login attempts.
+4. BE — Scheduled cleanup of stale pending login attempts.
 
 **Context:** `PendingUser` records are created automatically when a user attempts to log in but is not in `AllowedUser` and has not submitted an `AccessRequest`. These records are informational (used for Pushover notifications) and should be periodically purged.
 
@@ -189,15 +183,15 @@ When an admin rejects an `AccessRequest`, the record is silently deleted. Decide
 
 ---
 
-6. Investigate/Discuss: When/If shall the Google login be changed from test mode.
+5. Investigate/Discuss: When/If shall the Google login be changed from test mode.
 
 ---
 
-7. BE — Should the API types be sorted into their own folder by type?
+6. BE — Should the API types be sorted into their own folder by type?
 
 ---
 
-8. Design/Discuss — API authorization strategy.
+7. Design/Discuss — API authorization strategy.
 
 We now have three different types of APIs:
 - Completely open (e.g. `/ping`)
@@ -217,11 +211,11 @@ Or a combination of both?
 
 ---
 
-9. FE/BE — Logged-in users should have their settings stored in the database.
+8. FE/BE — Logged-in users should have their settings stored in the database.
 
 How transparent can this be made relative to the current localStorage-based approach?
 
-10. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
+9. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
 One role is project descriprion and one is codestyle choices. Should I split this into three files
 - One project description for backend,
 - One project description for frontend,

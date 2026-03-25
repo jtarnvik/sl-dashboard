@@ -17,10 +17,13 @@
 }
 
 .user-row-name    { grid-area: name; font-weight: 500; }
-.user-row-role    { grid-area: role; }
+.user-row-role    { grid-area: role; text-align: right; }
+
+.date-short { display: inline; }
+.date-full  { display: none; }
 .user-row-email   { grid-area: email; color: #6b7280; }
-.user-row-date    { grid-area: date; color: #6b7280; }
-.user-row-actions { grid-area: actions; display: flex; align-items: center; gap: 4px; }
+.user-row-date    { grid-area: date; color: #6b7280; text-align: right; }
+.user-row-actions { grid-area: actions; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 
 .user-row-role span {
   display: inline-block;
@@ -58,7 +61,12 @@
   }
 
   .user-row-email { color: #1f2937; }
-  .user-row-date  { color: #1f2937; }
+  .user-row-date  { color: #1f2937; text-align: left; }
+
+  .date-short { display: none; }
+  .date-full  { display: inline; }
+
+  .user-row-role { text-align: left; }
 
   .user-row-role span {
     background-color: transparent;
