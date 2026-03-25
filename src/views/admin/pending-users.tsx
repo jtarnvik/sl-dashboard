@@ -68,7 +68,7 @@ export function PendingUsers() {
                   <UserRow
                     key={r.id}
                     item={r}
-                    actions={[UserRowAction.Approve, UserRowAction.Reject]}
+                    actions={[UserRowAction.ShowMessage, UserRowAction.Approve, UserRowAction.Reject]}
                     onApprove={() => handleApprove(r.id)}
                     onReject={() => handleReject(r.id)}
                   />

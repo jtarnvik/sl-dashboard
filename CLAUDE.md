@@ -150,7 +150,10 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. FE — Show the message as a popup for pending users.   
+1. FE — The pending users may have sent in a message to the admin. This message should be possible to view in the pending users vierw
+THere is a ModalDialog component which can be used to display a message. Show an icon on each line in the pending users view
+that when clicked shows the Modal dialog with the message. Select an icon from react icons to use. Add an operation to the operations
+enum to use..   
 
 ---
 

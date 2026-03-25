@@ -1,9 +1,12 @@
-import { FaCheck, FaTrash } from 'react-icons/fa';
+import { useState } from 'react';
+import { FaCheck, FaComment, FaTrash } from 'react-icons/fa';
 
+import { ModalDialog } from '../../common/modal-dialog';
 import { UserRowItem } from '../../../types/backend';
 import './index.css';
 
 export enum UserRowAction {
+  ShowMessage,
   Approve,
   Reject,
   Delete,
@@ -34,6 +37,8 @@ export function UserRowHeader({ showRoleLabel = true }: HeaderProps) {
 }
 
 export function UserRow({ item, actions, onApprove, onReject, onDelete }: Props) {
+  const [messageOpen, setMessageOpen] = useState(false);
+
   if (actions.includes(UserRowAction.Approve) && onApprove === undefined) {
     throw new Error('UserRow: Approve action requires onApprove callback');
   }
@@ -56,6 +61,15 @@ export function UserRow({ item, actions, onApprove, onReject, onDelete }: Props)
         <span className="date-full">{item.createDate}</span>
       </div>
       <div className="user-row-actions">
+        {actions.includes(UserRowAction.ShowMessage) && item.message && (
+          <button
+            className="text-blue-600 hover:text-blue-800 p-1"
+            onClick={() => setMessageOpen(true)}
+            aria-label="Visa meddelande"
+          >
+            <FaComment />
+          </button>
+        )}
         {actions.includes(UserRowAction.Approve) && (
           <button
             className="text-green-600 hover:text-green-800 p-1"
@@ -84,6 +98,15 @@ export function UserRow({ item, actions, onApprove, onReject, onDelete }: Props)
           </button>
         )}
       </div>
+      {actions.includes(UserRowAction.ShowMessage) && item.message && (
+        <ModalDialog
+          isOpen={messageOpen}
+          onClose={() => setMessageOpen(false)}
+          title={`Meddelande från ${item.name}`}
+        >
+          <p>{item.message}</p>
+        </ModalDialog>
+      )}
     </div>
   );
 }

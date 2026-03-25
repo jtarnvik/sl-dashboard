@@ -11,9 +11,12 @@ export interface UserRowItem {
   name: string;
   createDate: string;
   role?: string | null;
+  message?: string | null;
 }
 
-export interface AccessRequestItem extends UserRowItem {}
+export interface AccessRequestItem extends UserRowItem {
+  message: string | null;
+}
 
 export interface AllowedUserItem extends UserRowItem {
   role: string | null;
