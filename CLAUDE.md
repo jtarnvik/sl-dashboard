@@ -104,6 +104,15 @@ The app is mobile-first. Default styles target mobile (iPhone-sized screens). Us
 
 For simple spacing or visibility changes, Tailwind responsive prefixes (`md:`, `lg:`) are fine. For complex multi-column layouts where column alignment across rows matters, use `grid-template-areas` in a companion `index.css` file with plain CSS `@media` queries — Tailwind utility classes do not guarantee cross-row column alignment.
 
+### Global window events
+
+Custom events dispatched on `window` are used for cross-tree communication between components that have no natural parent-child relationship. When adding a new event, document it here.
+
+| Event name | Dispatched by | Handled by | Purpose |
+|---|---|---|---|
+| `"unauthorized"` | `backend.ts` (Axios response interceptor) | `App.tsx` | Forces logout when any API call returns 401 |
+| `"pendingCountChanged"` | `pending-users.tsx` (after approve/reject) | `NavMenu` | Refreshes the pending access request count badge |
+
 ### Component conventions
 
 - All components use **named exports**, not default exports (`App.tsx` is the only exception).
@@ -150,22 +159,7 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. FE — The pending users may have sent in a message to the admin. This message should be possible to view in the pending users vierw
-THere is a ModalDialog component which can be used to display a message. Show an icon on each line in the pending users view
-that when clicked shows the Modal dialog with the message. Select an icon from react icons to use. Add an operation to the operations
-enum to use..   
-
----
-
-2. FE/BE — Enhance the admin hamburger menu with pending user count.
-
-- Disable the "Väntande användare" menu item if there are no pending access requests.
-- Show a red badge with the count on the hamburger button and the menu item when there are pending requests.
-- May require a new lightweight API endpoint to fetch the pending count.
-
----
-
-3. Discuss/Decide — Should rejected access request users be notified?
+1. Discuss/Decide — Should rejected access request users be notified?
 
 When an admin rejects an `AccessRequest`, the record is silently deleted. Decide:
 - Should the user receive any notification (e.g. email, or a message shown on next visit)?
@@ -175,7 +169,7 @@ When an admin rejects an `AccessRequest`, the record is silently deleted. Decide
 
 ---
 
-4. BE — Scheduled cleanup of stale pending login attempts.
+2. BE — Scheduled cleanup of stale pending login attempts.
 
 **Context:** `PendingUser` records are created automatically when a user attempts to log in but is not in `AllowedUser` and has not submitted an `AccessRequest`. These records are informational (used for Pushover notifications) and should be periodically purged.
 
@@ -186,15 +180,15 @@ When an admin rejects an `AccessRequest`, the record is silently deleted. Decide
 
 ---
 
-5. Investigate/Discuss: When/If shall the Google login be changed from test mode.
+3. Investigate/Discuss: When/If shall the Google login be changed from test mode.
 
 ---
 
-6. BE — Should the API types be sorted into their own folder by type?
+4. BE — Should the API types be sorted into their own folder by type?
 
 ---
 
-7. Design/Discuss — API authorization strategy.
+5. Design/Discuss — API authorization strategy.
 
 We now have three different types of APIs:
 - Completely open (e.g. `/ping`)
@@ -214,11 +208,11 @@ Or a combination of both?
 
 ---
 
-8. FE/BE — Logged-in users should have their settings stored in the database.
+6. FE/BE — Logged-in users should have their settings stored in the database.
 
 How transparent can this be made relative to the current localStorage-based approach?
 
-9. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
+7. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
 One role is project descriprion and one is codestyle choices. Should I split this into three files
 - One project description for backend,
 - One project description for frontend,

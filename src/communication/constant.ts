@@ -19,6 +19,7 @@ export const URL_BACKEND_LOGOUT = "/api/auth/logout";
 export const URL_BACKEND_ACCESS_REQUEST = "/api/public/access-request";
 
 export const URL_BACKEND_ADMIN_ACCESS_REQUESTS = "/api/admin/access-requests";
+export const URL_BACKEND_ADMIN_ACCESS_REQUEST_COUNT = "/api/admin/access-requests/count";
 export const URL_BACKEND_ADMIN_APPROVE_ACCESS_REQUEST = (id: number) => `/api/admin/access-requests/${id}/approve`;
 export const URL_BACKEND_ADMIN_REJECT_ACCESS_REQUEST = (id: number) => `/api/admin/access-requests/${id}`;
 export const URL_BACKEND_ADMIN_USERS = "/api/admin/users";

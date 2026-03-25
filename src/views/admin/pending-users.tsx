@@ -41,6 +41,7 @@ export function PendingUsers() {
     const ok = await approveAccessRequest(id, setError);
     if (ok) {
       setRequests(prev => prev.filter(r => r.id !== id));
+      window.dispatchEvent(new Event('pendingCountChanged'));
     }
   }
 
@@ -48,6 +49,7 @@ export function PendingUsers() {
     const ok = await rejectAccessRequest(id, setError);
     if (ok) {
       setRequests(prev => prev.filter(r => r.id !== id));
+      window.dispatchEvent(new Event('pendingCountChanged'));
     }
   }
 

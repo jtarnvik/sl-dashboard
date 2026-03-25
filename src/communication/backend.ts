@@ -1,6 +1,7 @@
 import axios from "axios";
 import {
   URL_BACKEND_ACCESS_REQUEST,
+  URL_BACKEND_ADMIN_ACCESS_REQUEST_COUNT,
   URL_BACKEND_ADMIN_ACCESS_REQUESTS,
   URL_BACKEND_ADMIN_APPROVE_ACCESS_REQUEST,
   URL_BACKEND_ADMIN_DELETE_USER,
@@ -64,6 +65,15 @@ export async function requestAccess(email: string, message: string, setError: Se
   } catch {
     setError("Kunde inte skicka ansökan. Försök igen senare.");
     return false;
+  }
+}
+
+export async function fetchAccessRequestCount(): Promise<number | null> {
+  try {
+    const response = await backend.get<number>(URL_BACKEND_ADMIN_ACCESS_REQUEST_COUNT);
+    return response.data;
+  } catch {
+    return null;
   }
 }
 
