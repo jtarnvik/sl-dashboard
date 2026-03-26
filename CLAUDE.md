@@ -159,30 +159,23 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. BE — Scheduled cleanup of stale pending login attempts.
-
-**Context:** `PendingUser` records are created automatically when a user attempts to log in but is not in `AllowedUser` and has not submitted an `AccessRequest`. These records are informational (used for Pushover notifications) and should be periodically purged.
-
-- Add a scheduled Spring job that deletes `PendingUser` rows where `lastLoginAttempt` is older than 7 days.
-- The job should run once per day (e.g. at midnight).
-- Use Spring's `@Scheduled` annotation. Ensure `@EnableScheduling` is active.
-- Classes marked with `@Scheduled` should be treated as incoming requests and located in `port/incoming/scheduled`, on the same level as `port/incoming/rest`. Add this instruction to the backend CLAUDE.md.
-
-1.5 BE, the services are grouped not by logical function, but matching controller. Restructure.
-
-1.6 BE, Start adding tests
+1. BE, the services are grouped not by logical function, but matching controller. Restructure.
 
 ---
 
-2. Investigate/Discuss: When/If shall the Google login be changed from test mode.
+2. BE, Start adding tests
 
 ---
 
-3. BE — Should the API types be sorted into their own folder by type?
+3. Investigate/Discuss: When/If shall the Google login be changed from test mode.
 
 ---
 
-4. Design/Discuss — API authorization strategy.
+4. BE — Should the API types be sorted into their own folder by type?
+
+---
+
+5. Design/Discuss — API authorization strategy.
 
 We now have three different types of APIs:
 - Completely open (e.g. `/ping`)
@@ -202,11 +195,11 @@ Or a combination of both?
 
 ---
 
-5. FE/BE — Logged-in users should have their settings stored in the database.
+6. FE/BE — Logged-in users should have their settings stored in the database.
 
 How transparent can this be made relative to the current localStorage-based approach?
 
-6. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
+7. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
 One role is project descriprion and one is codestyle choices. Should I split this into three files
 - One project description for backend,
 - One project description for frontend,
