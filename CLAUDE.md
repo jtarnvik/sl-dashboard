@@ -159,7 +159,10 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. BE, the services are grouped not by logical function, but matching controller. Restructure.
+1. BE, the services are grouped not by logical function, but matching controller. Design a restuctured service layer.
+- Analyse the services and make an suggestion of how to group them.
+- In initial quick look feels like the AdminService particulary needs to be split up.
+- What is a good way to grouo the service logic?
 
 ---
 
