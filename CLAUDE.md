@@ -159,26 +159,32 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. BE, the services are grouped not by logical function, but matching controller. Design a restuctured service layer.
-- Analyse the services and make an suggestion of how to group them.
-- In initial quick look feels like the AdminService particulary needs to be split up.
-- What is a good way to grouo the service logic?
+1. BE, Start adding tests. Add a test for the entire flow 
+- The user is added to the pending access table when no user exists
+- A list of pending users are fetched where the new users should exits
+- The user requests access
+- An entry should exist in the access requests table
+- THe user is granted access, dissapear from the pending list anc access requests list.
+All done throuh rest calls, I assume some validation needs to be done with using the services.
+
+
+---
+              
+1.4 BE, Hide test output.
+
+1,5, BE, Hwo do we handle transactions borders?
 
 ---
 
-2. BE, Start adding tests
+2. Investigate/Discuss: When/If shall the Google login be changed from test mode.
 
 ---
 
-3. Investigate/Discuss: When/If shall the Google login be changed from test mode.
+3. BE — Should the API types be sorted into their own folder by type?
 
 ---
 
-4. BE — Should the API types be sorted into their own folder by type?
-
----
-
-5. Design/Discuss — API authorization strategy.
+4. Design/Discuss — API authorization strategy.
 
 We now have three different types of APIs:
 - Completely open (e.g. `/ping`)
@@ -198,16 +204,20 @@ Or a combination of both?
 
 ---
 
-6. FE/BE — Logged-in users should have their settings stored in the database.
+5. FE/BE — Logged-in users should have their settings stored in the database.
 
 How transparent can this be made relative to the current localStorage-based approach?
 
-7. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
+6. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
 One role is project descriprion and one is codestyle choices. Should I split this into three files
 - One project description for backend,
 - One project description for frontend,
 - One codestyle choices file for frontend and backend. Can be used for future projects with ease.
 Where should such a new file be placed? In its own gitrepo?
+
+7. FE/BE, add AI access to handle deviations
+
+8. FE Better GUI for trips
 
 ## Issues
 
