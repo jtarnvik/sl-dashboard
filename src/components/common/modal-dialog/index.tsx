@@ -7,10 +7,11 @@ type Props = {
   onClose: () => void,
   title: string,
   children: ReactNode,
-  scrollable?: boolean
+  scrollable?: boolean,
+  actions?: ReactNode,
 }
 
-export function ModalDialog({onClose, isOpen, title, children, scrollable = false}: Props) {
+export function ModalDialog({onClose, isOpen, title, children, scrollable = false, actions}: Props) {
   let scrollabelDiv1 = "fixed inset-0 flex w-screen items-center justify-center p-4";
   let scrollabelDiv2 = "";
 
@@ -27,7 +28,8 @@ export function ModalDialog({onClose, isOpen, title, children, scrollable = fals
             <DialogPanel className="max-w-lg space-y-4 border rounded bg-white p-6">
               <DialogTitle className="font-bold">{title}</DialogTitle>
               {children}
-              <div className="w-full flex justify-end">
+              <div className="w-full flex justify-end gap-2">
+                {actions}
                 <SLButton onClick={onClose}>Stäng</SLButton>
               </div>
             </DialogPanel>

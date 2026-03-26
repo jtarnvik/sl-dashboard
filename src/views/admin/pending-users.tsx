@@ -3,12 +3,21 @@ import { useNavigate } from 'react-router-dom';
 
 import { approveAccessRequest, fetchAccessRequests, rejectAccessRequest } from '../../communication/backend';
 import { UserRow, UserRowAction, UserRowHeader } from '../../components/admin/user-row';
+import { ModalDialog } from '../../components/common/modal-dialog';
 import { SLButton } from '../../components/common/sl-button';
 import { ErrorHandler } from '../../components/error-handler';
 import ErrorContext from '../../contexts/error-context';
 import PageTitleContext from '../../contexts/page-title-context';
 import { useUser, useUserLoginState, UserLoginState } from '../../hook/use-user';
 import { AccessRequestItem } from '../../types/backend';
+
+function buildMailtoHref(email: string, name: string): string {
+  const subject = encodeURIComponent('Välkommen till SL Dashboard');
+  const body = encodeURIComponent(
+    `Hej ${name}!\n\nDin ansökan till SL Dashboard har godkänts och du kan nu logga in.`
+  );
+  return `mailto:${email}?subject=${subject}&body=${body}`;
+}
 
 export function PendingUsers() {
   const loginState = useUserLoginState();
@@ -18,6 +27,7 @@ export function PendingUsers() {
   const { setHeading } = useContext(PageTitleContext);
   const [requests, setRequests] = useState<AccessRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approvedUser, setApprovedUser] = useState<AccessRequestItem | null>(null);
 
   useEffect(() => {
     setHeading('Väntande användare');
@@ -37,10 +47,11 @@ export function PendingUsers() {
     });
   }, [loginState, user]);
 
-  async function handleApprove(id: number) {
-    const ok = await approveAccessRequest(id, setError);
+  async function handleApprove(request: AccessRequestItem) {
+    const ok = await approveAccessRequest(request.id, setError);
     if (ok) {
-      setRequests(prev => prev.filter(r => r.id !== id));
+      setRequests(prev => prev.filter(r => r.id !== request.id));
+      setApprovedUser(request);
       window.dispatchEvent(new Event('pendingCountChanged'));
     }
   }
@@ -71,7 +82,7 @@ export function PendingUsers() {
                     key={r.id}
                     item={r}
                     actions={[UserRowAction.ShowMessage, UserRowAction.Approve, UserRowAction.Reject]}
-                    onApprove={() => handleApprove(r.id)}
+                    onApprove={() => handleApprove(r)}
                     onReject={() => handleReject(r.id)}
                   />
                 ))}
@@ -83,6 +94,26 @@ export function PendingUsers() {
           <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
         </div>
       </div>
+
+      {approvedUser && (
+        <ModalDialog
+          isOpen={true}
+          onClose={() => setApprovedUser(null)}
+          title="Ansökan godkänd"
+          actions={
+            <a
+              href={buildMailtoHref(approvedUser.email, approvedUser.name)}
+              className="rounded bg-[#184fc2] text-sm text-white hover:bg-[#578ff3] p-[6px]"
+            >
+              Skicka välkomstmail
+            </a>
+          }
+        >
+          <p className="text-gray-800">
+            <span className="font-medium">{approvedUser.name}</span> har lagts till som användare.
+          </p>
+        </ModalDialog>
+      )}
     </main>
   );
 }
