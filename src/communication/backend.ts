@@ -10,8 +10,9 @@ import {
   URL_BACKEND_GET_CHECK_AUTH,
   URL_BACKEND_LOGIN,
   URL_BACKEND_LOGOUT,
+  URL_BACKEND_SETTINGS,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, User} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, User, UserSettings} from "../types/backend.ts";
 
 const backend = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -123,6 +124,16 @@ export async function deleteAllowedUser(id: number, setError: SetError): Promise
     return true;
   } catch {
     setError("Kunde inte ta bort användare.");
+    return false;
+  }
+}
+
+export async function saveSettings(settings: UserSettings, setError: SetError): Promise<boolean> {
+  try {
+    await backend.put(URL_BACKEND_SETTINGS, settings);
+    return true;
+  } catch {
+    setError("Kunde inte spara inställningar.");
     return false;
   }
 }

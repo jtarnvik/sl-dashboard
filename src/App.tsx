@@ -4,7 +4,7 @@ import { createHashRouter, RouterProvider } from 'react-router-dom';
 import ErrorContext from './contexts/error-context.ts';
 import PageTitleContext from './contexts/page-title-context.ts';
 import UserContext from './contexts/user-context.ts';
-import { User } from './types/backend.ts';
+import { User, UserSettings } from './types/backend.ts';
 import { checkLoginStatus, login, logout } from './communication/backend.ts';
 import { Denied } from './views/denied.tsx';
 import { Layout } from './views/layout.tsx';
@@ -41,6 +41,10 @@ function App() {
     setUser(null);
   }
 
+  function updateSettings(settings: UserSettings) {
+    setUser(prev => prev ? { ...prev, settings } : prev);
+  }
+
   useEffect(() => {
     const handleUnauthorized = () => setUser(null);
     window.addEventListener("unauthorized", handleUnauthorized);
@@ -52,7 +56,7 @@ function App() {
 
   return (
     <ErrorContext.Provider value={{ error, retry, setError }}>
-      <UserContext.Provider value={{ user, login, logout: handleLogout }}>
+      <UserContext.Provider value={{ user, login, logout: handleLogout, updateSettings }}>
         <PageTitleContext.Provider value={{ heading, setHeading }}>
           <RouterProvider router={router} />
         </PageTitleContext.Provider>

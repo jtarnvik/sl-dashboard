@@ -1,10 +1,11 @@
 import { createContext } from 'react';
-import { User } from '../types/backend';
+import { User, UserSettings } from '../types/backend';
 
 const UserContext = createContext({
   user: undefined as User | null | undefined,
   login: () => {},
   logout: () => {},
+  updateSettings: (_settings: UserSettings) => {},
 });
 
 export default UserContext;

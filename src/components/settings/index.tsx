@@ -1,28 +1,38 @@
-import {useContext, useMemo, useState} from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import {IoCloseCircle} from "react-icons/io5";
-import {URL_GET_STOP_POINT} from "../../communication/constant.ts";
-import {ModalDialog} from "../common/modal-dialog";
-import {SLButton} from "../common/sl-button";
+import { IoCloseCircle } from "react-icons/io5";
+import { DEFAULT_SETTINGS, URL_GET_STOP_POINT } from "../../communication/constant.ts";
+import { ModalDialog } from "../common/modal-dialog";
+import { SLButton } from "../common/sl-button";
 import InDebugModeContext from "../../contexts/debug-context.ts";
-import {StopFinderResponse} from "../../types/sl-journeyplaner-responses.ts";
+import { StopFinderResponse } from "../../types/sl-journeyplaner-responses.ts";
 import "./input.css";
 
 type Props = {
   settingsOpen: boolean,
   setSettingsOpen: (open: boolean) => void,
-  applySettings: (data: SettingsData) => void,
-  removeSettings: () => void
+  currentSettings: SettingsData,
+  onSave: (data: SettingsData) => void,
 }
 
-export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSettings}: Props) {
+export function Settings({ settingsOpen, setSettingsOpen, currentSettings, onSave }: Props) {
   const MAX_RESULTS = 5;
 
-  const {inDebugMode, setInDebugMode} = useContext(InDebugModeContext);
+  const { inDebugMode, setInDebugMode } = useContext(InDebugModeContext);
+  const [pendingDebugMode, setPendingDebugMode] = useState<boolean>(inDebugMode);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResponse, setSearchResponse] = useState<StopFinderResponse | undefined>(undefined);
   const [searchInProgress, setSearchInProgress] = useState<boolean>(false);
-  const [selectedStopPointId, setSelectedStopPointId] = useState<string | undefined>(undefined);
+  const [selectedStop, setSelectedStop] = useState<SettingsData | null>(null);
+
+  useEffect(() => {
+    if (settingsOpen) {
+      setPendingDebugMode(inDebugMode);
+      setSelectedStop(currentSettings);
+      setSearchTerm("");
+      setSearchResponse(undefined);
+    }
+  }, [settingsOpen]);
 
   function stopPointSearch() {
     const trimmed = searchTerm.trim();
@@ -37,39 +47,29 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
         setSearchResponse(response.data);
       })
       .catch(function (error) {
-        // TODO: Log error
-        // handle error
         console.log(error);
       })
       .finally(function () {
-        // always executed
         setSearchInProgress(false);
       });
   }
 
-  function close() {
-    setSettingsOpen(false);
-    clearSettingsModal();
-  }
-
-  function clearSettingsModal() {
+  function handleDefault() {
     setSearchTerm("");
     setSearchResponse(undefined);
-    setSelectedStopPointId(undefined);
+    setSelectedStop(DEFAULT_SETTINGS);
   }
 
-  function applySelectedStopPoint() {
-    if (!selectedStopPointId) return;
+  function handleSave() {
+    if (!selectedStop) return;
+    setInDebugMode(pendingDebugMode);
+    onSave(selectedStop);
+    setSettingsOpen(false);
+  }
 
-    const selected = visibleResults.find((x) => x.id === selectedStopPointId);
-    if (!selected) return;
-
-    applySettings({
-      stopPointId: selected.id,
-      stopPointName: selected.disassembledName ?? selected.name
-    });
-
-    close();
+  function clearSearch() {
+    setSearchTerm("");
+    setSearchResponse(undefined);
   }
 
   const trimmedSearchTerm = useMemo(() => searchTerm.trim(), [searchTerm]);
@@ -77,15 +77,15 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
   const visibleResults = searchResponse?.locations?.slice(0, MAX_RESULTS) ?? [];
 
   return (
-    <ModalDialog isOpen={settingsOpen} onClose={close} title="Inställningar">
+    <ModalDialog isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="Inställningar">
       <div className="flex flex-col gap-5 font-size-settings">
 
         <div className="space-y-2">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={inDebugMode}
-              onChange={(e) => setInDebugMode(e.target.checked)}
+              checked={pendingDebugMode}
+              onChange={(e) => setPendingDebugMode(e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
             />
             <span className="font-medium text-gray-700">Debug-läge</span>
@@ -113,7 +113,7 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
               {trimmedSearchTerm.length > 0 && (
                 <button
                   type="button"
-                  onClick={clearSettingsModal}
+                  onClick={clearSearch}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 >
                   <IoCloseCircle className="h-5 w-5" />
@@ -138,73 +138,66 @@ export function Settings({settingsOpen, setSettingsOpen, applySettings, removeSe
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
             <table className="w-full table-fixed">
               <thead className="bg-gray-50">
-              <tr>
-                <th className="w-10 px-3 py-2 text-left font-semibold text-gray-600">
-                  <span className="sr-only">Välj</span>
-                </th>
-                <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
-                  Hållplats
-                </th>
-                <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
-                  Område
-                </th>
-              </tr>
+                <tr>
+                  <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
+                    Hållplats
+                  </th>
+                  <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
+                    Område
+                  </th>
+                </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-              {visibleResults.map((itm) => {
-                const isSelected = itm.id === selectedStopPointId;
-                return (
-                  <tr
-                    key={itm.id}
-                    className={`hover:bg-gray-50 cursor-pointer ${isSelected ? "bg-blue-50" : ""}`}
-                    onClick={() => setSelectedStopPointId(itm.id)}
-                  >
-                    <td className="px-3 py-2 text-gray-900">
-                      <input
-                        type="radio"
-                        name="selectedStopPoint"
-                        checked={isSelected}
-                        onChange={() => setSelectedStopPointId(itm.id)}
-                        className="h-4 w-4"
-                      />
+                {visibleResults.map((itm) => {
+                  const stopData: SettingsData = {
+                    stopPointId: itm.id,
+                    stopPointName: itm.disassembledName ?? itm.name,
+                  };
+                  const isSelected = selectedStop?.stopPointId === itm.id;
+                  return (
+                    <tr
+                      key={itm.id}
+                      className={`cursor-pointer ${isSelected ? "bg-blue-50" : "hover:bg-gray-50"}`}
+                      onClick={() => setSelectedStop(stopData)}
+                    >
+                      <td className="px-3 py-2 text-gray-900">
+                        {itm.disassembledName ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600">
+                        {itm.parent?.name ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {visibleResults.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-3 py-4 text-gray-500">
+                      Inga träffar än.
                     </td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {itm.disassembledName ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-gray-600">
-                    {itm.parent?.name ?? "—"}
-                  </td>
-                </tr>
-                );
-              })}
-              {visibleResults.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="px-3 py-4 text-gray-500">
-                    Inga träffar än.
-                  </td>
-                </tr>
-              )}
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
 
-          {totalResults > MAX_RESULTS &&
+          {totalResults > MAX_RESULTS && (
             <div className="text-xs text-gray-500">
-              Visar {Math.min(MAX_RESULTS, totalResults)} ({totalResults})
+              Visar {Math.min(MAX_RESULTS, totalResults)} av {totalResults}
             </div>
-          }
+          )}
+
+          {selectedStop && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              Vald hållplats: <strong>{selectedStop.stopPointName}</strong>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
-            <SLButton
-              onClick={removeSettings}
-            >
-              Default
+            <SLButton onClick={handleDefault}>
+              Standard
             </SLButton>
-            <SLButton
-              onClick={applySelectedStopPoint}
-              disabled={!selectedStopPointId}
-            >
-              Använd
+            <SLButton onClick={handleSave} disabled={!selectedStop}>
+              Spara
             </SLButton>
           </div>
         </div>

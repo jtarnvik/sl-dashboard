@@ -159,66 +159,18 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. BE, Start adding tests. Add a test for the entire flow 
-- The user is added to the pending access table when no user exists
-- A list of pending users are fetched where the new users should exits
-- The user requests access
-- An entry should exist in the access requests table
-- THe user is granted access, dissapear from the pending list anc access requests list.
-All done throuh rest calls, I assume some validation needs to be done with using the services.
-
-
----
-              
-1.4 BE, Hide test output.
-
-1,5, BE, Hwo do we handle transactions borders?
-
----
-
-2. Investigate/Discuss: When/If shall the Google login be changed from test mode.
-
----
-
-3. BE — Should the API types be sorted into their own folder by type?
-
----
-
-4. Design/Discuss — API authorization strategy.
-
-We now have three different types of APIs:
-- Completely open (e.g. `/ping`)
-- Open to logged-in users (e.g. `/api/protected/**`)
-- Open to logged-in users with a specific role (e.g. `/api/admin/**`)
-
-Should the APIs be sorted by type into different URL namespaces enforced in `SecurityConfig`:
-```java
-.requestMatchers("/api/admin/**").hasRole("ADMIN")
-.requestMatchers("/api/protected/**").hasRole("USER")
-```
-Or is per-method annotation better:
-```java
-@PreAuthorize("hasRole('ADMIN')")
-```
-Or a combination of both?
-
----
-
-5. FE/BE — Logged-in users should have their settings stored in the database.
-
-How transparent can this be made relative to the current localStorage-based approach?
-
-6. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
+1. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
 One role is project descriprion and one is codestyle choices. Should I split this into three files
 - One project description for backend,
 - One project description for frontend,
 - One codestyle choices file for frontend and backend. Can be used for future projects with ease.
 Where should such a new file be placed? In its own gitrepo?
 
-7. FE/BE, add AI access to handle deviations
+2. FE/BE, add AI access to handle deviations
 
-8. FE Better GUI for trips
+3. FE Better GUI for trips
 
+4. FE/BE Login weirdness. No signup button.
 ## Issues
 
 No current issues.

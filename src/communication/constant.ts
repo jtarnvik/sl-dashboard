@@ -25,6 +25,10 @@ export const URL_BACKEND_ADMIN_REJECT_ACCESS_REQUEST = (id: number) => `/api/adm
 export const URL_BACKEND_ADMIN_USERS = "/api/admin/users";
 export const URL_BACKEND_ADMIN_DELETE_USER = (id: number) => `/api/admin/users/${id}`;
 
+export const URL_BACKEND_SETTINGS = "/api/protected/settings";
+
+export const DEFAULT_SETTINGS: SettingsData = { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen" };
+
 // Focus stops for deviation filtering (StopArea.id from the deviations API).
 // When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.
 // Deviations with no stop scope (line-wide) are always shown.
