@@ -60,7 +60,8 @@ export function Main() {
         <div className="flex flex-col space-y-2 px-2 mb-2">
           <ErrorHandler></ErrorHandler>
           <Departures stopPoint16Chars={settingsData.stopPointId} />
-          <Routes settingsData={settingsData} />
+          {/* key forces a full remount when the stop changes, resetting all route planning state */}
+          <Routes key={settingsData.stopPointId} settingsData={settingsData} />
           <div className="flex justify-between">
             <div className="w-1/2">
               <Deviations />

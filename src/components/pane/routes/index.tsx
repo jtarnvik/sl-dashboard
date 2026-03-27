@@ -35,13 +35,6 @@ export function Routes({settingsData}: Props) {
   const [, setRoutePlanningInProgress] = useState<boolean>(false);
   const [state, setState] = useState<string>("");
 
-  useEffect(() => {
-    setLocation(undefined);
-    setGeoInfo(undefined);
-    setJourneys(undefined);
-    setSystemMessages(undefined);
-    setState("");
-  }, [settingsData])
 
   useEffect(() => {
     return () => latestRequest.current?.abort("Component unmounted");
