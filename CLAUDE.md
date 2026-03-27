@@ -20,17 +20,17 @@ There are no tests in this project.
 This is a personal project. It's main function is to give a quick dashbard for my personal bus stop and also make it easy
 to return to that busstop when out and about. It is also used by a few close friends who are able to select different home bus stops.
 
-The app is hosted on GitHub Pages and built via GitHub Actions. It is a fully static site — there is no backend, and SL APIs are called directly from the browser. This is intentional and should be preserved unless there is a strong reason to introduce a backend.
+The app is hosted on GitHub Pages and built via GitHub Actions. SL APIs are called directly from the browser — no API keys required. It has a companion backend (`publicbackend`) that handles Google OAuth2 login, user management, and settings persistence for logged-in users.
 
 ## Architecture
 
-This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm public transit (SL — Storstockholms Lokaltrafik). The UI is in Swedish. It calls SL's public integration APIs directly from the browser — no backend, no API keys required.
+This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm public transit (SL — Storstockholms Lokaltrafik). The UI is in Swedish. It calls SL's public integration APIs directly from the browser — no API keys required.
 
 ### App structure (`src/`)
 
 **`App.tsx`** is the root. It manages:
-- `SettingsData` (persisted to localStorage via `use-local-storage-state`) containing the selected stop point ID (16-char SL format) and name
-- Three React contexts: `ErrorContext` (global error string), `InDebugModeContext` (debug mode toggle), and `UserContext` (logged-in user, login/logout functions)
+- `SettingsData` for the selected stop point (ID in 16-char SL format and name). For logged-in users this comes from the backend; for non-logged-in users it is persisted to localStorage via `use-local-storage-state`.
+- Three React contexts: `ErrorContext` (global error string), `InDebugModeContext` (debug mode toggle), and `UserContext` (logged-in user, login/logout/updateSettings functions)
 
 ### Three main panes
 
@@ -57,7 +57,7 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 - **`useVisibility` hook** (`src/hook/use-visibility.ts`): Refreshes data when the browser tab becomes visible again.
 - **`TransportationMode` enum** and `LineCommon` component (`src/components/common/line/`) are the central abstraction for rendering transport icons with line badges. Two variants exist: `LineJourney` (for departures, uses `sl-responses` types) and `LineTransportation` (for journey legs, uses `sl-journeyplaner-responses` types).
 - **`DeviationWrapper`** (`src/components/common/deviation-wrapper/`) wraps departure display text to show deviation indicators inline.
-- **`useUserLoginState` / `useUser`** (`src/hook/use-user.ts`): Custom hooks for consuming `UserContext`. `useUserLoginState()` returns a `UserLoginState` enum (`Loading` | `NotLoggedIn` | `LoggedIn`) derived from the `user` value (`undefined` = loading, `null` = not logged in, `User` object = logged in). `useUser()` returns the full context including `login` and `logout` actions. Prefer these hooks over calling `useContext(UserContext)` directly.
+- **`useUserLoginState` / `useUser`** (`src/hook/use-user.ts`): Custom hooks for consuming `UserContext`. `useUserLoginState()` returns a `UserLoginState` enum (`Loading` | `NotLoggedIn` | `LoggedIn`) derived from the `user` value (`undefined` = loading, `null` = not logged in, `User` object = logged in). `useUser()` returns the full context including `login`, `logout`, and `updateSettings` actions. Prefer these hooks over calling `useContext(UserContext)` directly.
 
 ### Type files
 
@@ -66,6 +66,15 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 - `src/types/deviations.ts` — types for the deviations API
 - `src/types/common.d.ts` — global ambient types (`SettingsData`)
 - `src/types/common-constants.ts` — `SETTINGS_KEY` for localStorage
+- `src/types/backend.ts` — types for the backend API (`User`, `UserSettings`)
+
+### Settings architecture
+
+Settings (selected stop point) are stored in two places depending on login state:
+- **Logged-in users**: stored in the backend database. `GET /api/auth/me` always returns a non-null `settings` object (backend defaults to Skogslöparvägen if none saved). Saved via `PUT /api/protected/settings`. After a successful save, `updateSettings(data)` patches the local `UserContext` state without a round trip.
+- **Non-logged-in users**: stored in localStorage via `use-local-storage-state` with `SETTINGS_KEY`. Removing the key resets to the default stop.
+
+`DEFAULT_SETTINGS` and `URL_BACKEND_SETTINGS` are defined in `src/communication/constant.ts`. `saveSettings()` is in `src/communication/backend.ts`.
 
 ### `Deviation` type name collision
 
@@ -118,73 +127,23 @@ Custom events dispatched on `window` are used for cross-tree communication betwe
 - All components use **named exports**, not default exports (`App.tsx` is the only exception).
 - Each component lives in its own directory with an `index.tsx` entry point.
 
-## File management
-
-When a new file is created and the user has approved it, stage it in git with `git add <file>`.
-
-## Code Style
-
-- Prefer readability over brevity.
-- Prefer maintainability over performance.
-- Prefer simplicity over complexity.
-- If statements and all other constrol flow constructs should use curly braces even if they are followed by just a single statement.
-- I prefer the imports section sorted in the following order:
-  - React
-  - Third-party
-  - Local
-  - css files.
-
 ## Future plans
 
-This front end react application (including its accompanion backend project), 
-is to be considered a learning tool first (both for technologies and how to work with an AI helper), 
-which means that the focus is not on
-quickly shipping features but for me to experiment with and learn new technologies as we go.
-This means that this plan is broken up into small steps, perhaps more steps than is
-strictly neccessary, but which will help me understand both the proposed changes better and improve my 
-AI cooperation skills.
+This project is a learning tool first — the focus is on experimenting with new technologies rather than quickly shipping features. Steps are intentionally small to aid understanding and AI collaboration skills.
 
-Regarding the actual planned steps:
-Where a preferred approach is given, use it unless there is a clearly better alternative — in that case, 
-propose it before implementing. I may default to Java-style patterns without realizing it, so
-this especially applies to TypeScript and React idioms. 
+I may default to Java-style patterns in TypeScript/React without realising it — feel free to point this out.
 
-Implement only the current step unless told otherwise. Future steps may be read for context and direction, but 
-treat them as provisional — they may change. If the current step requires an implementation decision that a future 
-step would influence, use that step as guidance.
-   
 FE - means frontend
 BE - means backend
 ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. FE/BE Design/Discuss: I now have two Claude files, one in FE and one in BE. These files have started to take on different roles.
-One role is project descriprion and one is codestyle choices. Should I split this into three files
-- One project description for backend,
-- One project description for frontend,
-- One codestyle choices file for frontend and backend. Can be used for future projects with ease.
-Where should such a new file be placed? In its own gitrepo?
+1. FE/BE, add AI access to handle deviations
 
-2. FE/BE, add AI access to handle deviations
+2. FE Better GUI for trips
 
-3. FE Better GUI for trips
-
-4. FE/BE Login weirdness. No signup button.
+3. FE/BE Login weirdness. No signup button.
 ## Issues
 
 No current issues.
-
-## About me
-
-I have been a programmer for more than 30 years, the last 20 of them programming i Java. I mostly work with 
-microservices using spring boot. I have also some experiance with writing React web applications.
-I have been creating web application for 7 years using React and Typescript for about 50% of my 
-time at work. But I have probably approached the React/Typescript worlds from the Java/Spring boot
-way of doing things so it is very possible I write web apps more in a java way. I dont mind pointers
-when that is the case.
-
-I work in a enterprice environment and this project is mostly for my personal use, including for a few friends. The front
-end at work is quite restrictive and I want to play around with more new technologies, programing-for-fun if you will. 
-This is also an attempt at learning to code with AI assistance. I am quite convinced that I could solve all issues on 
-my own, but it would take some time and effort.
