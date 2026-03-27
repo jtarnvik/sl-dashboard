@@ -7,12 +7,8 @@ export class LegStopPoint {
 
   private baseTimetable: string;
   private estimated: string;
-  private planned: string;
-
   private baseTimetableDT: DateTime;
   private estimatedDT: DateTime;
-  private plannedDT: DateTime;
-
   private estimatedRounded: DateTime;
   private baseTimetableRounded: DateTime;
 
@@ -23,9 +19,8 @@ export class LegStopPoint {
     this.baseTimetableDT = DateTime.fromISO(this.baseTimetable);
     this.estimated = legType.getEstimated(legType.stopPoint(leg));
     this.estimatedDT = DateTime.fromISO(this.estimated);
-    this.planned = legType.getPlanned(legType.stopPoint(leg));
-    this.plannedDT = DateTime.fromISO(this.planned);
-
+    // The API also provides a planned time (legType.getPlanned) distinct from baseTimetable
+    // and estimated. Not currently exposed — add a plannedDT field and planned getter if needed.
     this.estimatedRounded = legType.round(this.estimatedDT);
     this.baseTimetableRounded = legType.round(this.baseTimetableDT);
   }
