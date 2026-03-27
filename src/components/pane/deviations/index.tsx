@@ -34,22 +34,31 @@ export function Deviations() {
   const [trainDeviations, setTrainDeviations] = useState<Deviation[]>([]);
   const [subwayDeviations, setSubwayDeviations] = useState<Deviation[]>([]);
 
+  const [busInProgress, setBusInProgress] = useState<boolean>(true);
+  const [trainInProgress, setTrainInProgress] = useState<boolean>(true);
+  const [subwayInProgress, setSubwayInProgress] = useState<boolean>(true);
+
   const [openModal, setOpenModal] = useState<'bus' | 'train' | 'subway' | null>(null);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_BUS, latestBusRequest, setBusDeviations, setError);
+    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_BUS, latestBusRequest,
+      (data) => { setBusDeviations(data); setBusInProgress(false); },
+      (error, retry) => { setBusInProgress(false); setError(error, retry); }
+    );
   }, []);
   useEffect(() => {
-    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_TRAIN, latestTrainRequest, setTrainDeviations, setError);
+    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_TRAIN, latestTrainRequest,
+      (data) => { setTrainDeviations(data); setTrainInProgress(false); },
+      (error, retry) => { setTrainInProgress(false); setError(error, retry); }
+    );
   }, []);
   useEffect(() => {
-    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_SUBWAY, latestSubwayRequest, setSubwayDeviations, setError);
+    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_SUBWAY, latestSubwayRequest,
+      (data) => { setSubwayDeviations(data); setSubwayInProgress(false); },
+      (error, retry) => { setSubwayInProgress(false); setError(error, retry); }
+    );
   }, []);
-
-  const busInProgress = latestBusRequest.current !== undefined;
-  const subwayInProgress = latestSubwayRequest.current !== undefined;
-  const trainInProgress = latestTrainRequest.current !== undefined;
 
   const trainDeviationInfos = convertDeviationSearch(filterDeviationsByStops(trainDeviations, DEVIATION_FOCUS_STOPS_TRAIN), DEVIATION_FOCUS_STOPS_TRAIN);
   const subwayDeviationInfos = convertDeviationSearch(filterDeviationsByStops(subwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY), DEVIATION_FOCUS_STOPS_SUBWAY);
