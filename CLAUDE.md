@@ -139,7 +139,17 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. FE Fix disabled eslint-plugin-react-hooks v7 rules. Four new rules were disabled during the ESLint 10 upgrade rather than fixed: `set-state-in-effect`, `refs`, `react-compiler`, `preserve-manual-memoization`. See comments in `eslint.config.js`.
+1. FE Fix disabled eslint-plugin-react-hooks v7 rules. Four new rules were disabled during the ESLint 10 upgrade rather than fixed. See comments in `eslint.config.js`. Rules and examples:
+
+   - **`set-state-in-effect`**: Calling `setState` directly in a `useEffect` body. Example: `settings/index.tsx` — `setPendingDebugMode(inDebugMode)` and `setSelectedStop(currentSettings)` are called directly inside an effect that runs when `settingsOpen` changes. The rule prefers deriving state or using event handlers instead. Also `nav-menu/index.tsx` calling `loadPendingCount()` (which sets state) inside effects.
+
+   - **`refs`**: Reading `ref.current` during render. Example: `deviations/index.tsx` lines 50–52 — `const busInProgress = latestBusRequest.current !== undefined` reads a ref during render to derive a loading flag. Refs don't trigger re-renders when mutated, so this value may be stale when React renders. Fix: replace with `useState` for the in-progress flag.
+
+   - **`preserve-manual-memoization`**: A `useCallback` or `useMemo` whose manually specified deps don't match what the React Compiler would infer, meaning the memoization may be incorrect. Example: `departures/index.tsx` — `useCallback(() => { ... }, [stopPoint16Chars])` uses `setError` from context inside the callback but omits it from the dep array. The compiler infers `setError` should be included.
+
+   - **`react-compiler`**: Broader React Compiler rule that fires when it cannot preserve existing memoization at all. Related to `preserve-manual-memoization` — same `useCallback` in `departures/index.tsx` triggers both.
+
+1.5 Move stuff from backend claude to global claude. Set a base package.
 
 2. FE/BE, add AI access to handle deviations
 

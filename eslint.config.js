@@ -27,6 +27,7 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_' },
       ],
+      'curly': 'error',
       // v7 rules disabled pending proper fixes:
       // setState in effects is intentional (reset on prop change, modal init, data fetch)
       'react-hooks/set-state-in-effect': 'off',

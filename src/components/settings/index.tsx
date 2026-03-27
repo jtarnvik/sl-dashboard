@@ -1,11 +1,11 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import {useContext, useMemo, useState} from "react";
 import axios from "axios";
-import { IoCloseCircle } from "react-icons/io5";
-import { DEFAULT_SETTINGS, URL_GET_STOP_POINT } from "../../communication/constant.ts";
-import { ModalDialog } from "../common/modal-dialog";
-import { SLButton } from "../common/sl-button";
+import {IoCloseCircle} from "react-icons/io5";
+import {DEFAULT_SETTINGS, URL_GET_STOP_POINT} from "../../communication/constant.ts";
+import {ModalDialog} from "../common/modal-dialog";
+import {SLButton} from "../common/sl-button";
 import InDebugModeContext from "../../contexts/debug-context.ts";
-import { StopFinderResponse } from "../../types/sl-journeyplaner-responses.ts";
+import {StopFinderResponse} from "../../types/sl-journeyplaner-responses.ts";
 import "./input.css";
 
 type Props = {
@@ -15,28 +15,21 @@ type Props = {
   onSave: (data: SettingsData) => void,
 }
 
-export function Settings({ settingsOpen, setSettingsOpen, currentSettings, onSave }: Props) {
+export function Settings({settingsOpen, setSettingsOpen, currentSettings, onSave}: Props) {
   const MAX_RESULTS = 5;
 
-  const { inDebugMode, setInDebugMode } = useContext(InDebugModeContext);
+  const {inDebugMode, setInDebugMode} = useContext(InDebugModeContext);
   const [pendingDebugMode, setPendingDebugMode] = useState<boolean>(inDebugMode);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResponse, setSearchResponse] = useState<StopFinderResponse | undefined>(undefined);
   const [searchInProgress, setSearchInProgress] = useState<boolean>(false);
-  const [selectedStop, setSelectedStop] = useState<SettingsData | null>(null);
-
-  useEffect(() => {
-    if (settingsOpen) {
-      setPendingDebugMode(inDebugMode);
-      setSelectedStop(currentSettings);
-      setSearchTerm("");
-      setSearchResponse(undefined);
-    }
-  }, [settingsOpen]);
+  const [selectedStop, setSelectedStop] = useState<SettingsData | null>(currentSettings);
 
   function stopPointSearch() {
     const trimmed = searchTerm.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
 
     setSearchInProgress(true);
     setSearchResponse(undefined);
@@ -60,8 +53,19 @@ export function Settings({ settingsOpen, setSettingsOpen, currentSettings, onSav
     setSelectedStop(DEFAULT_SETTINGS);
   }
 
+  function handleClose() {
+    // Reset staged state on close so the modal always opens fresh with the current values.
+    setPendingDebugMode(inDebugMode);
+    setSelectedStop(currentSettings);
+    setSearchTerm("");
+    setSearchResponse(undefined);
+    setSettingsOpen(false);
+  }
+
   function handleSave() {
-    if (!selectedStop) return;
+    if (!selectedStop) {
+      return;
+    }
     setInDebugMode(pendingDebugMode);
     onSave(selectedStop);
     setSettingsOpen(false);
@@ -77,7 +81,7 @@ export function Settings({ settingsOpen, setSettingsOpen, currentSettings, onSav
   const visibleResults = searchResponse?.locations?.slice(0, MAX_RESULTS) ?? [];
 
   return (
-    <ModalDialog isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="Inställningar">
+    <ModalDialog isOpen={settingsOpen} onClose={handleClose} title="Inställningar">
       <div className="flex flex-col gap-5 font-size-settings">
 
         <div className="space-y-2">
@@ -104,7 +108,9 @@ export function Settings({ settingsOpen, setSettingsOpen, currentSettings, onSav
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") stopPointSearch();
+                  if (e.key === "Enter") {
+                    stopPointSearch();
+                  }
                 }}
                 placeholder="Sök hållplats…"
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
@@ -138,44 +144,44 @@ export function Settings({ settingsOpen, setSettingsOpen, currentSettings, onSav
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
             <table className="w-full table-fixed">
               <thead className="bg-gray-50">
-                <tr>
-                  <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
-                    Hållplats
-                  </th>
-                  <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
-                    Område
-                  </th>
-                </tr>
+              <tr>
+                <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
+                  Hållplats
+                </th>
+                <th className="w-1/2 px-3 py-2 text-left font-semibold text-gray-600">
+                  Område
+                </th>
+              </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {visibleResults.map((itm) => {
-                  const stopData: SettingsData = {
-                    stopPointId: itm.id,
-                    stopPointName: itm.disassembledName ?? itm.name,
-                  };
-                  const isSelected = selectedStop?.stopPointId === itm.id;
-                  return (
-                    <tr
-                      key={itm.id}
-                      className={`cursor-pointer ${isSelected ? "bg-blue-50" : "hover:bg-gray-50"}`}
-                      onClick={() => setSelectedStop(stopData)}
-                    >
-                      <td className="px-3 py-2 text-gray-900">
-                        {itm.disassembledName ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 text-gray-600">
-                        {itm.parent?.name ?? "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {visibleResults.length === 0 && (
-                  <tr>
-                    <td colSpan={2} className="px-3 py-4 text-gray-500">
-                      Inga träffar än.
+              {visibleResults.map((itm) => {
+                const stopData: SettingsData = {
+                  stopPointId: itm.id,
+                  stopPointName: itm.disassembledName ?? itm.name,
+                };
+                const isSelected = selectedStop?.stopPointId === itm.id;
+                return (
+                  <tr
+                    key={itm.id}
+                    className={`cursor-pointer ${isSelected ? "bg-blue-50" : "hover:bg-gray-50"}`}
+                    onClick={() => setSelectedStop(stopData)}
+                  >
+                    <td className="px-3 py-2 text-gray-900">
+                      {itm.disassembledName ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">
+                      {itm.parent?.name ?? "—"}
                     </td>
                   </tr>
-                )}
+                );
+              })}
+              {visibleResults.length === 0 && (
+                <tr>
+                  <td colSpan={2} className="px-3 py-4 text-gray-500">
+                    Inga träffar än.
+                  </td>
+                </tr>
+              )}
               </tbody>
             </table>
           </div>
