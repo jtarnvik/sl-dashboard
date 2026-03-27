@@ -46,19 +46,19 @@ export function Deviations() {
       (data) => { setBusDeviations(data); setBusInProgress(false); },
       (error, retry) => { setBusInProgress(false); setError(error, retry); }
     );
-  }, []);
+  }, [setError]);
   useEffect(() => {
     fetchAbortable<Deviation[]>(URL_GET_DEVIATION_TRAIN, latestTrainRequest,
       (data) => { setTrainDeviations(data); setTrainInProgress(false); },
       (error, retry) => { setTrainInProgress(false); setError(error, retry); }
     );
-  }, []);
+  }, [setError]);
   useEffect(() => {
     fetchAbortable<Deviation[]>(URL_GET_DEVIATION_SUBWAY, latestSubwayRequest,
       (data) => { setSubwayDeviations(data); setSubwayInProgress(false); },
       (error, retry) => { setSubwayInProgress(false); setError(error, retry); }
     );
-  }, []);
+  }, [setError]);
 
   const trainDeviationInfos = convertDeviationSearch(filterDeviationsByStops(trainDeviations, DEVIATION_FOCUS_STOPS_TRAIN), DEVIATION_FOCUS_STOPS_TRAIN);
   const subwayDeviationInfos = convertDeviationSearch(filterDeviationsByStops(subwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY), DEVIATION_FOCUS_STOPS_SUBWAY);

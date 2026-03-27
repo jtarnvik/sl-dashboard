@@ -21,7 +21,7 @@ export function ExistingUsers() {
 
   useEffect(() => {
     setHeading('Användare');
-  }, []);
+  }, [setHeading]);
 
   useEffect(() => {
     if (loginState === UserLoginState.Loading) {
@@ -35,7 +35,7 @@ export function ExistingUsers() {
       setUsers(data.slice().sort((a, b) => a.name.localeCompare(b.name, 'sv')));
       setLoading(false);
     });
-  }, [loginState, user]);
+  }, [loginState, user, navigate, setError]);
 
   async function handleDelete(id: number) {
     const ok = await deleteAllowedUser(id, setError);

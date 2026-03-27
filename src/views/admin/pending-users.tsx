@@ -31,7 +31,7 @@ export function PendingUsers() {
 
   useEffect(() => {
     setHeading('Väntande användare');
-  }, []);
+  }, [setHeading]);
 
   useEffect(() => {
     if (loginState === UserLoginState.Loading) {
@@ -45,7 +45,7 @@ export function PendingUsers() {
       setRequests(data.slice().sort((a, b) => a.name.localeCompare(b.name, 'sv')));
       setLoading(false);
     });
-  }, [loginState, user]);
+  }, [loginState, user, navigate, setError]);
 
   async function handleApprove(request: AccessRequestItem) {
     const ok = await approveAccessRequest(request.id, setError);

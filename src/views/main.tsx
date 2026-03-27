@@ -32,7 +32,7 @@ export function Main() {
 
   useEffect(() => {
     setHeading(settingsData.stopPointName);
-  }, [settingsData.stopPointName]);
+  }, [settingsData.stopPointName, setHeading]);
 
   if (!isLoggedIn && !isPersistent) {
     console.log("Settings data not persistent");

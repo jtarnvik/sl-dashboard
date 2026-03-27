@@ -47,6 +47,7 @@ export function Departures({stopPoint16Chars}: Props) {
   }, [lastUpdated]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reads ref.current at unmount time, not at setup time
     return () => latestRequest.current?.abort("Component unmounted");
   }, []);
 
