@@ -91,7 +91,7 @@ export function Departures({stopPoint16Chars}: Props) {
         setDiffSinceLastUpdated(DateTime.now().diffNow())
       }
     }, setError);
-  }, [stopPoint16Chars]);
+  }, [stopPoint16Chars, setError]);
 
   useVisibility({onVisible: updateDepartures});
 

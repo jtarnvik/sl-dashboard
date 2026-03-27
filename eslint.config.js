@@ -28,10 +28,6 @@ export default tseslint.config(
         { argsIgnorePattern: '^_' },
       ],
       'curly': 'error',
-      // v7 rules disabled pending proper fixes:
-      // React Compiler inference rules — pre-existing dep mismatches in useCallback
-      'react-hooks/react-compiler': 'off',
-      'react-hooks/preserve-manual-memoization': 'off',
     },
   },
 )
