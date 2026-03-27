@@ -86,7 +86,7 @@ export function Settings({ settingsOpen, setSettingsOpen, currentSettings, onSav
               type="checkbox"
               checked={pendingDebugMode}
               onChange={(e) => setPendingDebugMode(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+              className="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
             />
             <span className="font-medium text-gray-700">Debug-läge</span>
           </label>
@@ -107,14 +107,14 @@ export function Settings({ settingsOpen, setSettingsOpen, currentSettings, onSav
                   if (e.key === "Enter") stopPointSearch();
                 }}
                 placeholder="Sök hållplats…"
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
 
               {trimmedSearchTerm.length > 0 && (
                 <button
                   type="button"
                   onClick={clearSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-gray-400 hover:text-gray-600 focus:outline-hidden focus:ring-2 focus:ring-blue-200"
                 >
                   <IoCloseCircle className="h-5 w-5" />
                 </button>

@@ -59,7 +59,7 @@ export function Deviations() {
 
   const commonAdjustments = classNames(
     "w-[24px] h-[24px] p-[3px]",
-    "rounded", "text-white");
+    "rounded-sm", "text-white");
   const busAdjustments = classNames(commonAdjustments,
     {"cursor-pointer": busDeviationInfos.length > 0});
   const subwayAdjustments = classNames(commonAdjustments,

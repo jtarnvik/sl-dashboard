@@ -23,7 +23,7 @@ export function Denied() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4">
-      <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-6 w-full max-w-md flex flex-col gap-4">
+      <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-6 w-full max-w-md flex flex-col gap-4">
         <p className="text-gray-800">
           Endast godkända användare får logga in, ansök om godkännande nedan.
         </p>
@@ -39,7 +39,7 @@ export function Denied() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2 text-gray-800 bg-white focus:outline-none focus:border-[#184fc2]"
+                className="border border-gray-300 rounded-sm px-3 py-2 text-gray-800 bg-white focus:outline-hidden focus:border-[#184fc2]"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -49,7 +49,7 @@ export function Denied() {
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 rows={3}
-                className="border border-gray-300 rounded px-3 py-2 text-gray-800 bg-white focus:outline-none focus:border-[#184fc2] resize-none"
+                className="border border-gray-300 rounded-sm px-3 py-2 text-gray-800 bg-white focus:outline-hidden focus:border-[#184fc2] resize-none"
               />
             </div>
             <SLButton onClick={handleSubmit}>Skicka ansökan</SLButton>

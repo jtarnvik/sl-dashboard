@@ -46,7 +46,7 @@ export function SldJourney({journey}: Props) {
 
   const headerLegs = findJourneyLegs(adjustedLegs);
   const journeyClasses = classNames({
-    'bg-[#F8F9FA] border border-gray-200 shadow p-[10px]': true,
+    'bg-[#F8F9FA] border border-gray-200 shadow-sm p-[10px]': true,
     'cursor-pointer': true,
     'mb-2': !showLegs,
     'rounded-md': !showLegs,

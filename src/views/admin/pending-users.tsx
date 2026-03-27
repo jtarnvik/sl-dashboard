@@ -71,7 +71,7 @@ export function PendingUsers() {
         {loading ? (
           <p className="text-gray-600">Laddar...</p>
         ) : (
-          <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4">
+          <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-4">
             {requests.length === 0 ? (
               <p className="text-gray-600">Inga väntande förfrågningar.</p>
             ) : (
@@ -103,7 +103,7 @@ export function PendingUsers() {
           actions={
             <a
               href={buildMailtoHref(approvedUser.email, approvedUser.name)}
-              className="rounded bg-[#184fc2] text-sm text-white hover:bg-[#578ff3] p-[6px]"
+              className="rounded-sm bg-[#184fc2] text-sm text-white hover:bg-[#578ff3] p-[6px]"
             >
               Skicka välkomstmail
             </a>

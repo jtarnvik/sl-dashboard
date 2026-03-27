@@ -49,7 +49,7 @@ export function NavMenu({ logout }: Props) {
   return (
     <div className="relative" ref={menuRef}>
       <button
-        className="relative text-white text-2xl px-2 py-1 focus:outline-none hover:bg-[#578ff3] rounded"
+        className="relative text-white text-2xl px-2 py-1 focus:outline-hidden hover:bg-[#578ff3] rounded-sm"
         onClick={() => setMenuOpen(prev => !prev)}
         aria-label="Meny"
       >
@@ -61,7 +61,7 @@ export function NavMenu({ logout }: Props) {
         )}
       </button>
       {menuOpen && (
-        <div className="absolute right-0 mt-1 w-52 bg-white rounded shadow-lg z-30">
+        <div className="absolute right-0 mt-1 w-52 bg-white rounded-sm shadow-lg z-30">
           <button
             className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between ${pendingCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 hover:bg-gray-100'}`}
             onClick={() => { if (pendingCount !== 0) { navigate('/admin/pending'); setMenuOpen(false); } }}

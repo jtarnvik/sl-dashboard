@@ -1,6 +1,6 @@
 import {TransportationIconCommon, TransportationMode} from "../../common/line";
 
-const iconClass = "w-[24px] h-[24px] p-[3px] rounded text-white";
+const iconClass = "w-[24px] h-[24px] p-[3px] rounded-sm text-white";
 const ORANGE = "#F97316";
 
 export const normalIcons: { symbol: React.ReactNode; legend: React.ReactNode }[] = [

@@ -51,7 +51,7 @@ export function ExistingUsers() {
         {loading ? (
           <p className="text-gray-600">Laddar...</p>
         ) : (
-          <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4">
+          <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-4">
             {users.length === 0 ? (
               <p className="text-gray-600">Inga användare.</p>
             ) : (

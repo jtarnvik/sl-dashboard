@@ -19,7 +19,7 @@ export function ErrorHandler() {
   }
 
   return (
-    <div className="flex items-center px-4 py-3 bg-red-50 border border-red-200 rounded-lg shadow text-gray-800"
+    <div className="flex items-center px-4 py-3 bg-red-50 border border-red-200 rounded-lg shadow-sm text-gray-800"
          role="alert">
       <div className="text-sm flex items-center gap-3 flex-1">
         <span>{error}</span>

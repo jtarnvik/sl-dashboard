@@ -59,7 +59,7 @@ export interface Line {
   designation: string;
   /** Type of transport for this line */
   transport_mode: TransportMode;
-  /** Optional group classification (e.g., "blåbuss", "Waxholmsbolaget") */
+  /** Optional group classification (e.g., "blï¿½buss", "Waxholmsbolaget") */
   group_of_lines?: string;
 }
 

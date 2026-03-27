@@ -28,7 +28,7 @@ type Props = {
 
 export function SldJourneyDetails({legs}: Props) {
   return (
-    <div className="bg-[#F8F9FA] border border-gray-200 shadow-sm rounded-md rounded-t-none p-[10px] ms-[10px] me-[10px] mb-2">
+    <div className="bg-[#F8F9FA] border border-gray-200 shadow-xs rounded-md rounded-t-none p-[10px] ms-[10px] me-[10px] mb-2">
       {legs.map((leg, index) => {
         return (
           <React.Fragment key={index}>

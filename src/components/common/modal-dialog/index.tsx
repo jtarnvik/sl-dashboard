@@ -25,7 +25,7 @@ export function ModalDialog({onClose, isOpen, title, children, scrollable = fals
         <DialogBackdrop className="fixed inset-0 bg-black/30" />
         <div className={scrollabelDiv1}>
           <div className={scrollabelDiv2}>
-            <DialogPanel className="max-w-lg space-y-4 border rounded bg-white p-6">
+            <DialogPanel className="max-w-lg space-y-4 border rounded-sm bg-white p-6">
               <DialogTitle className="font-bold">{title}</DialogTitle>
               {children}
               <div className="w-full flex justify-end gap-2">

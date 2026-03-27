@@ -59,7 +59,7 @@ function getBadgeShapeClass(mode: TransportationMode): string {
     case TransportationMode.TRAIN:
       return "rounded-full";
     case TransportationMode.SUBWAY:
-      return "rounded-sm";
+      return "rounded-xs";
     case TransportationMode.TRAM:
       return "tram-badge-bulge";
     default:
@@ -82,7 +82,7 @@ function LineDesignationBadge({designation, mode, className = ""}: LineDesignati
   const base = hasLetterSuffix ? normalized.slice(0, -1) : normalized;
   const suffix = hasLetterSuffix ? lastChar.toUpperCase() : null;
 
-  const badgeClasses = classNames("font-signage text-white font-extrabold w-[40px] text-center leading-[16px] pt-[1px] mt-[3px]",
+  const badgeClasses = classNames("font-signage text-white font-extrabold w-[40px] text-center leading-[16px] pt-px mt-[3px]",
     className, getBadgeShapeClass(mode));
 
   return (
