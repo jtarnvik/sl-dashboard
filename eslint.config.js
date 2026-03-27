@@ -29,8 +29,6 @@ export default tseslint.config(
       ],
       'curly': 'error',
       // v7 rules disabled pending proper fixes:
-      // setState in effects is intentional (reset on prop change, modal init, data fetch)
-      'react-hooks/set-state-in-effect': 'off',
       // refs read in render — real anti-pattern but requires converting to state to fix
       'react-hooks/refs': 'off',
       // React Compiler inference rules — pre-existing dep mismatches in useCallback
