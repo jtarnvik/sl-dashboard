@@ -139,11 +139,13 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. FE/BE, add AI access to handle deviations
+1. FE Fix disabled eslint-plugin-react-hooks v7 rules. Four new rules were disabled during the ESLint 10 upgrade rather than fixed: `set-state-in-effect`, `refs`, `react-compiler`, `preserve-manual-memoization`. See comments in `eslint.config.js`.
 
-2. FE Better GUI for trips
+2. FE/BE, add AI access to handle deviations
 
-3. FE/BE Login weirdness. No signup button.
+3. FE Better GUI for trips
+
+4. FE/BE Login weirdness. No signup button.
 ## Issues
 
 No current issues.
