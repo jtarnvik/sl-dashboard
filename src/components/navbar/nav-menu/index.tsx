@@ -20,12 +20,12 @@ export function NavMenu({ logout }: Props) {
   }
 
   useEffect(() => {
-    loadPendingCount();
+    fetchAccessRequestCount().then(setPendingCount);
   }, []);
 
   useEffect(() => {
     if (menuOpen) {
-      loadPendingCount();
+      fetchAccessRequestCount().then(setPendingCount);
     }
   }, [menuOpen]);
 
