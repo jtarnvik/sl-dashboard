@@ -7,7 +7,7 @@ export class LegName {
   private _name: string = "";
 
   constructor(leg: Leg, legType: LegType) {
-    let stopPoint = legType.stopPoint(leg);
+    const stopPoint = legType.stopPoint(leg);
     const presName = stopPoint.disassembledName;
     if (!presName) {
       return;

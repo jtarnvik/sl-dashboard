@@ -61,7 +61,7 @@ export interface StopPoint {
   arrivalTimePlanned?: ISODateTime;
   arrivalTimeEstimated?: ISODateTime;
 
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 export interface StopParent {
@@ -71,7 +71,7 @@ export interface StopParent {
   disassembledName?: string;
   type: StopPointType;
   parent?: StopParent;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   coord?: Coordinate;
   niveau?: number;
 }
@@ -151,7 +151,7 @@ export interface FootPathElement {
   levelTo: number;
 
   attributes: FootPathAttributes;
-  openingHours: any[];
+  openingHours: unknown[];
 }
 
 export interface FootPathStop {
@@ -160,7 +160,7 @@ export interface FootPathStop {
   name: string;
   type: StopPointType;
   coord: Coordinate;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 export interface FootPathAttributes {

@@ -11,7 +11,6 @@ export class LegStopPoint {
 
   private baseTimetableDT: DateTime;
   private estimatedDT: DateTime;
-  // @ts-ignore
   private plannedDT: DateTime;
 
   private estimatedRounded: DateTime;

@@ -7,7 +7,7 @@ interface LegendData {
 
 type PropsLegend = {
   legendData: LegendData[],
-  title: String,
+  title: string,
   useColumns?: boolean,
 }
 

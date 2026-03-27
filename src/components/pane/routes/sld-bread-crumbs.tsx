@@ -12,7 +12,7 @@ function convertLegsToProducts(legs: Leg[]) {
   const result: Transportation[] = [];
 
   for (let i = 0; i < legs.length; i++) {
-    let leg = legs[i];
+    const leg = legs[i];
     if (!leg?.transportation?.product) {
       continue;
     }

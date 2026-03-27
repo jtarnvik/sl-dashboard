@@ -28,18 +28,12 @@ export function Routes({settingsData}: Props) {
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
 
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
-  const [systemMessages, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined)
+  const [, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined)
 
-  const [location, setLocation] = useState<Location | undefined>(undefined);
+  const [, setLocation] = useState<Location | undefined>(undefined);
   const [geoInfo, setGeoInfo] = useState<string | undefined>(undefined);
-  const [routePlanningInProgress, setRoutePlanningInProgress] = useState<boolean>(false);
+  const [, setRoutePlanningInProgress] = useState<boolean>(false);
   const [state, setState] = useState<string>("");
-
-  if (false) {
-    console.log(systemMessages);
-    console.log(location);
-    console.log(routePlanningInProgress);
-  }
 
   useEffect(() => {
     setLocation(undefined);
