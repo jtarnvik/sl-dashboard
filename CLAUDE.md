@@ -139,13 +139,31 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-1. Move stuff from backend claude to global claude. Set a base package.
+There are a few large blocks of implementation. each block has its own letter and each step within that block has its own order by number.
 
-2. FE/BE, add AI access to handle deviations
+A - FE/BE, Add AI interpretations of deviations. Deviations shall be interpreted in the backend so that an intelligent decision can be made as to 
+ignore or not. Interpretations scall be made bi Claude AI. Interpreted deviations shall be stored with a hash value to avoid re-interpretations.
+A user shall be able to hide seen deviations to not have to see them again. It shall be possible to remove all hidden deviations for my user.
+It shall be possible to see all deviation in the front end temporaily. Deviations shall be cleared when they expire ( if that is obvous) 
+or after a specfic time (if not).
 
-3. FE Better GUI for trips
+A1, BE, decide on error handling in the Claude provider
 
-4. FE/BE Login weirdness. No signup button.
+A2, BE, set up initial controller call with deviation argument, response shall be enum with HIDDEN_ACCESSABILITY/HIDDEN_TIME and importance.
+
+A3, BE, create service layer with decision logic.
+
+
+B - FE/BE, Improve GUI for trips and deviations
+
+B1, FE Better GUI for trips
+    
+C - FE/BE, More work, not broken down yet
+
+C1. FE/BE Login weirdness. No signup button.
+
+D - FE/BE map support for trips and online maps for moving buses.
+
 ## Issues
 
 No current issues.
