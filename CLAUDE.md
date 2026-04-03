@@ -29,7 +29,7 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 ### App structure (`src/`)
 
 **`App.tsx`** is the root. It manages:
-- `SettingsData` for the selected stop point (ID in 16-char SL format and name). For logged-in users this comes from the backend; for non-logged-in users it is persisted to localStorage via `use-local-storage-state`.
+- `SettingsData` for the selected stop point (ID in 16-char SL format and name). For logged-in users this comes from the backend; non-logged-in users always use `DEFAULT_SETTINGS`.
 - Three React contexts: `ErrorContext` (global error string), `InDebugModeContext` (debug mode toggle), and `UserContext` (logged-in user, login/logout/updateSettings functions)
 
 ### Three main panes
@@ -65,14 +65,14 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 - `src/types/sl-journeyplaner-responses.ts` — types for the journey planner API (`Journey` as trips, `Leg`, `Transportation`)
 - `src/types/deviations.ts` — types for the deviations API
 - `src/types/common.d.ts` — global ambient types (`SettingsData`)
-- `src/types/common-constants.ts` — `SETTINGS_KEY` for localStorage
+- `src/types/common-constants.ts` — `SETTINGS_KEY` (unused, kept for reference)
 - `src/types/backend.ts` — types for the backend API (`User`, `UserSettings`)
 
 ### Settings architecture
 
-Settings (selected stop point) are stored in two places depending on login state:
+Settings (selected stop point) are only available to logged-in users:
 - **Logged-in users**: stored in the backend database. `GET /api/auth/me` always returns a non-null `settings` object (backend defaults to Skogslöparvägen if none saved). Saved via `PUT /api/protected/settings`. After a successful save, `updateSettings(data)` patches the local `UserContext` state without a round trip.
-- **Non-logged-in users**: stored in localStorage via `use-local-storage-state` with `SETTINGS_KEY`. Removing the key resets to the default stop.
+- **Non-logged-in users**: always use `DEFAULT_SETTINGS`. The Settings modal is not rendered for non-logged-in users.
 
 `DEFAULT_SETTINGS` and `URL_BACKEND_SETTINGS` are defined in `src/communication/constant.ts`. `saveSettings()` is in `src/communication/backend.ts`.
 
@@ -187,7 +187,7 @@ A5 - DONE - BE, Add a test for the delete user endpoint.
                    
 A6 - DONE - FE, Menu looks a bit much now. Create a "Mitt konto" page and move the GDPR link and "Ta bort mitt konto" there. Add a "Mitt konto" menu item. Also update the GDPR text: "menyn" → "Mitt konto".
 
-A7, FE/BE, Only use backend settings, and only use setting for logged in users. Non logged in users use default stop for departues.
+A7 - DONE - FE/BE, Only use backend settings, and only use setting for logged in users. Non logged in users use default stop for departues.
 
 B - FE, Connect the deviations pane to the backend AI interpretation API.
 Backend is complete: deviations are interpreted by Claude AI, cached in DB,

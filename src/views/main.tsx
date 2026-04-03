@@ -1,7 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
-import useLocalStorageState from 'use-local-storage-state';
 
-import { DEFAULT_SETTINGS, SITE_SKOGSLOPARVAGEN_16_CHAR } from '../communication/constant.ts';
+import { DEFAULT_SETTINGS } from '../communication/constant.ts';
 import { saveSettings } from '../communication/backend.ts';
 import { ErrorHandler } from '../components/error-handler';
 import { Departures } from '../components/pane/departures';
@@ -14,7 +13,6 @@ import InDebugModeContext from '../contexts/debug-context.ts';
 import PageTitleContext from '../contexts/page-title-context.ts';
 import { LoginTeaser } from '../components/pane/login-teaser';
 import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user.ts';
-import { SETTINGS_KEY } from '../types/common-constants.ts';
 
 export function Main() {
   const { setError } = useContext(ErrorContext);
@@ -22,16 +20,13 @@ export function Main() {
   const { user, updateSettings } = useUser();
   const loginState = useUserLoginState();
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
-
-  const isLoggedIn = loginState === UserLoginState.LoggedIn;
-  const [localSettingsData, setLocalSettingsData, { removeItem, isPersistent }] = useLocalStorageState<SettingsData>(SETTINGS_KEY, {
-    defaultValue: DEFAULT_SETTINGS
-  });
   const [inDebugMode, setInDebugMode] = useState<boolean>(false);
 
-  const settingsData: SettingsData = isLoggedIn && user && user.settings
+  const isLoggedIn = loginState === UserLoginState.LoggedIn;
+
+  const settingsData: SettingsData = isLoggedIn && user?.settings
     ? { stopPointId: user.settings.stopPointId, stopPointName: user.settings.stopPointName }
-    : localSettingsData;
+    : DEFAULT_SETTINGS;
 
   useEffect(() => {
     setHeading(settingsData.stopPointName);
@@ -43,23 +38,10 @@ export function Main() {
     return () => window.removeEventListener('openSettings', openSettings);
   }, []);
 
-  if (loginState === UserLoginState.NotLoggedIn && !isPersistent) {
-    console.log("Settings data not persistent");
-    setError("Settings data not persistent. Please reload the page.");
-  }
-
   async function handleSaveSettings(data: SettingsData) {
-    if (isLoggedIn) {
-      const success = await saveSettings(data, setError);
-      if (success) {
-        updateSettings(data);
-      }
-    } else {
-      if (data.stopPointId === SITE_SKOGSLOPARVAGEN_16_CHAR) {
-        removeItem();
-      } else {
-        setLocalSettingsData(data);
-      }
+    const success = await saveSettings(data, setError);
+    if (success) {
+      updateSettings(data);
     }
   }
 
@@ -86,12 +68,14 @@ export function Main() {
             </SLButton>
           </div>
         )}
-        <Settings
-          settingsOpen={settingsOpen}
-          setSettingsOpen={setSettingsOpen}
-          currentSettings={settingsData}
-          onSave={handleSaveSettings}
-        />
+        {isLoggedIn && (
+          <Settings
+            settingsOpen={settingsOpen}
+            setSettingsOpen={setSettingsOpen}
+            currentSettings={settingsData}
+            onSave={handleSaveSettings}
+          />
+        )}
       </main>
     </InDebugModeContext.Provider>
   );
