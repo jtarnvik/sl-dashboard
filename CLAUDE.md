@@ -177,11 +177,17 @@ A3 - DONE - FE, Add a GDPR info page.
 
   *Den rättsliga grunden för behandlingen av dina personuppgifter är fullgörande av avtal (GDPR artikel 6.1 b) — det vill säga att vi behöver uppgifterna för att kunna tillhandahålla tjänsten du registrerat dig för.*
 
-A4 - FE/BE, Add "Ta bort mitt konto" for GDPR compliance.
+A4 - DONE - FE/BE, Add "Ta bort mitt konto" for GDPR compliance.
 - Available in the user nav menu (non-admins and admins alike). In the backend, make an extra validation on the delete user that the last admin user cant be removed.
 - Show a confirmation dialog ("Är du säker?") before proceeding.
 - On confirm: call a new backend endpoint that deletes the user from all tables, then logs the user out and redirects to the default view.
 - Backend: new DELETE endpoint at `/api/protected/account` — removes the user's row from `allowed_user` (cascade handles settings and hidden deviations), invalidates the session.
+  
+A5, BE, Add a test for the delete user endpoint.
+                   
+A6 FE, Menu looks a bit much now. Create a My Account page and move gdpr link there and the delete account link. Do we need to update the GDPR info text as well?
+
+A7, FE/BE, Only use backend settings, and only use setting for logged in users. Non logged in users use default stop for departues.
 
 B - FE, Connect the deviations pane to the backend AI interpretation API.
 Backend is complete: deviations are interpreted by Claude AI, cached in DB,

@@ -7,6 +7,7 @@ import {
   URL_BACKEND_ADMIN_DELETE_USER,
   URL_BACKEND_ADMIN_REJECT_ACCESS_REQUEST,
   URL_BACKEND_ADMIN_USERS,
+  URL_BACKEND_DELETE_ACCOUNT,
   URL_BACKEND_GET_CHECK_AUTH,
   URL_BACKEND_LOGIN,
   URL_BACKEND_LOGOUT,
@@ -124,6 +125,20 @@ export async function deleteAllowedUser(id: number, setError: SetError): Promise
     return true;
   } catch {
     setError("Kunde inte ta bort användare.");
+    return false;
+  }
+}
+
+export async function deleteAccount(setError: SetError): Promise<boolean> {
+  try {
+    await backend.delete(URL_BACKEND_DELETE_ACCOUNT);
+    return true;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 409) {
+      setError("Kan inte ta bort det sista administratörskontot.");
+    } else {
+      setError("Kunde inte ta bort kontot. Försök igen senare.");
+    }
     return false;
   }
 }

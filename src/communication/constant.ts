@@ -26,6 +26,7 @@ export const URL_BACKEND_ADMIN_USERS = "/api/admin/users";
 export const URL_BACKEND_ADMIN_DELETE_USER = (id: number) => `/api/admin/users/${id}`;
 
 export const URL_BACKEND_SETTINGS = "/api/protected/settings";
+export const URL_BACKEND_DELETE_ACCOUNT = "/api/protected/account";
 
 export const DEFAULT_SETTINGS: SettingsData = { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen" };
 
