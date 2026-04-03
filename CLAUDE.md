@@ -29,8 +29,45 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 ### App structure (`src/`)
 
 **`App.tsx`** is the root. It manages:
-- `SettingsData` for the selected stop point (ID in 16-char SL format and name). For logged-in users this comes from the backend; non-logged-in users always use `DEFAULT_SETTINGS`.
-- Three React contexts: `ErrorContext` (global error string), `InDebugModeContext` (debug mode toggle), and `UserContext` (logged-in user, login/logout/updateSettings functions)
+- Authentication state (`user`: `undefined` = loading, `null` = not logged in, `User` object = logged in) and the `login` / `logout` / `updateSettings` functions.
+- Three React contexts: `ErrorContext` (global error string + retry function), `UserContext` (auth state and actions), and `PageTitleContext` (current page heading shown in the navbar).
+
+**`Main.tsx`** renders the main page (`/`). It derives `settingsData` from `user.settings` when logged in, or `DEFAULT_SETTINGS` otherwise. It also manages `settingsOpen` state, listens for the `openSettings` window event, and provides `InDebugModeContext` to the debug mode button and panes.
+
+### Login states and visible content
+
+| State | Navbar right | Panes shown |
+|---|---|---|
+| Loading | "Logga in" (disabled) | Departures only |
+| Not logged in | "Logga in" (active) | Departures + LoginTeaser |
+| Logged in | Hamburger menu | Departures + Routes + Deviations |
+
+`LoginTeaser` (`src/components/pane/login-teaser/`) is a card shown below Departures when not logged in. It contains a teaser text and a link to the GDPR page.
+
+### Navbar (`src/components/navbar/`)
+
+`Navbar` is a fixed top bar. It shows the SL logo, the current page heading from `PageTitleContext`, and either a login button (not logged in) or `NavMenu` (logged in).
+
+`NavMenu` (`src/components/navbar/nav-menu/`) is the hamburger dropdown for logged-in users:
+- Admin-only items at top: "Väntande användare" (with badge for pending count), "Användare"
+- "Mitt konto" — navigates to `/my-account`
+- "Inställningar" — dispatches `openSettings` window event (handled by `Main.tsx`)
+- "Logga ut"
+
+The hamburger icon shows a red badge when there are pending access requests. The count is fetched on mount and on every menu open.
+
+### Views and routes
+
+| View | Route | Auth | Description |
+|---|---|---|---|
+| `Main` | `/` | Any | Main dashboard with panes |
+| `MyAccount` | `/my-account` | Logged in | Delete account + GDPR link |
+| `PendingUsers` | `/admin/pending` | Admin | Approve/reject access requests |
+| `ExistingUsers` | `/admin/users` | Admin | List and delete allowed users |
+| `Gdpr` | `/gdpr` | Any | GDPR info page |
+| `Denied` | `/denied` | — | Shown when access is denied during OAuth2 |
+
+All routes except `/denied` are rendered inside `Layout`, which wraps them with `Navbar` and an `ErrorBoundary`.
 
 ### Three main panes
 
@@ -65,7 +102,6 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 - `src/types/sl-journeyplaner-responses.ts` — types for the journey planner API (`Journey` as trips, `Leg`, `Transportation`)
 - `src/types/deviations.ts` — types for the deviations API
 - `src/types/common.d.ts` — global ambient types (`SettingsData`)
-- `src/types/common-constants.ts` — `SETTINGS_KEY` (unused, kept for reference)
 - `src/types/backend.ts` — types for the backend API (`User`, `UserSettings`)
 
 ### Settings architecture
@@ -141,53 +177,6 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 Implementation Steps
 
 There are a few large blocks of implementation. Each block has its own letter and each step within that block has its own order by number.
-
-A - FE/BE, Activate login for all users and set up a proper non-logged-in view and GDPR page.
-
-A1 - DONE - FE, Show the login button in production.
-Removed the `VITE_FEATURE_LOGIN` feature flag from both env files and the navbar. Login/logout button now always visible.
-
-A2 - DONE - FE, Show a nav menu for all user types, and define the non-logged-in experience.
-- All logged-in users get a nav menu. Admins see user admin pages; non-admins do not.
-- When not logged in: hide all panes except departures.
-- Below the departures pane, show a teaser panel — something like "Logga in för att se avvikelseinformation och övriga funktioner. Helt gratis."
-
-A3 - DONE - FE, Add a GDPR info page.
-- For logged-in users: accessible via a small link at the bottom of the nav menu.
-- For non-logged-in users: a small, muted link in the bottom-right corner of the LoginTeaser card.
-- Rendered as a page (not a modal), styled with headings. The update date and the final legal paragraph should be in a smaller, greyed-out font.
-- GDPR text to use:
-
-  **Om din data**
-  *Senast uppdaterad: april 2026*
-
-  Den här tjänsten är ett litet hobbyprojekt för pendlingsinformation i Stockholm. Vi tar din integritet på allvar och samlar bara in det vi faktiskt behöver.
-
-  **Vad vi lagrar**
-  Vi lagrar ditt namn och din e-postadress. Dessa hämtas från ditt Google-konto när du loggar in och används enbart för att identifiera dig i tjänsten.
-
-  **Varför vi lagrar det**
-  Vi lagrar dina uppgifter för att du ska kunna logga in och använda tjänsten. Uppgifterna delas inte med någon utomstående och används inte i marknadsföringssyfte.
-
-  **Var lagras det**
-  Tjänsten körs på Render med servrar i Frankfurt och din data lagras i Supabase med servrar i Irland — båda inom EU. Data krypteras i vila och lämnar aldrig EU.
-
-  **Dina rättigheter**
-  Enligt GDPR har du rätt att få din data raderad. Du kan när som helst ta bort all din data via menyn i appen. Om du har frågor om hur dina uppgifter hanteras är du välkommen att kontakta oss direkt.
-
-  *Den rättsliga grunden för behandlingen av dina personuppgifter är fullgörande av avtal (GDPR artikel 6.1 b) — det vill säga att vi behöver uppgifterna för att kunna tillhandahålla tjänsten du registrerat dig för.*
-
-A4 - DONE - FE/BE, Add "Ta bort mitt konto" for GDPR compliance.
-- Available in the user nav menu (non-admins and admins alike). In the backend, make an extra validation on the delete user that the last admin user cant be removed.
-- Show a confirmation dialog ("Är du säker?") before proceeding.
-- On confirm: call a new backend endpoint that deletes the user from all tables, then logs the user out and redirects to the default view.
-- Backend: new DELETE endpoint at `/api/protected/account` — removes the user's row from `allowed_user` (cascade handles settings and hidden deviations), invalidates the session.
-  
-A5 - DONE - BE, Add a test for the delete user endpoint.
-                   
-A6 - DONE - FE, Menu looks a bit much now. Create a "Mitt konto" page and move the GDPR link and "Ta bort mitt konto" there. Add a "Mitt konto" menu item. Also update the GDPR text: "menyn" → "Mitt konto".
-
-A7 - DONE - FE/BE, Only use backend settings, and only use setting for logged in users. Non logged in users use default stop for departues.
 
 B - FE, Connect the deviations pane to the backend AI interpretation API.
 Backend is complete: deviations are interpreted by Claude AI, cached in DB,
