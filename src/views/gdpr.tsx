@@ -39,7 +39,7 @@ export function Gdpr() {
       <h2 className="text-lg font-semibold mb-2">Dina rättigheter</h2>
       <p className="mb-6">
         Enligt GDPR har du rätt att få din data raderad. Du kan när som helst ta bort all din data
-        via menyn i appen. Om du har frågor om hur dina uppgifter hanteras är du välkommen att
+        via Mitt konto i appen. Om du har frågor om hur dina uppgifter hanteras är du välkommen att
         kontakta oss direkt.
       </p>
 

@@ -1,11 +1,8 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RxHamburgerMenu } from 'react-icons/rx';
 
-import { deleteAccount, fetchAccessRequestCount } from '../../../communication/backend';
-import { ModalDialog } from '../../common/modal-dialog';
-import { SLButton } from '../../common/sl-button';
-import ErrorContext from '../../../contexts/error-context';
+import { fetchAccessRequestCount } from '../../../communication/backend';
 
 type Props = {
   logout: () => void
@@ -14,9 +11,7 @@ type Props = {
 
 export function NavMenu({ logout, isAdmin }: Props) {
   const navigate = useNavigate();
-  const { setError } = useContext(ErrorContext);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -53,15 +48,6 @@ export function NavMenu({ logout, isAdmin }: Props) {
   }, []);
 
   const hasPending = pendingCount !== null && pendingCount > 0;
-
-  async function handleDeleteAccount() {
-    setConfirmDeleteOpen(false);
-    const success = await deleteAccount(setError);
-    if (success) {
-      await logout();
-      navigate('/');
-    }
-  }
 
   return (
     <div className="relative" ref={menuRef}>
@@ -104,6 +90,13 @@ export function NavMenu({ logout, isAdmin }: Props) {
           )}
           <button
             className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+            onClick={() => { navigate('/my-account'); setMenuOpen(false); }}
+          >
+            Mitt konto
+          </button>
+          <hr className="border-gray-200" />
+          <button
+            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
             onClick={() => { window.dispatchEvent(new Event('openSettings')); setMenuOpen(false); }}
           >
             Inställningar
@@ -115,32 +108,8 @@ export function NavMenu({ logout, isAdmin }: Props) {
           >
             Logga ut
           </button>
-          <hr className="border-gray-200" />
-          <button
-            className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 text-sm"
-            onClick={() => { setMenuOpen(false); setConfirmDeleteOpen(true); }}
-          >
-            Ta bort mitt konto
-          </button>
-          <hr className="border-gray-200" />
-          <button
-            className="w-full text-left px-4 py-2 text-gray-400 hover:bg-gray-100 text-xs"
-            onClick={() => { navigate('/gdpr'); setMenuOpen(false); }}
-          >
-            Om din data
-          </button>
         </div>
       )}
-      <ModalDialog
-        isOpen={confirmDeleteOpen}
-        onClose={() => setConfirmDeleteOpen(false)}
-        title="Ta bort konto"
-        actions={
-          <SLButton onClick={handleDeleteAccount}>Ta bort</SLButton>
-        }
-      >
-        <p>Är du säker på att du vill ta bort ditt konto? All din data raderas permanent och kan inte återställas.</p>
-      </ModalDialog>
     </div>
   );
 }

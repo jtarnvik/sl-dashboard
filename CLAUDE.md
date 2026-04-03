@@ -183,9 +183,9 @@ A4 - DONE - FE/BE, Add "Ta bort mitt konto" for GDPR compliance.
 - On confirm: call a new backend endpoint that deletes the user from all tables, then logs the user out and redirects to the default view.
 - Backend: new DELETE endpoint at `/api/protected/account` — removes the user's row from `allowed_user` (cascade handles settings and hidden deviations), invalidates the session.
   
-A5, BE, Add a test for the delete user endpoint.
+A5 - DONE - BE, Add a test for the delete user endpoint.
                    
-A6 FE, Menu looks a bit much now. Create a My Account page and move gdpr link there and the delete account link. Do we need to update the GDPR info text as well?
+A6 - DONE - FE, Menu looks a bit much now. Create a "Mitt konto" page and move the GDPR link and "Ta bort mitt konto" there. Add a "Mitt konto" menu item. Also update the GDPR text: "menyn" → "Mitt konto".
 
 A7, FE/BE, Only use backend settings, and only use setting for logged in users. Non logged in users use default stop for departues.
 
