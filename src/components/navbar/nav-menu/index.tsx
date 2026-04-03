@@ -6,9 +6,10 @@ import { fetchAccessRequestCount } from '../../../communication/backend';
 
 type Props = {
   logout: () => void
+  isAdmin: boolean
 }
 
-export function NavMenu({ logout }: Props) {
+export function NavMenu({ logout, isAdmin }: Props) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
@@ -20,14 +21,16 @@ export function NavMenu({ logout }: Props) {
   }
 
   useEffect(() => {
-    fetchAccessRequestCount().then(setPendingCount);
-  }, []);
-
-  useEffect(() => {
-    if (menuOpen) {
+    if (isAdmin) {
       fetchAccessRequestCount().then(setPendingCount);
     }
-  }, [menuOpen]);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin && menuOpen) {
+      fetchAccessRequestCount().then(setPendingCount);
+    }
+  }, [isAdmin, menuOpen]);
 
   useEffect(() => {
     window.addEventListener('pendingCountChanged', loadPendingCount);
@@ -62,23 +65,34 @@ export function NavMenu({ logout }: Props) {
       </button>
       {menuOpen && (
         <div className="absolute right-0 mt-1 w-52 bg-white rounded-sm shadow-lg z-30">
-          <button
-            className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between ${pendingCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 hover:bg-gray-100'}`}
-            onClick={() => { if (pendingCount !== 0) { navigate('/admin/pending'); setMenuOpen(false); } }}
-            disabled={pendingCount === 0}
-          >
-            <span>Väntande användare</span>
-            {hasPending && (
-              <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.1rem] h-[1.1rem] flex items-center justify-center leading-none px-0.5">
-                {pendingCount}
-              </span>
-            )}
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between ${pendingCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 hover:bg-gray-100'}`}
+                onClick={() => { if (pendingCount !== 0) { navigate('/admin/pending'); setMenuOpen(false); } }}
+                disabled={pendingCount === 0}
+              >
+                <span>Väntande användare</span>
+                {hasPending && (
+                  <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.1rem] h-[1.1rem] flex items-center justify-center leading-none px-0.5">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                onClick={() => { navigate('/admin/users'); setMenuOpen(false); }}
+              >
+                Användare
+              </button>
+              <hr className="border-gray-200" />
+            </>
+          )}
           <button
             className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-            onClick={() => { navigate('/admin/users'); setMenuOpen(false); }}
+            onClick={() => { window.dispatchEvent(new Event('openSettings')); setMenuOpen(false); }}
           >
-            Användare
+            Inställningar
           </button>
           <hr className="border-gray-200" />
           <button

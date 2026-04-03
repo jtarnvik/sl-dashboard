@@ -121,6 +121,7 @@ Custom events dispatched on `window` are used for cross-tree communication betwe
 |---|---|---|---|
 | `"unauthorized"` | `backend.ts` (Axios response interceptor) | `App.tsx` | Forces logout when any API call returns 401 |
 | `"pendingCountChanged"` | `pending-users.tsx` (after approve/reject) | `NavMenu` | Refreshes the pending access request count badge |
+| `"openSettings"` | `NavMenu` (Inställningar menu item) | `Main` | Opens the settings modal |
 
 ### Component conventions
 
@@ -139,30 +140,65 @@ ME - Stuff for me to do, remind me if this gets to number 1.
 
 Implementation Steps
 
-There are a few large blocks of implementation. each block has its own letter and each step within that block has its own order by number.
+There are a few large blocks of implementation. Each block has its own letter and each step within that block has its own order by number.
 
-A - FE/BE, Add AI interpretations of deviations. Deviations shall be interpreted in the backend so that an intelligent decision can be made as to 
-ignore or not. Interpretations scall be made bi Claude AI. Interpreted deviations shall be stored with a hash value to avoid re-interpretations.
-A user shall be able to hide seen deviations to not have to see them again. It shall be possible to remove all hidden deviations for my user.
-It shall be possible to see all deviation in the front end temporaily. Deviations shall be cleared when they expire ( if that is obvous) 
-or after a specfic time (if not).
+A - FE/BE, Activate login for all users and set up a proper non-logged-in view and GDPR page.
 
-A1, BE, decide on error handling in the Claude provider
+A1 - DONE - FE, Show the login button in production.
+Removed the `VITE_FEATURE_LOGIN` feature flag from both env files and the navbar. Login/logout button now always visible.
 
-A2, BE, set up initial controller call with deviation argument, response shall be enum with HIDDEN_ACCESSABILITY/HIDDEN_TIME and importance.
+A2 - DONE - FE, Show a nav menu for all user types, and define the non-logged-in experience.
+- All logged-in users get a nav menu. Admins see user admin pages; non-admins do not.
+- When not logged in: hide all panes except departures.
+- Below the departures pane, show a teaser panel — something like "Logga in för att se avvikelseinformation och övriga funktioner. Helt gratis."
 
-A3, BE, create service layer with decision logic.
+A3 - FE, Add a GDPR info page.
+- Accessible via a small link at the bottom of the nav menu, visible to all users (logged in or not).
+- Rendered as a page (not a modal), styled with headings. The update date and the final legal paragraph should be in a smaller, greyed-out font.
+- GDPR text to use:
+
+  **Om din data**
+  *Senast uppdaterad: april 2026*
+
+  Den här tjänsten är ett litet hobbyprojekt för pendlingsinformation i Stockholm. Vi tar din integritet på allvar och samlar bara in det vi faktiskt behöver.
+
+  **Vad vi lagrar**
+  Vi lagrar ditt namn och din e-postadress. Dessa hämtas från ditt Google-konto när du loggar in och används enbart för att identifiera dig i tjänsten.
+
+  **Varför vi lagrar det**
+  Vi lagrar dina uppgifter för att du ska kunna logga in och använda tjänsten. Uppgifterna delas inte med någon utomstående och används inte i marknadsföringssyfte.
+
+  **Var lagras det**
+  Tjänsten körs på Render med servrar i Frankfurt och din data lagras i Supabase med servrar i Irland — båda inom EU. Data krypteras i vila och lämnar aldrig EU.
+
+  **Dina rättigheter**
+  Enligt GDPR har du rätt att få din data raderad. Du kan när som helst ta bort all din data via menyn i appen. Om du har frågor om hur dina uppgifter hanteras är du välkommen att kontakta oss direkt.
+
+  *Den rättsliga grunden för behandlingen av dina personuppgifter är fullgörande av avtal (GDPR artikel 6.1 b) — det vill säga att vi behöver uppgifterna för att kunna tillhandahålla tjänsten du registrerat dig för.*
+
+A4 - FE/BE, Add "Ta bort mitt konto" for GDPR compliance.
+- Available in the user nav menu (non-admins and admins alike). In the backend, make an extra validation on the delete user that the last admin user cant be removed.
+- Show a confirmation dialog ("Är du säker?") before proceeding.
+- On confirm: call a new backend endpoint that deletes the user from all tables, then logs the user out and redirects to the default view.
+- Backend: new DELETE endpoint at `/api/protected/account` — removes the user's row from `allowed_user` (cascade handles settings and hidden deviations), invalidates the session.
+
+B - FE, Connect the deviations pane to the backend AI interpretation API.
+Backend is complete: deviations are interpreted by Claude AI, cached in DB,
+and returned with an action (SHOWN/HIDDEN_ACCESSIBILITY/HIDDEN_BY_USER/UNKNOWN) and importance (LOW/MEDIUM/HIGH/UNKNOWN).
+
+B1 - FE, to be fleshed out later
+- How to handle slow api
+- how to show all
+- How to show action
+
+C - FE/BE, Improve GUI for trips and deviations
+
+C1, FE Better GUI for trips
+
+D - FE/BE, More work, not broken down yet
 
 
-B - FE/BE, Improve GUI for trips and deviations
-
-B1, FE Better GUI for trips
-    
-C - FE/BE, More work, not broken down yet
-
-C1. FE/BE Login weirdness. No signup button.
-
-D - FE/BE map support for trips and online maps for moving buses.
+E - FE/BE map support for trips and online maps for moving buses.
 
 ## Issues
 

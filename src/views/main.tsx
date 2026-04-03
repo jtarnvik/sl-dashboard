@@ -12,21 +12,24 @@ import { SLButton } from '../components/common/sl-button';
 import ErrorContext from '../contexts/error-context.ts';
 import InDebugModeContext from '../contexts/debug-context.ts';
 import PageTitleContext from '../contexts/page-title-context.ts';
-import { useUser } from '../hook/use-user.ts';
+import { LoginTeaser } from '../components/pane/login-teaser';
+import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user.ts';
 import { SETTINGS_KEY } from '../types/common-constants.ts';
 
 export function Main() {
   const { setError } = useContext(ErrorContext);
   const { setHeading } = useContext(PageTitleContext);
   const { user, updateSettings } = useUser();
+  const loginState = useUserLoginState();
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+
+  const isLoggedIn = loginState === UserLoginState.LoggedIn;
   const [localSettingsData, setLocalSettingsData, { removeItem, isPersistent }] = useLocalStorageState<SettingsData>(SETTINGS_KEY, {
     defaultValue: DEFAULT_SETTINGS
   });
   const [inDebugMode, setInDebugMode] = useState<boolean>(false);
 
-  const isLoggedIn = user !== null && user !== undefined;
-  const settingsData: SettingsData = isLoggedIn && user.settings
+  const settingsData: SettingsData = isLoggedIn && user && user.settings
     ? { stopPointId: user.settings.stopPointId, stopPointName: user.settings.stopPointName }
     : localSettingsData;
 
@@ -34,7 +37,13 @@ export function Main() {
     setHeading(settingsData.stopPointName);
   }, [settingsData.stopPointName, setHeading]);
 
-  if (!isLoggedIn && !isPersistent) {
+  useEffect(() => {
+    const openSettings = () => setSettingsOpen(true);
+    window.addEventListener('openSettings', openSettings);
+    return () => window.removeEventListener('openSettings', openSettings);
+  }, []);
+
+  if (loginState === UserLoginState.NotLoggedIn && !isPersistent) {
     console.log("Settings data not persistent");
     setError("Settings data not persistent. Please reload the page.");
   }
@@ -60,16 +69,15 @@ export function Main() {
         <div className="flex flex-col space-y-2 px-2 mb-2">
           <ErrorHandler></ErrorHandler>
           <Departures stopPoint16Chars={settingsData.stopPointId} />
-          {/* key forces a full remount when the stop changes, resetting all route planning state */}
-          <Routes key={settingsData.stopPointId} settingsData={settingsData} />
-          <div className="flex justify-between">
-            <div className="w-1/2">
+          {isLoggedIn ? (
+            <>
+              {/* key forces a full remount when the stop changes, resetting all route planning state */}
+              <Routes key={settingsData.stopPointId} settingsData={settingsData} />
               <Deviations />
-            </div>
-            <div className="flex justify-end items-start">
-              <SLButton onClick={() => setSettingsOpen(true)} thin>Inställningar</SLButton>
-            </div>
-          </div>
+            </>
+          ) : (
+            loginState === UserLoginState.NotLoggedIn && <LoginTeaser />
+          )}
         </div>
         {inDebugMode && (
           <div className="px-2 mb-2 flex gap-2">
