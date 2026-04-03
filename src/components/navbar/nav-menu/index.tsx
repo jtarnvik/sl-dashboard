@@ -101,6 +101,13 @@ export function NavMenu({ logout, isAdmin }: Props) {
           >
             Logga ut
           </button>
+          <hr className="border-gray-200" />
+          <button
+            className="w-full text-left px-4 py-2 text-gray-400 hover:bg-gray-100 text-xs"
+            onClick={() => { navigate('/gdpr'); setMenuOpen(false); }}
+          >
+            Om din data
+          </button>
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import UserContext from './contexts/user-context.ts';
 import { User, UserSettings } from './types/backend.ts';
 import { checkLoginStatus, login, logout } from './communication/backend.ts';
 import { Denied } from './views/denied.tsx';
+import { Gdpr } from './views/gdpr.tsx';
 import { Layout } from './views/layout.tsx';
 import { Main } from './views/main.tsx';
 import { PendingUsers } from './views/admin/pending-users.tsx';
@@ -20,6 +21,7 @@ const router = createHashRouter([
       { path: '/', element: <Main /> },
       { path: '/admin/pending', element: <PendingUsers /> },
       { path: '/admin/users', element: <ExistingUsers /> },
+      { path: '/gdpr', element: <Gdpr /> },
     ],
   },
   { path: '/denied', element: <Denied /> },

@@ -152,8 +152,9 @@ A2 - DONE - FE, Show a nav menu for all user types, and define the non-logged-in
 - When not logged in: hide all panes except departures.
 - Below the departures pane, show a teaser panel — something like "Logga in för att se avvikelseinformation och övriga funktioner. Helt gratis."
 
-A3 - FE, Add a GDPR info page.
-- Accessible via a small link at the bottom of the nav menu, visible to all users (logged in or not).
+A3 - DONE - FE, Add a GDPR info page.
+- For logged-in users: accessible via a small link at the bottom of the nav menu.
+- For non-logged-in users: a small, muted link in the bottom-right corner of the LoginTeaser card.
 - Rendered as a page (not a modal), styled with headings. The update date and the final legal paragraph should be in a smaller, greyed-out font.
 - GDPR text to use:
 
