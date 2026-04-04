@@ -193,6 +193,12 @@ C1, FE Better GUI for trips
 
 D - FE/BE, More work, not broken down yet
 
+E Reset hidden
+
+F Bulleting board
+
+G Preload deviations
+
 
 E - FE/BE map support for trips and online maps for moving buses.
 
