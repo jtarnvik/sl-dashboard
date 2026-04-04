@@ -192,6 +192,12 @@ sent to the backend, and results are merged back to produce an EnrichedDeviation
 action and importance. Components receive EnrichedDeviation and render accordingly. The existing ignoreDeviation 
 filter is removed.
 
+A0 - DONE - FE, Remove the existing ignoreDeviation filter to establish an unfiltered baseline.
+- Delete the ignoreDeviation function and its regex patterns from deviation-modal/index.tsx
+- Remove all calls to ignoreDeviation from convertDeviations, convertInfoMessages, and convertDeviationSearch
+- After this step the app shows all deviations including accessibility messages — this is intentional and expected
+- No other changes, no type changes, no backend calls
+
 A1 - FE, Define CommonDeviation and EnrichedDeviation types and the conversion/enrichment pipeline.
 - Extend DeviationInfo (in deviation-modal) to become CommonDeviation by adding a text field (the raw string sent to the backend for interpretation)
 - Update the three existing conversion functions (convertDeviations, convertInfoMessages, convertDeviationSearch) to populate text and remove the ignoreDeviation call from within them
@@ -199,7 +205,7 @@ A1 - FE, Define CommonDeviation and EnrichedDeviation types and the conversion/e
 - Write the enrichment function that takes a CommonDeviation list and a backend result list and produces an 
 EnrichedDeviation list, matched by text. This is a pure function — no backend call here. The actual backend call 
 happens in each pane (A2/A3/A4), which converts to CommonDeviation, calls the backend, then calls this enrichment function with the results
-- Remove the ignoreDeviation function and its regex patterns once no longer called
+- The ignoreDeviation function is already gone by this point (removed in A0)
 
 A2 - FE, Connect the deviations pane to the backend.
 - After each SL transport type response arrives, batch all deviation texts into one backend call per transport type (three calls total: train, subway, bus)

@@ -13,18 +13,6 @@ export enum DeviationType {
   UNKNOWN,
 }
 
-const IGNORED_DEVIATION_PATTERNS: RegExp[] = [
-  /hissen är avstängd/i,
-  /en av hissarna/i,
-  /hissen.*avstängd på grund av tekniskt fel/i,
-  /hissen.*är avstängd/i,
-  /hissarna.*är avstängda/i,
-  /Rulltrapporna.*ska bytas ut/i,
-];
-
-export function ignoreDeviation(msg: string): boolean {
-  return IGNORED_DEVIATION_PATTERNS.some(pattern => pattern.test(msg));
-}
 
 export function filterDeviationsByStops(deviations: DeviationSearch[], focusStops: number[]): DeviationSearch[] {
   if (focusStops.length === 0) {
@@ -54,16 +42,10 @@ export function convertInfoMessages(infos: InfoMessage[]): DeviationInfo[] {
   const result: DeviationInfo[] = [];
   infos.forEach(info => {
     if (info?.text) {
-      if (ignoreDeviation(info.text)) {
-        return;
-      }
       result.push({message: info.text, type: DeviationType.INFORMATION});
     }
     if (info.infoLinks && info.infoLinks.length > 0) {
       info.infoLinks.forEach(link => {
-        if (ignoreDeviation(link.title)) {
-          return;
-        }
         result.push({message: link.title, type: DeviationType.INFORMATION});
       })
     }
@@ -100,7 +82,7 @@ export function convertDeviationSearch(deviations: DeviationSearch[], focusStops
       return;
     }
     const message = variant.details || variant.header;
-    if (!message || ignoreDeviation(message)) {
+    if (!message) {
       return;
     }
     const heading = buildDeviationHeading(deviation, variant, focusStops);
@@ -131,10 +113,6 @@ export function convertDeviations(deviations: Deviation[]): DeviationInfo[] {
 
   const result: DeviationInfo[] = [];
   deviations.forEach(deviation => {
-    if (ignoreDeviation(deviation.message)) {
-      return;
-    }
-
     const type = getDeviationType(deviation.consequence);
     result.push({message: deviation.message, type});
   });
