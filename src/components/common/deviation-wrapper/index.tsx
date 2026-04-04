@@ -1,37 +1,28 @@
-import {ReactNode, useState} from "react";
-import {convertDeviations, convertInfoMessages, DeviationInfo, DeviationModal} from "../deviation-modal";
-import {Leg} from "../../../types/sl-journeyplaner-responses.ts";
-import {Departure} from "../../../types/sl-responses.ts";
+import { ReactNode, useState } from 'react';
+import { DeviationModal } from '../deviation-modal';
+import { EnrichedDeviation } from '../../../types/deviations-common.ts';
 
 type Props = {
-  children: ReactNode,
-  departure?: Departure,
-  leg?: Leg,
+  children: ReactNode;
+  deviations: EnrichedDeviation[];
 };
 
-export function DeviationWrapper({children, departure, leg}: Props) {
-  const [selectedDeviations, setSelectedDeviations] = useState<DeviationInfo[] | null>(null);
+export function DeviationWrapper({ children, deviations }: Props) {
+  const [open, setOpen] = useState(false);
 
-  let deviationInfos: DeviationInfo[] | undefined = [];
-  if (departure && departure.deviations && departure.deviations.length > 0) {
-    deviationInfos = convertDeviations(departure.deviations);
-  } else if (leg && leg.infos && leg.infos.length > 0) {
-    deviationInfos = convertInfoMessages(leg.infos);
-  }
-
-  if (!deviationInfos || deviationInfos.length === 0) {
+  if (deviations.length === 0) {
     return (<div>{children}</div>);
   }
 
   return (
     <div>
-      <div className={"deviation-info"} onClick={() => setSelectedDeviations(deviationInfos)}>
+      <div className={"deviation-info"} onClick={() => setOpen(true)}>
         {children}
       </div>
       <DeviationModal
-        onClose={() => setSelectedDeviations(null)}
-        open={selectedDeviations !== null}
-        deviation={deviationInfos}
+        onClose={() => setOpen(false)}
+        open={open}
+        deviation={deviations}
       />
     </div>
   );

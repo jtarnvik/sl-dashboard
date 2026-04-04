@@ -8,6 +8,8 @@ import {LineJourney} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
+import {convertDeviations} from "../../common/deviation-modal";
+import {EnrichedDeviation} from "../../../types/deviations-common.ts";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
@@ -144,7 +146,8 @@ export function Departures({stopPoint16Chars}: Props) {
                 </div>
                 <div className="grid-time justify-self-end departure-row">
                   <div className={"relative " }>
-                    <DeviationWrapper departure={departure}>
+                    {/* TODO A3: replace cast with real enriched deviations from backend */}
+                  <DeviationWrapper deviations={convertDeviations(departure.deviations ?? []) as EnrichedDeviation[]}>
                       {departure.display}
                     </DeviationWrapper>
                   </div>

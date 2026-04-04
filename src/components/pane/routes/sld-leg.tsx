@@ -6,6 +6,8 @@ import {LineTransportation} from "../../common/line";
 import {capitalizeFirst} from "../../../util/util.ts";
 import {SldSchedule} from "./sld-schedule.tsx";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
+import {convertInfoMessages} from "../../common/deviation-modal";
+import {EnrichedDeviation} from "../../../types/deviations-common.ts";
 
 type Props = {
   leg: Leg
@@ -18,9 +20,10 @@ export function SldLeg({leg}: Props) {
     <div>
       <div className="flex justify-between">
         <SldSchedule headerLegs={headerLegs} highlightDiff={true} />
-        <DeviationWrapper leg={leg}>
+        {/* TODO A4: replace cast with real enriched deviations from backend */}
+        <DeviationWrapper deviations={convertInfoMessages(leg.infos ?? []) as EnrichedDeviation[]}>
           <SldDuration headerLegs={headerLegs} />
-        </DeviationWrapper >
+        </DeviationWrapper>
       </div>
       <SldLegTitle headerLegs={headerLegs} />
       {leg.transportation &&

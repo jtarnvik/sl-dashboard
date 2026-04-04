@@ -3,6 +3,7 @@ import classNames from "classnames";
 import {DEVIATION_FOCUS_STOPS_BUS, DEVIATION_FOCUS_STOPS_SUBWAY, DEVIATION_FOCUS_STOPS_TRAIN, URL_GET_DEVIATION_BUS, URL_GET_DEVIATION_SUBWAY, URL_GET_DEVIATION_TRAIN} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {convertDeviationSearch, DeviationModal, filterDeviationsByStops} from "../../common/deviation-modal";
+import {EnrichedDeviation} from "../../../types/deviations-common.ts";
 import {Card} from "../../common/card";
 import {getColorRef, TransportationIconCommon, TransportationMode} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
@@ -60,9 +61,10 @@ export function Deviations() {
     );
   }, [setError]);
 
-  const trainDeviationInfos = convertDeviationSearch(filterDeviationsByStops(trainDeviations, DEVIATION_FOCUS_STOPS_TRAIN), DEVIATION_FOCUS_STOPS_TRAIN);
-  const subwayDeviationInfos = convertDeviationSearch(filterDeviationsByStops(subwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY), DEVIATION_FOCUS_STOPS_SUBWAY);
-  const busDeviationInfos = convertDeviationSearch(filterDeviationsByStops(busDeviations, DEVIATION_FOCUS_STOPS_BUS), DEVIATION_FOCUS_STOPS_BUS);
+  // TODO A2: replace casts with real enriched deviations from backend
+  const trainDeviationInfos = convertDeviationSearch(filterDeviationsByStops(trainDeviations, DEVIATION_FOCUS_STOPS_TRAIN), DEVIATION_FOCUS_STOPS_TRAIN) as EnrichedDeviation[];
+  const subwayDeviationInfos = convertDeviationSearch(filterDeviationsByStops(subwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY), DEVIATION_FOCUS_STOPS_SUBWAY) as EnrichedDeviation[];
+  const busDeviationInfos = convertDeviationSearch(filterDeviationsByStops(busDeviations, DEVIATION_FOCUS_STOPS_BUS), DEVIATION_FOCUS_STOPS_BUS) as EnrichedDeviation[];
 
   // style={{ backgroundColor: modeColor, color: '#FFFFFF' }}
 

@@ -174,23 +174,23 @@ FE - means frontend
 BE - means backend
 ME - Stuff for me to do, remind me if this gets to number 1.
 
+Prefer 125 character wide lines in this file where the format allows it.
+
 Implementation Steps
 
 There are a few large blocks of implementation. Each block has its own letter and each step within that block 
 has its own order by number.
 
 A - FE, Connect all deviation sources to the backend AI interpretation API.
-The backend is complete: deviation texts are SHA-256 hashed, looked up in the DB cache, 
-and if missing interpreted by Claude AI. Results include an action 
-(SHOWN/HIDDEN_ACCESSIBILITY/HIDDEN_BY_USER/UNKNOWN) and importance (LOW/MEDIUM/HIGH/UNKNOWN). 
-The frontend currently filters deviations using a simple regex-based ignoreDeviation function — this will be 
-replaced entirely by backend interpretation results.
+The backend is complete: deviation texts are SHA-256 hashed, looked up in the DB cache, and if missing interpreted
+by Claude AI. Results include an action (SHOWN/HIDDEN_ACCESSIBILITY/HIDDEN_BY_USER/UNKNOWN) and importance
+(LOW/MEDIUM/HIGH/UNKNOWN). The frontend currently filters deviations using a simple regex-based ignoreDeviation
+function — this will be replaced entirely by backend interpretation results.
 
-The approach: each pane batches all deviation texts from one SL API response into a single backend call 
-(one batch per SL request, not per deviation). Raw SL types are converted to a CommonDeviation type, 
-sent to the backend, and results are merged back to produce an EnrichedDeviation type that includes the backend 
-action and importance. Components receive EnrichedDeviation and render accordingly. The existing ignoreDeviation 
-filter is removed.
+The approach: each pane batches all deviation texts from one SL API response into a single backend call (one batch
+per SL request, not per deviation). Raw SL types are converted to a CommonDeviation type, sent to the backend, and
+results are merged back to produce an EnrichedDeviation type that includes the backend action and importance.
+Components receive EnrichedDeviation and render accordingly. The existing ignoreDeviation filter is removed.
 
 A0 - DONE - FE, Remove the existing ignoreDeviation filter to establish an unfiltered baseline.
 - Delete the ignoreDeviation function and its regex patterns from deviation-modal/index.tsx
@@ -198,35 +198,54 @@ A0 - DONE - FE, Remove the existing ignoreDeviation filter to establish an unfil
 - After this step the app shows all deviations including accessibility messages — this is intentional and expected
 - No other changes, no type changes, no backend calls
 
-A1 - FE, Define CommonDeviation and EnrichedDeviation types and the conversion/enrichment pipeline.
-- Extend DeviationInfo (in deviation-modal) to become CommonDeviation by adding a text field (the raw string sent to the backend for interpretation)
-- Update the three existing conversion functions (convertDeviations, convertInfoMessages, convertDeviationSearch) to populate text and remove the ignoreDeviation call from within them
-- Define EnrichedDeviation: extends CommonDeviation with id (DB id for hide), importance, and action from backend
-- Write the enrichment function that takes a CommonDeviation list and a backend result list and produces an 
-EnrichedDeviation list, matched by text. This is a pure function — no backend call here. The actual backend call 
-happens in each pane (A2/A3/A4), which converts to CommonDeviation, calls the backend, then calls this enrichment function with the results
+A1 - DONE - FE/BE, Define CommonDeviation and EnrichedDeviation types and the conversion/enrichment pipeline.
+- BE: Add delays (Boolean) and cancelations (Boolean) to DeviationInterpretationResult — these fields already
+  exist on the DeviationInterpretation entity from the AI prompt, they just need to be exposed in the result DTO
+  and populated in the mapper/service
+- FE: Create a new file src/types/deviations-common.ts to hold the new shared deviation types
+- FE: Define CommonDeviation in deviations-common.ts with fields:
+    message (the full text — used both for display and as the string sent to the backend),
+    heading? (stop name or scope label, only populated by deviations pane),
+    shortMessage? (brief header summary, only populated by deviations pane).
+  No type field — deviation type is determined by the AI, not inferred from SL data
+- FE: Define EnrichedDeviation in deviations-common.ts: extends CommonDeviation with id (DB id for hide),
+  importance, action, delays, and cancelations from the backend result
+- FE: Remove DeviationInfo and DeviationType from deviation-modal and replace all usages with
+  CommonDeviation/EnrichedDeviation. Remove getDeviationType() helper
+- FE: Update the three conversion functions (convertDeviations, convertInfoMessages, convertDeviationSearch)
+  to return CommonDeviation[] instead of DeviationInfo[]
+- FE: Write the enrichment function (in deviations-common.ts or a companion util) that takes a CommonDeviation[]
+  and a backend result list and produces EnrichedDeviation[], matched by message. Pure function — no backend call
+  here. The actual backend call happens in each pane (A2/A3/A4)
+- FE: Update DeviationModal to accept EnrichedDeviation[] — use delays/cancelations for icons instead of
+  DeviationType. importance and action fields can be ignored in the modal for now (used in A5/A6)
 - The ignoreDeviation function is already gone by this point (removed in A0)
 
 A2 - FE, Connect the deviations pane to the backend.
-- After each SL transport type response arrives, batch all deviation texts into one backend call per transport type (three calls total: train, subway, bus)
+- After each SL transport type response arrives, batch all deviation texts into one backend call per transport
+  type (three calls total: train, subway, bus)
 - Filter out HIDDEN_ACCESSIBILITY and HIDDEN_BY_USER actions — show only SHOWN
-- Loading state: extend existing SL loading state to cover the backend call (one combined loading phase per transport type)
+- Loading state: extend existing SL loading state to cover the backend call (one combined loading phase per
+  transport type)
 
 A3 - FE, Connect the departures pane to the backend.
-- After the SL departures response arrives, collect all unique deviation texts across all departures and send one batched backend call
+- After the SL departures response arrives, collect all unique deviation texts across all departures and send
+  one batched backend call
 - Match results back to each departure by text
 - Filter out hidden actions
 - Loading state: extend existing departures loading state
 
 A4 - FE, Connect the routes pane to the backend.
-- After the SL journey planner response arrives, collect all unique InfoMessage texts across all journeys and legs and send one batched backend call
+- After the SL journey planner response arrives, collect all unique InfoMessage texts across all journeys and
+  legs and send one batched backend call
 - Match results back to each leg
 - Filter out hidden actions
 - Update both the journey-level warning icon and the leg-level deviation display
 - Loading state: extend existing routes loading state
 
 A5 - FE, Show importance icons on deviation display.
-- In the DeviationModal (or equivalent), show a visual indicator of importance (LOW/MEDIUM/HIGH) alongside each deviation
+- In the DeviationModal (or equivalent), show a visual indicator of importance (LOW/MEDIUM/HIGH) alongside
+  each deviation
 - Design to be decided — could be color coding, icons, or labels
 
 A6 - FE/BE, Add hide button for individual deviations.
@@ -236,16 +255,37 @@ A6 - FE/BE, Add hide button for individual deviations.
 - Only available to logged-in users
 
 A7 - FE, Add frontend cache for deviation interpretations.
-- Cache backend interpretation results in memory (e.g. a Map keyed by deviation text) for the lifetime of the page session
+- Cache backend interpretation results in memory (e.g. a Map keyed by deviation text) for the lifetime of the
+  page session
 - On each SL refresh cycle, check the cache before sending texts to the backend — only send uncached texts
 - Merge cached results with fresh backend results before enrichment
-- Note: may not be needed. The backend caches interpretations in the DB by SHA-256 hash, so repeated calls for the same text are fast (no Claude API call, just a DB lookup). If the round-trip latency to api.tarnvik.com is acceptable, frontend caching adds complexity for little gain — evaluate at implementation time and skip if responses feel fast enough
+- Note: may not be needed. The backend caches interpretations in the DB by SHA-256 hash, so repeated calls for
+  the same text are fast (no Claude API call, just a DB lookup). If the round-trip latency to api.tarnvik.com
+  is acceptable, frontend caching adds complexity for little gain — evaluate at implementation time and skip
+  if responses feel fast enough
+
+A8, this deviation is seen now and then 
+--
+      "deviations": [
+        {
+          "importance_level": 7,
+          "consequence": "INFORMATION",
+          "message": "."
+        }
+      ]
+--
+How does the AI handle that? Should we just set up a hardcoded manual interpretation?
+
+Between A and B at next re-alphabetize fix this. Create sharable route links.
 
 B - FE/BE, Improve GUI for trips and deviations
 
 B1 - FE, Better GUI for trips
 
 C - FE/BE, More work, not broken down yet
+C1 - FE bug, the "Inställningar" menu item only works if the user is at the main page.
+C2 - FE how to handle long list of departures
+C3 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
 
 D - Reset hidden
 

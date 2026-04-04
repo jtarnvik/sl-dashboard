@@ -1,18 +1,12 @@
-import {useState} from "react";
-import {IoMdInformationCircleOutline} from "react-icons/io";
-import {IoChevronDown, IoChevronUp} from "react-icons/io5";
-import {MdOutlineCancel} from "react-icons/md";
-import {ModalDialog} from "../modal-dialog";
-import { Deviation as DeviationSearch } from "../../../types/deviations";
-import {InfoMessage} from "../../../types/sl-journeyplaner-responses";
-import {Deviation} from "../../../types/sl-responses";
-
-export enum DeviationType {
-  INFORMATION = 1,
-  CANCELLED,
-  UNKNOWN,
-}
-
+import { useState } from 'react';
+import { IoMdInformationCircleOutline } from 'react-icons/io';
+import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
+import { MdOutlineCancel } from 'react-icons/md';
+import { ModalDialog } from '../modal-dialog';
+import { Deviation as DeviationSearch } from '../../../types/deviations';
+import { InfoMessage } from '../../../types/sl-journeyplaner-responses';
+import { Deviation } from '../../../types/sl-responses';
+import { CommonDeviation, EnrichedDeviation } from '../../../types/deviations-common';
 
 export function filterDeviationsByStops(deviations: DeviationSearch[], focusStops: number[]): DeviationSearch[] {
   if (focusStops.length === 0) {
@@ -27,27 +21,20 @@ export function filterDeviationsByStops(deviations: DeviationSearch[], focusStop
   });
 }
 
-export interface DeviationInfo {
-  heading?: string,
-  shortMessage?: string,
-  message: string,
-  type: DeviationType
-}
-
-export function convertInfoMessages(infos: InfoMessage[]): DeviationInfo[] {
+export function convertInfoMessages(infos: InfoMessage[]): CommonDeviation[] {
   if (!infos) {
     return [];
   }
 
-  const result: DeviationInfo[] = [];
+  const result: CommonDeviation[] = [];
   infos.forEach(info => {
     if (info?.text) {
-      result.push({message: info.text, type: DeviationType.INFORMATION});
+      result.push({ message: info.text });
     }
     if (info.infoLinks && info.infoLinks.length > 0) {
       info.infoLinks.forEach(link => {
-        result.push({message: link.title, type: DeviationType.INFORMATION});
-      })
+        result.push({ message: link.title });
+      });
     }
   });
   return result;
@@ -70,12 +57,12 @@ function buildDeviationHeading(deviation: DeviationSearch, variant: { scope_alia
   return undefined;
 }
 
-export function convertDeviationSearch(deviations: DeviationSearch[], focusStops: number[] = []): DeviationInfo[] {
+export function convertDeviationSearch(deviations: DeviationSearch[], focusStops: number[] = []): CommonDeviation[] {
   if (!deviations) {
     return [];
   }
 
-  const result: DeviationInfo[] = [];
+  const result: CommonDeviation[] = [];
   deviations.forEach(deviation => {
     const variant = deviation.message_variants.find(v => v.language === 'sv') ?? deviation.message_variants[0];
     if (!variant) {
@@ -87,74 +74,51 @@ export function convertDeviationSearch(deviations: DeviationSearch[], focusStops
     }
     const heading = buildDeviationHeading(deviation, variant, focusStops);
     const shortMessage = variant.header || undefined;
-    result.push({ heading, shortMessage, message, type: DeviationType.INFORMATION });
+    result.push({ heading, shortMessage, message });
   });
   return result;
 }
 
-export function convertDeviations(deviations: Deviation[]): DeviationInfo[] {
-  function getDeviationType(consequence?: string): DeviationType {
-    if (!consequence) {
-      return DeviationType.UNKNOWN;
-    }
-    switch (consequence) {
-      case "INFORMATION":
-        return DeviationType.INFORMATION;
-      case "CANCELLED":
-        return DeviationType.CANCELLED;
-      default:
-        return DeviationType.UNKNOWN;
-    }
-  }
-
+export function convertDeviations(deviations: Deviation[]): CommonDeviation[] {
   if (!deviations) {
     return [];
   }
 
-  const result: DeviationInfo[] = [];
-  deviations.forEach(deviation => {
-    const type = getDeviationType(deviation.consequence);
-    result.push({message: deviation.message, type});
-  });
-  return result;
+  return deviations.map(deviation => ({ message: deviation.message }));
 }
 
-function getDeviationIcon(type: DeviationType) {
-  switch (type) {
-    case DeviationType.INFORMATION:
-      return <IoMdInformationCircleOutline size={24} />;
-    case DeviationType.CANCELLED:
-      return <MdOutlineCancel size={24} />;
-    default:
-      return <IoMdInformationCircleOutline size={24} />;
+function getDeviationIcon(deviation: EnrichedDeviation) {
+  if (deviation.cancelations) {
+    return <MdOutlineCancel size={24} />;
   }
+  return <IoMdInformationCircleOutline size={24} />;
 }
 
 type DeviationRowProps = {
-  deviationInfo: DeviationInfo
+  enriched: EnrichedDeviation;
 };
 
-function DeviationRow({deviationInfo}: DeviationRowProps) {
+function DeviationRow({ enriched }: DeviationRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const hasExpandable = Boolean(deviationInfo.shortMessage && deviationInfo.message);
+  const hasExpandable = Boolean(enriched.shortMessage && enriched.message);
 
   return (
     <tr>
-      <td className="align-top">{getDeviationIcon(deviationInfo.type)}</td>
+      <td className="align-top">{getDeviationIcon(enriched)}</td>
       <td className="align-top">
-        {deviationInfo.heading && <div className="font-semibold">{deviationInfo.heading}</div>}
+        {enriched.heading && <div className="font-semibold">{enriched.heading}</div>}
         {hasExpandable ? (
           <>
             <div className="flex items-start justify-between gap-2">
-              <span>{deviationInfo.shortMessage}</span>
+              <span>{enriched.shortMessage}</span>
               <button onClick={() => setExpanded(!expanded)} className="shrink-0 mt-[2px]">
                 {expanded ? <IoChevronUp size={16} /> : <IoChevronDown size={16} />}
               </button>
             </div>
-            {expanded && <div className="mt-1 text-sm text-gray-700">{deviationInfo.message}</div>}
+            {expanded && <div className="mt-1 text-sm text-gray-700">{enriched.message}</div>}
           </>
         ) : (
-          deviationInfo.message
+          enriched.message
         )}
       </td>
     </tr>
@@ -162,21 +126,21 @@ function DeviationRow({deviationInfo}: DeviationRowProps) {
 }
 
 type Props = {
-  onClose: () => void,
-  open: boolean,
-  deviation: DeviationInfo[]
+  onClose: () => void;
+  open: boolean;
+  deviation: EnrichedDeviation[];
 };
 
-export function DeviationModal({onClose, open, deviation}: Props) {
+export function DeviationModal({ onClose, open, deviation }: Props) {
   if (!open) {
     return null;
   }
 
   const sortedDeviations = [...deviation].sort((a, b) => {
-    if (a.type === DeviationType.CANCELLED && b.type !== DeviationType.CANCELLED) {
+    if (a.cancelations && !b.cancelations) {
       return -1;
     }
-    if (a.type !== DeviationType.CANCELLED && b.type === DeviationType.CANCELLED) {
+    if (!a.cancelations && b.cancelations) {
       return 1;
     }
     return 0;
@@ -192,7 +156,7 @@ export function DeviationModal({onClose, open, deviation}: Props) {
       <table className="border-separate border-spacing-y-2">
         <tbody>
         {sortedDeviations.map((deviationInfo, index) => (
-          <DeviationRow key={index} deviationInfo={deviationInfo} />
+          <DeviationRow key={index} enriched={deviationInfo} />
         ))}
         </tbody>
       </table>
