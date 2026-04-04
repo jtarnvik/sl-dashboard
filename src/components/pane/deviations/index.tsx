@@ -19,7 +19,7 @@ import InDebugModeContext from '../../../contexts/debug-context.ts';
 import { Legend } from '../departures/legend.tsx';
 import { AbortControllerState } from '../../../types/communication.ts';
 import { Deviation } from '../../../types/deviations.ts';
-import { EnrichedDeviation, enrichDeviations } from '../../../types/deviations-common.ts';
+import { EnrichedDeviation, enrichDeviations, isShown } from '../../../types/deviations-common.ts';
 import { deviationIcons, normalIcons } from './legend-data.tsx';
 import ErrorContext from '../../../contexts/error-context.ts';
 
@@ -65,7 +65,7 @@ export function Deviations() {
     const results = await interpretDeviations(common.map(d => d.message), setError);
     if (results) {
       const enriched = enrichDeviations(common, results);
-      setEnriched(enriched.filter(d => d.action === 'SHOWN'));
+      setEnriched(enriched.filter(isShown));
     }
     setInProgress(false);
   }

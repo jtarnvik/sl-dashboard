@@ -228,7 +228,7 @@ A2 - DONE - FE, Connect the deviations pane to the backend.
 - Loading state: extend existing SL loading state to cover the backend call (one combined loading phase per
   transport type)
 
-A3 - FE, Connect the departures pane to the backend.
+A3 - DONE - FE, Connect the departures pane to the backend.
 - After the SL departures response arrives, collect all unique deviation texts across all departures and send
   one batched backend call
 - Match results back to each departure by text
@@ -242,6 +242,15 @@ A4 - FE, Connect the routes pane to the backend.
 - Filter out hidden actions
 - Update both the journey-level warning icon and the leg-level deviation display
 - Loading state: extend existing routes loading state
+
+A4.1 - FE, We need to rework how deviations are interpreted. Some deviations are reported with very thorough
+messages, typically for deviations connected to the intire line, dypically found in the deviations pane. But when the 
+devitions are connected to a singel departue, they are typically very brief and can even be just a single word "Inställd". 
+The AI interpreter needs to know if the text is connected to a specific departure or not to give a specific interpretation.
+Design discuss how to handle this. Should we add a context field to the backend entity? Where the context could be "Dennavvikelse berör 
+specifikt denna avgång"  eller "Denna avvikelse berör linje 43" eller "Denna avvikelse berör linje 43 och hållplatsen/erna X, Y,X"
+The context shold be obvious at the FE.
+Design/Discuss. Right now the AI gets one word deviations and cant do much with them. See also A8. 
 
 A5 - FE, Show importance icons on deviation display.
 - In the DeviationModal (or equivalent), show a visual indicator of importance (LOW/MEDIUM/HIGH) alongside

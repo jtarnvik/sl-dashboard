@@ -20,6 +20,10 @@ export interface BackendInterpretationResult {
   cancelations: boolean | null;
 }
 
+export function isShown(d: EnrichedDeviation): boolean {
+  return d.action !== 'HIDDEN_ACCESSIBILITY' && d.action !== 'HIDDEN_BY_USER';
+}
+
 export function enrichDeviations(
   deviations: CommonDeviation[],
   results: BackendInterpretationResult[]

@@ -3,13 +3,13 @@ import {MdRefresh} from "react-icons/md";
 import {DateTime, Duration} from "luxon";
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
+import {interpretDeviations} from "../../../communication/backend.ts";
 import {Card} from "../../common/card";
 import {LineJourney} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
-import {convertDeviations} from "../../common/deviation-modal";
-import {EnrichedDeviation} from "../../../types/deviations-common.ts";
+import {BackendInterpretationResult, EnrichedDeviation, isShown} from "../../../types/deviations-common.ts";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
@@ -35,6 +35,7 @@ export function Departures({stopPoint16Chars}: Props) {
   const [departing, setDeparting] = useState<Set<string>>(new Set());
 
   const [departures, setDepartures] = useState<SlDeparturesResponse | undefined>(undefined);
+  const [deviationEnrichment, setDeviationEnrichment] = useState<Map<string, BackendInterpretationResult>>(new Map());
   const [lastUpdated, setLastUpdated] = useState<DateTime | undefined>(undefined);
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
@@ -53,9 +54,32 @@ export function Departures({stopPoint16Chars}: Props) {
     return () => latestRequest.current?.abort("Component unmounted");
   }, []);
 
+  const processDeviationEnrichment = useCallback(async (deps: Departure[]) => {
+    const allMessages = deps
+      .flatMap(dep => dep.deviations ?? [])
+      .map(dev => dev.message)
+      .filter(Boolean);
+    const uniqueMessages = [...new Set(allMessages)];
+    if (uniqueMessages.length === 0) {
+      setDeviationEnrichment(new Map());
+      return;
+    }
+    const results = await interpretDeviations(uniqueMessages, setError);
+    if (results) {
+      const enrichmentMap = new Map<string, BackendInterpretationResult>();
+      uniqueMessages.forEach((msg, i) => {
+        if (results[i]) {
+          enrichmentMap.set(msg, results[i]);
+        }
+      });
+      setDeviationEnrichment(enrichmentMap);
+    }
+  }, [setError]);
+
   const updateDepartures = useCallback(() => {
     const url = URL_GET_DEPARTURES_FROM_SITE(stopPoint16Chars.slice(-4));
     fetchAbortable<SlDeparturesResponse>(url, latestRequest, (data) => {
+      processDeviationEnrichment(data.departures);
       const lastDepts = lastDepartures.current;
       if (lastDepts) {
         const lastIds = lastDepts.map(dep => getUniqueId(dep));
@@ -94,7 +118,7 @@ export function Departures({stopPoint16Chars}: Props) {
         setDiffSinceLastUpdated(DateTime.now().diffNow())
       }
     }, setError);
-  }, [stopPoint16Chars, setError]);
+  }, [stopPoint16Chars, setError, processDeviationEnrichment]);
 
   useVisibility({onVisible: updateDepartures});
 
@@ -146,8 +170,16 @@ export function Departures({stopPoint16Chars}: Props) {
                 </div>
                 <div className="grid-time justify-self-end departure-row">
                   <div className={"relative " }>
-                    {/* TODO A3: replace cast with real enriched deviations from backend */}
-                  <DeviationWrapper deviations={convertDeviations(departure.deviations ?? []) as EnrichedDeviation[]}>
+                    <DeviationWrapper deviations={
+                      (departure.deviations ?? [])
+                        .map(dev => {
+                          const result = deviationEnrichment.get(dev.message);
+                          if (!result) { return null; }
+                          return { message: dev.message, ...result } as EnrichedDeviation;
+                        })
+                        .filter((d): d is EnrichedDeviation => d !== null)
+                        .filter(isShown)
+                    }>
                       {departure.display}
                     </DeviationWrapper>
                   </div>
