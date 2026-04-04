@@ -221,7 +221,7 @@ A1 - DONE - FE/BE, Define CommonDeviation and EnrichedDeviation types and the co
   DeviationType. importance and action fields can be ignored in the modal for now (used in A5/A6)
 - The ignoreDeviation function is already gone by this point (removed in A0)
 
-A2 - FE, Connect the deviations pane to the backend.
+A2 - DONE - FE, Connect the deviations pane to the backend.
 - After each SL transport type response arrives, batch all deviation texts into one backend call per transport
   type (three calls total: train, subway, bus)
 - Filter out HIDDEN_ACCESSIBILITY and HIDDEN_BY_USER actions — show only SHOWN
@@ -264,7 +264,7 @@ A7 - FE, Add frontend cache for deviation interpretations.
   is acceptable, frontend caching adds complexity for little gain — evaluate at implementation time and skip
   if responses feel fast enough
 
-A8, this deviation is seen now and then 
+A8 - FE/BE, this deviation is seen now and then 
 --
       "deviations": [
         {
@@ -275,6 +275,8 @@ A8, this deviation is seen now and then
       ]
 --
 How does the AI handle that? Should we just set up a hardcoded manual interpretation?
+
+A9 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
 
 Between A and B at next re-alphabetize fix this. Create sharable route links.
 

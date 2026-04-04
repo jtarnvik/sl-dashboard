@@ -9,11 +9,13 @@ import {
   URL_BACKEND_ADMIN_USERS,
   URL_BACKEND_DELETE_ACCOUNT,
   URL_BACKEND_GET_CHECK_AUTH,
+  URL_BACKEND_INTERPRET_DEVIATIONS,
   URL_BACKEND_LOGIN,
   URL_BACKEND_LOGOUT,
   URL_BACKEND_SETTINGS,
 } from "./constant.ts";
 import {AccessRequestItem, AllowedUserItem, User, UserSettings} from "../types/backend.ts";
+import {BackendInterpretationResult} from "../types/deviations-common.ts";
 
 const backend = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -140,6 +142,22 @@ export async function deleteAccount(setError: SetError): Promise<boolean> {
       setError("Kunde inte ta bort kontot. Försök igen senare.");
     }
     return false;
+  }
+}
+
+export async function interpretDeviations(
+  texts: string[],
+  setError: SetError
+): Promise<BackendInterpretationResult[] | null> {
+  try {
+    const response = await backend.post<BackendInterpretationResult[]>(
+      URL_BACKEND_INTERPRET_DEVIATIONS,
+      { deviationTexts: texts }
+    );
+    return response.data;
+  } catch {
+    setError("Kunde inte tolka avvikelser.");
+    return null;
   }
 }
 

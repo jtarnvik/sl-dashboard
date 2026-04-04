@@ -1,19 +1,27 @@
-import {useContext, useEffect, useRef, useState} from "react";
-import classNames from "classnames";
-import {DEVIATION_FOCUS_STOPS_BUS, DEVIATION_FOCUS_STOPS_SUBWAY, DEVIATION_FOCUS_STOPS_TRAIN, URL_GET_DEVIATION_BUS, URL_GET_DEVIATION_SUBWAY, URL_GET_DEVIATION_TRAIN} from "../../../communication/constant.ts";
-import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
-import {convertDeviationSearch, DeviationModal, filterDeviationsByStops} from "../../common/deviation-modal";
-import {EnrichedDeviation} from "../../../types/deviations-common.ts";
-import {Card} from "../../common/card";
-import {getColorRef, TransportationIconCommon, TransportationMode} from "../../common/line";
-import {ModalDialog} from "../../common/modal-dialog";
-import {SLButton} from "../../common/sl-button";
-import InDebugModeContext from "../../../contexts/debug-context.ts";
-import {Legend} from "../departures/legend.tsx";
-import {AbortControllerState} from "../../../types/communication.ts";
-import {Deviation} from "../../../types/deviations.ts";
-import {deviationIcons, normalIcons} from "./legend-data.tsx";
-import ErrorContext from "../../../contexts/error-context.ts";
+import { useContext, useEffect, useRef, useState } from 'react';
+import classNames from 'classnames';
+import {
+  DEVIATION_FOCUS_STOPS_BUS,
+  DEVIATION_FOCUS_STOPS_SUBWAY,
+  DEVIATION_FOCUS_STOPS_TRAIN,
+  URL_GET_DEVIATION_BUS,
+  URL_GET_DEVIATION_SUBWAY,
+  URL_GET_DEVIATION_TRAIN,
+} from '../../../communication/constant.ts';
+import { fetchAbortable } from '../../../communication/fetch-abortable.ts';
+import { interpretDeviations } from '../../../communication/backend.ts';
+import { convertDeviationSearch, DeviationModal, filterDeviationsByStops } from '../../common/deviation-modal';
+import { Card } from '../../common/card';
+import { getColorRef, TransportationIconCommon, TransportationMode } from '../../common/line';
+import { ModalDialog } from '../../common/modal-dialog';
+import { SLButton } from '../../common/sl-button';
+import InDebugModeContext from '../../../contexts/debug-context.ts';
+import { Legend } from '../departures/legend.tsx';
+import { AbortControllerState } from '../../../types/communication.ts';
+import { Deviation } from '../../../types/deviations.ts';
+import { EnrichedDeviation, enrichDeviations } from '../../../types/deviations-common.ts';
+import { deviationIcons, normalIcons } from './legend-data.tsx';
+import ErrorContext from '../../../contexts/error-context.ts';
 
 /**
  * Aktuella pendeltåg: 43, 43X, 44
@@ -24,16 +32,16 @@ import ErrorContext from "../../../contexts/error-context.ts";
  * https://deviations.integration.sl.se/v1/messages?future=false&line=17&line=18&line=19&transport_mode=METRO
  */
 export function Deviations() {
-  const {inDebugMode} = useContext(InDebugModeContext);
-  const {setError} = useContext(ErrorContext);
+  const { inDebugMode } = useContext(InDebugModeContext);
+  const { setError } = useContext(ErrorContext);
 
   const latestBusRequest = useRef<AbortControllerState | undefined>(undefined);
   const latestTrainRequest = useRef<AbortControllerState | undefined>(undefined);
   const latestSubwayRequest = useRef<AbortControllerState | undefined>(undefined);
 
-  const [busDeviations, setBusDeviations] = useState<Deviation[]>([]);
-  const [trainDeviations, setTrainDeviations] = useState<Deviation[]>([]);
-  const [subwayDeviations, setSubwayDeviations] = useState<Deviation[]>([]);
+  const [trainEnriched, setTrainEnriched] = useState<EnrichedDeviation[]>([]);
+  const [subwayEnriched, setSubwayEnriched] = useState<EnrichedDeviation[]>([]);
+  const [busEnriched, setBusEnriched] = useState<EnrichedDeviation[]>([]);
 
   const [busInProgress, setBusInProgress] = useState<boolean>(true);
   const [trainInProgress, setTrainInProgress] = useState<boolean>(true);
@@ -42,74 +50,89 @@ export function Deviations() {
   const [openModal, setOpenModal] = useState<'bus' | 'train' | 'subway' | null>(null);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_BUS, latestBusRequest,
-      (data) => { setBusDeviations(data); setBusInProgress(false); },
-      (error, retry) => { setBusInProgress(false); setError(error, retry); }
-    );
-  }, [setError]);
+  async function processDeviations(
+    data: Deviation[],
+    focusStops: number[],
+    setEnriched: (deviations: EnrichedDeviation[]) => void,
+    setInProgress: (inProgress: boolean) => void
+  ) {
+    const common = convertDeviationSearch(filterDeviationsByStops(data, focusStops), focusStops);
+    if (common.length === 0) {
+      setEnriched([]);
+      setInProgress(false);
+      return;
+    }
+    const results = await interpretDeviations(common.map(d => d.message), setError);
+    if (results) {
+      const enriched = enrichDeviations(common, results);
+      setEnriched(enriched.filter(d => d.action === 'SHOWN'));
+    }
+    setInProgress(false);
+  }
+
   useEffect(() => {
     fetchAbortable<Deviation[]>(URL_GET_DEVIATION_TRAIN, latestTrainRequest,
-      (data) => { setTrainDeviations(data); setTrainInProgress(false); },
+      (data) => processDeviations(data, DEVIATION_FOCUS_STOPS_TRAIN, setTrainEnriched, setTrainInProgress),
       (error, retry) => { setTrainInProgress(false); setError(error, retry); }
     );
   }, [setError]);
+
   useEffect(() => {
     fetchAbortable<Deviation[]>(URL_GET_DEVIATION_SUBWAY, latestSubwayRequest,
-      (data) => { setSubwayDeviations(data); setSubwayInProgress(false); },
+      (data) => processDeviations(data, DEVIATION_FOCUS_STOPS_SUBWAY, setSubwayEnriched, setSubwayInProgress),
       (error, retry) => { setSubwayInProgress(false); setError(error, retry); }
     );
   }, [setError]);
 
-  // TODO A2: replace casts with real enriched deviations from backend
-  const trainDeviationInfos = convertDeviationSearch(filterDeviationsByStops(trainDeviations, DEVIATION_FOCUS_STOPS_TRAIN), DEVIATION_FOCUS_STOPS_TRAIN) as EnrichedDeviation[];
-  const subwayDeviationInfos = convertDeviationSearch(filterDeviationsByStops(subwayDeviations, DEVIATION_FOCUS_STOPS_SUBWAY), DEVIATION_FOCUS_STOPS_SUBWAY) as EnrichedDeviation[];
-  const busDeviationInfos = convertDeviationSearch(filterDeviationsByStops(busDeviations, DEVIATION_FOCUS_STOPS_BUS), DEVIATION_FOCUS_STOPS_BUS) as EnrichedDeviation[];
+  useEffect(() => {
+    fetchAbortable<Deviation[]>(URL_GET_DEVIATION_BUS, latestBusRequest,
+      (data) => processDeviations(data, DEVIATION_FOCUS_STOPS_BUS, setBusEnriched, setBusInProgress),
+      (error, retry) => { setBusInProgress(false); setError(error, retry); }
+    );
+  }, [setError]);
 
-  // style={{ backgroundColor: modeColor, color: '#FFFFFF' }}
+  const commonAdjustments = classNames('w-[24px] h-[24px] p-[3px]', 'rounded-sm', 'text-white');
+  const busAdjustments = classNames(commonAdjustments, { 'cursor-pointer': busEnriched.length > 0 });
+  const subwayAdjustments = classNames(commonAdjustments, { 'cursor-pointer': subwayEnriched.length > 0 });
+  const trainAdjustments = classNames(commonAdjustments, { 'cursor-pointer': trainEnriched.length > 0 });
 
-  const commonAdjustments = classNames(
-    "w-[24px] h-[24px] p-[3px]",
-    "rounded-sm", "text-white");
-  const busAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": busDeviationInfos.length > 0});
-  const subwayAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": subwayDeviationInfos.length > 0});
-  const trainAdjustments = classNames(commonAdjustments,
-    {"cursor-pointer": trainDeviationInfos.length > 0});
-
-  function getModeBackgroundColor(mode: TransportationMode, designation: string, inProgress: boolean, hasDeviations: boolean): { backgroundColor: string } {
+  function getModeBackgroundColor(
+    mode: TransportationMode,
+    designation: string,
+    inProgress: boolean,
+    hasDeviations: boolean
+  ): { backgroundColor: string } {
     if (inProgress) {
-      return {backgroundColor: "bg-gray-400"};
+      return { backgroundColor: 'bg-gray-400' };
     }
     if (hasDeviations) {
-      return {backgroundColor: "#F97316"};
+      return { backgroundColor: '#F97316' };
     }
-    return {backgroundColor: getColorRef(mode, designation)};
+    return { backgroundColor: getColorRef(mode, designation) };
   }
 
   return (
     <Card>
       <div className="flex justify-between">
-        <div onClick={() => { if (trainDeviationInfos.length > 0) { setOpenModal('train'); } }}>
+        <div onClick={() => { if (trainEnriched.length > 0) { setOpenModal('train'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.TRAIN}
             className={trainAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainInProgress, trainDeviationInfos.length > 0)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainInProgress, trainEnriched.length > 0)}
           />
         </div>
-        <div onClick={() => { if (subwayDeviationInfos.length > 0) { setOpenModal('subway'); } }}>
+        <div onClick={() => { if (subwayEnriched.length > 0) { setOpenModal('subway'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.SUBWAY}
             className={subwayAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayInProgress, subwayDeviationInfos.length > 0)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayInProgress, subwayEnriched.length > 0)}
           />
         </div>
-        <div onClick={() => { if (busDeviationInfos.length > 0) { setOpenModal('bus'); } }}>
+        <div onClick={() => { if (busEnriched.length > 0) { setOpenModal('bus'); } }}>
           <TransportationIconCommon
             mode={TransportationMode.BUS}
             className={busAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busInProgress, busDeviationInfos.length > 0)}
+            inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busInProgress, busEnriched.length > 0)}
           />
         </div>
       </div>
@@ -120,23 +143,23 @@ export function Deviations() {
         <SLButton onClick={() => setLegendOpen(true)} thin>Symboler</SLButton>
       </div>
       <ModalDialog isOpen={legendOpen} onClose={() => setLegendOpen(false)} title="Symboler" scrollable={false}>
-        <Legend legendData={normalIcons} title="Normalt läge"/>
-        <Legend legendData={deviationIcons} title="Avvikelser finns"/>
+        <Legend legendData={normalIcons} title="Normalt läge" />
+        <Legend legendData={deviationIcons} title="Avvikelser finns" />
       </ModalDialog>
       <DeviationModal
         open={openModal === 'train'}
         onClose={() => setOpenModal(null)}
-        deviation={trainDeviationInfos}
+        deviation={trainEnriched}
       />
       <DeviationModal
         open={openModal === 'subway'}
         onClose={() => setOpenModal(null)}
-        deviation={subwayDeviationInfos}
+        deviation={subwayEnriched}
       />
       <DeviationModal
         open={openModal === 'bus'}
         onClose={() => setOpenModal(null)}
-        deviation={busDeviationInfos}
+        deviation={busEnriched}
       />
     </Card>
   );
