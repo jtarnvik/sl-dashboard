@@ -5,7 +5,7 @@ export interface CommonDeviation {
 }
 
 export interface EnrichedDeviation extends CommonDeviation {
-  id: number;
+  id: number | null;
   importance: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
   action: 'SHOWN' | 'HIDDEN_ACCESSIBILITY' | 'HIDDEN_BY_USER' | 'UNKNOWN';
   delays: boolean | null;
@@ -13,7 +13,7 @@ export interface EnrichedDeviation extends CommonDeviation {
 }
 
 export interface BackendInterpretationResult {
-  id: number;
+  id: number | null;
   importance: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
   action: 'SHOWN' | 'HIDDEN_ACCESSIBILITY' | 'HIDDEN_BY_USER' | 'UNKNOWN';
   delays: boolean | null;
@@ -21,6 +21,7 @@ export interface BackendInterpretationResult {
 }
 
 export function isValidDeviationText(text: string): boolean {
+  // Sometimes SL passes "." as deviation messages. Ignore those.
   return text.trim().length > 1;
 }
 

@@ -150,17 +150,17 @@ export function Deviations() {
       <DeviationModal
         open={openModal === 'train'}
         onClose={() => setOpenModal(null)}
-        deviation={trainEnriched}
+        deviations={trainEnriched}
       />
       <DeviationModal
         open={openModal === 'subway'}
         onClose={() => setOpenModal(null)}
-        deviation={subwayEnriched}
+        deviations={subwayEnriched}
       />
       <DeviationModal
         open={openModal === 'bus'}
         onClose={() => setOpenModal(null)}
-        deviation={busEnriched}
+        deviations={busEnriched}
       />
     </Card>
   );

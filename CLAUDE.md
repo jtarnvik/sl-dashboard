@@ -251,13 +251,15 @@ A4.1 - DONE - FE/BE, Handle short/noise departure deviation texts.
   (SHOWN/MEDIUM/delays). Hardcoded results have null id so they cannot be hidden by the user (intentional).
 - Hardcoded results bypass the DB entirely — no hash, no storage, no AI call.
 
-A5 - FE, Show importance icons on deviation display.
-- In the DeviationModal (or equivalent), show a visual indicator of importance (LOW/MEDIUM/HIGH) alongside
-  each deviation
-- Design to be decided — could be color coding, icons, or labels
+A5 - DONE - FE, Show importance icons on deviation display (Deviation modal).
+- Today there is one icon which is either a cancel or an info icon. The icon is not visible in the UI.
+- I would like to convey both the whats-going-on and the importance of the deviation. 
+  - The whats-going-on icon should be either a cancel or a delay icon somehow. 
+  - The importance icon should be a low, medium or high. This could also be color coded but I dont know what to color code.
+Discuss a design before implementing.
 
-A6 - FE/BE, Add hide button for individual deviations.
-- In the deviation display, add a hide button/link per deviation
+A6 - DONE - FE/BE, Add hide button for individual deviations.
+- In the deviation display (Deviation modal), add a hide button/link per deviation
 - Calls POST /api/protected/deviations/{id}/hide on the backend (endpoint already exists)
 - On success, remove the deviation from the current view immediately
 - Only available to logged-in users
@@ -283,6 +285,8 @@ B - FE/BE, Improve GUI for trips and deviations
 B1 - FE, Better GUI for trips
 
 C - FE/BE, More work, not broken down yet
+C0 - Add a periodical check for new deviations to BE to speed up future use
+C1 - FE Examine how deviations work for buses, Do I handle lines correctly?
 C1 - FE bug, the "Inställningar" menu item only works if the user is at the main page.
 C2 - FE how to handle long list of departures
 C3 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.

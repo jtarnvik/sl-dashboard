@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { IoMdInformationCircleOutline } from 'react-icons/io';
 import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
-import { MdOutlineCancel } from 'react-icons/md';
+import { MdOutlineAccessTime, MdOutlineCancel } from 'react-icons/md';
 import { ModalDialog } from '../modal-dialog';
+import { hideDeviation } from '../../../communication/backend.ts';
 import { Deviation as DeviationSearch } from '../../../types/deviations';
 import { InfoMessage } from '../../../types/sl-journeyplaner-responses';
 import { Deviation } from '../../../types/sl-responses';
 import { CommonDeviation, EnrichedDeviation } from '../../../types/deviations-common';
+import { useUserLoginState, UserLoginState } from '../../../hook/use-user.ts';
+import ErrorContext from '../../../contexts/error-context.ts';
 
 export function filterDeviationsByStops(deviations: DeviationSearch[], focusStops: number[]): DeviationSearch[] {
   if (focusStops.length === 0) {
@@ -87,20 +90,34 @@ export function convertDeviations(deviations: Deviation[]): CommonDeviation[] {
   return deviations.map(deviation => ({ message: deviation.message }));
 }
 
-function getDeviationIcon(deviation: EnrichedDeviation) {
-  if (deviation.cancelations) {
-    return <MdOutlineCancel size={24} />;
+function getImportanceColor(importance: EnrichedDeviation['importance']): string {
+  switch (importance) {
+    case 'HIGH':   return '#DC2626';
+    case 'MEDIUM': return '#D97706';
+    default:       return '#6B7280';
   }
-  return <IoMdInformationCircleOutline size={24} />;
+}
+
+function getDeviationIcon(deviation: EnrichedDeviation) {
+  const color = getImportanceColor(deviation.importance);
+  if (deviation.cancelations) {
+    return <MdOutlineCancel size={24} color={color} />;
+  }
+  if (deviation.delays) {
+    return <MdOutlineAccessTime size={24} color={color} />;
+  }
+  return <IoMdInformationCircleOutline size={24} color={color} />;
 }
 
 type DeviationRowProps = {
   enriched: EnrichedDeviation;
+  onHide?: (id: number) => void;
 };
 
-function DeviationRow({ enriched }: DeviationRowProps) {
+function DeviationRow({ enriched, onHide }: DeviationRowProps) {
   const [expanded, setExpanded] = useState(false);
   const hasExpandable = Boolean(enriched.shortMessage && enriched.message);
+  const canHide = onHide !== undefined && enriched.id !== null;
 
   return (
     <tr>
@@ -120,6 +137,16 @@ function DeviationRow({ enriched }: DeviationRowProps) {
         ) : (
           enriched.message
         )}
+        {canHide && (
+          <div className="mt-1">
+            <button
+              onClick={() => onHide(enriched.id!)}
+              className="text-s text-[#184fc2] hover:text-[#578ff3]"
+            >
+              Dölj
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   );
@@ -128,23 +155,45 @@ function DeviationRow({ enriched }: DeviationRowProps) {
 type Props = {
   onClose: () => void;
   open: boolean;
-  deviation: EnrichedDeviation[];
+  deviations: EnrichedDeviation[];
 };
 
-export function DeviationModal({ onClose, open, deviation }: Props) {
+export function DeviationModal({ onClose, open, deviations }: Props) {
+  const { setError } = useContext(ErrorContext);
+  const loginState = useUserLoginState();
+  const [visible, setVisible] = useState<EnrichedDeviation[]>(deviations);
+
+  useEffect(() => {
+    if (open) {
+      setVisible(deviations);
+    }
+  }, [open]);
+
   if (!open) {
     return null;
   }
 
-  const sortedDeviations = [...deviation].sort((a, b) => {
-    if (a.cancelations && !b.cancelations) {
-      return -1;
+  async function handleHide(id: number) {
+    const success = await hideDeviation(id, setError);
+    if (success) {
+      const remaining = visible.filter(d => d.id !== id);
+      if (remaining.length === 0) {
+        onClose();
+      } else {
+        setVisible(remaining);
+      }
     }
-    if (!a.cancelations && b.cancelations) {
-      return 1;
-    }
-    return 0;
+  }
+
+  const importanceRank = (d: EnrichedDeviation) => ({ HIGH: 0, MEDIUM: 1, LOW: 2, UNKNOWN: 3 })[d.importance] ?? 3;
+
+  const sortedDeviations = [...visible].sort((a, b) => {
+    if (a.cancelations && !b.cancelations) { return -1; }
+    if (!a.cancelations && b.cancelations) { return 1; }
+    return importanceRank(a) - importanceRank(b);
   });
+
+  const onHide = loginState === UserLoginState.LoggedIn ? handleHide : undefined;
 
   return (
     <ModalDialog
@@ -156,7 +205,7 @@ export function DeviationModal({ onClose, open, deviation }: Props) {
       <table className="border-separate border-spacing-y-2">
         <tbody>
         {sortedDeviations.map((deviationInfo, index) => (
-          <DeviationRow key={index} enriched={deviationInfo} />
+          <DeviationRow key={index} enriched={deviationInfo} onHide={onHide} />
         ))}
         </tbody>
       </table>

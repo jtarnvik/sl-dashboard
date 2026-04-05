@@ -22,7 +22,7 @@ export function DeviationWrapper({ children, deviations }: Props) {
       <DeviationModal
         onClose={() => setOpen(false)}
         open={open}
-        deviation={deviations}
+        deviations={deviations}
       />
     </div>
   );
