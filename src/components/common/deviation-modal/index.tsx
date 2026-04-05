@@ -176,6 +176,7 @@ export function DeviationModal({ onClose, open, deviations }: Props) {
   async function handleHide(id: number) {
     const success = await hideDeviation(id, setError);
     if (success) {
+      window.dispatchEvent(new CustomEvent('deviationHidden', { detail: { id } }));
       const remaining = visible.filter(d => d.id !== id);
       if (remaining.length === 0) {
         onClose();

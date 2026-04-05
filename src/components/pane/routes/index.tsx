@@ -45,6 +45,23 @@ export function Routes({settingsData}: Props) {
     return () => latestRequest.current?.abort("Component unmounted");
   }, []);
 
+  useEffect(() => {
+    function handleDeviationHidden(e: Event) {
+      const id = (e as CustomEvent<{ id: number }>).detail.id;
+      setDeviationEnrichment(prev => {
+        const next = new Map(prev);
+        for (const [key, val] of next) {
+          if (val.id === id) {
+            next.delete(key);
+          }
+        }
+        return next;
+      });
+    }
+    window.addEventListener('deviationHidden', handleDeviationHidden);
+    return () => window.removeEventListener('deviationHidden', handleDeviationHidden);
+  }, []);
+
   async function processDeviationEnrichment(newJourneys: Journey[]) {
     const allMessages = newJourneys
       .flatMap(j => j.legs.flatMap(leg => convertInfoMessages(leg.infos ?? []).map(c => c.message)))

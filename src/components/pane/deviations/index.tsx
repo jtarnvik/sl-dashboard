@@ -92,6 +92,17 @@ export function Deviations() {
     );
   }, [setError]);
 
+  useEffect(() => {
+    function handleDeviationHidden(e: Event) {
+      const id = (e as CustomEvent<{ id: number }>).detail.id;
+      setTrainEnriched(prev => prev.filter(d => d.id !== id));
+      setSubwayEnriched(prev => prev.filter(d => d.id !== id));
+      setBusEnriched(prev => prev.filter(d => d.id !== id));
+    }
+    window.addEventListener('deviationHidden', handleDeviationHidden);
+    return () => window.removeEventListener('deviationHidden', handleDeviationHidden);
+  }, []);
+
   const commonAdjustments = classNames('w-[24px] h-[24px] p-[3px]', 'rounded-sm', 'text-white');
   const busAdjustments = classNames(commonAdjustments, { 'cursor-pointer': busEnriched.length > 0 });
   const subwayAdjustments = classNames(commonAdjustments, { 'cursor-pointer': subwayEnriched.length > 0 });

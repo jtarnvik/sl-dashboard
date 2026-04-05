@@ -158,6 +158,7 @@ Custom events dispatched on `window` are used for cross-tree communication betwe
 | `"unauthorized"` | `backend.ts` (Axios response interceptor) | `App.tsx` | Forces logout when any API call returns 401 |
 | `"pendingCountChanged"` | `pending-users.tsx` (after approve/reject) | `NavMenu` | Refreshes the pending access request count badge |
 | `"openSettings"` | `NavMenu` (Inställningar menu item) | `Main` | Opens the settings modal |
+| `"deviationHidden"` | `deviation-modal/index.tsx` (after successful hide) | `Departures`, `Deviations`, `Routes` panes | Removes the hidden deviation (by `detail.id`) from each pane's local state |
 
 ### Component conventions
 

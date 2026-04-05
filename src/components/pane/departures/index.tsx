@@ -135,6 +135,23 @@ export function Departures({stopPoint16Chars}: Props) {
     return () => clearInterval(intervalId);
   }, [updateDiffSinceLatUpdated]);
 
+  useEffect(() => {
+    function handleDeviationHidden(e: Event) {
+      const id = (e as CustomEvent<{ id: number }>).detail.id;
+      setDeviationEnrichment(prev => {
+        const next = new Map(prev);
+        for (const [key, val] of next) {
+          if (val.id === id) {
+            next.delete(key);
+          }
+        }
+        return next;
+      });
+    }
+    window.addEventListener('deviationHidden', handleDeviationHidden);
+    return () => window.removeEventListener('deviationHidden', handleDeviationHidden);
+  }, []);
+
   function handleLegend() {
     setLegendOpen(true);
   }
