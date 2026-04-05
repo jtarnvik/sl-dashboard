@@ -235,7 +235,7 @@ A3 - DONE - FE, Connect the departures pane to the backend.
 - Filter out hidden actions
 - Loading state: extend existing departures loading state
 
-A4 - FE, Connect the routes pane to the backend.
+A4 - DONE - FE, Connect the routes pane to the backend.
 - After the SL journey planner response arrives, collect all unique InfoMessage texts across all journeys and
   legs and send one batched backend call
 - Match results back to each leg
@@ -250,6 +250,8 @@ The AI interpreter needs to know if the text is connected to a specific departur
 Design discuss how to handle this. Should we add a context field to the backend entity? Where the context could be "Dennavvikelse berör 
 specifikt denna avgång"  eller "Denna avvikelse berör linje 43" eller "Denna avvikelse berör linje 43 och hållplatsen/erna X, Y,X"
 The context shold be obvious at the FE.
+There is a need to make sure that the context does not end up in the hash at that would make all the diviations different.
+I think I could hardocde a few interpretations. Maybe for "." and for "Inställd". This does not mean the context is not needed for other things
 Design/Discuss. Right now the AI gets one word deviations and cant do much with them. See also A8. 
 
 A5 - FE, Show importance icons on deviation display.

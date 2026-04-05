@@ -7,21 +7,30 @@ import {capitalizeFirst} from "../../../util/util.ts";
 import {SldSchedule} from "./sld-schedule.tsx";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
 import {convertInfoMessages} from "../../common/deviation-modal";
-import {EnrichedDeviation} from "../../../types/deviations-common.ts";
+import {BackendInterpretationResult, EnrichedDeviation, isShown} from "../../../types/deviations-common.ts";
 
 type Props = {
-  leg: Leg
+  leg: Leg;
+  deviationEnrichment: Map<string, BackendInterpretationResult>;
 }
 
-export function SldLeg({leg}: Props) {
+export function SldLeg({leg, deviationEnrichment}: Props) {
   const headerLegs = findJourneyLegs([leg, leg]);
+
+  const legDeviations: EnrichedDeviation[] = convertInfoMessages(leg.infos ?? [])
+    .map(common => {
+      const result = deviationEnrichment.get(common.message);
+      if (!result) { return null; }
+      return { ...common, ...result } as EnrichedDeviation;
+    })
+    .filter((d): d is EnrichedDeviation => d !== null)
+    .filter(isShown);
 
   return (
     <div>
       <div className="flex justify-between">
         <SldSchedule headerLegs={headerLegs} highlightDiff={true} />
-        {/* TODO A4: replace cast with real enriched deviations from backend */}
-        <DeviationWrapper deviations={convertInfoMessages(leg.infos ?? []) as EnrichedDeviation[]}>
+        <DeviationWrapper deviations={legDeviations}>
           <SldDuration headerLegs={headerLegs} />
         </DeviationWrapper>
       </div>

@@ -1,9 +1,12 @@
 import {useContext, useEffect, useRef, useState} from "react";
 import {URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
+import {interpretDeviations} from "../../../communication/backend.ts";
 import {Card} from "../../common/card";
 import {SLButton} from "../../common/sl-button";
 import {SldJourney} from "./sld-journey.tsx";
+import {convertInfoMessages} from "../../common/deviation-modal";
+import {BackendInterpretationResult} from "../../../types/deviations-common.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
 import {Journey, SystemMessage} from "../../../types/sl-journeyplaner-responses";
 import ErrorContext from "../../../contexts/error-context.ts";
@@ -28,7 +31,8 @@ export function Routes({settingsData}: Props) {
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
 
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
-  const [, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined)
+  const [, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined);
+  const [deviationEnrichment, setDeviationEnrichment] = useState<Map<string, BackendInterpretationResult>>(new Map());
 
   const [, setLocation] = useState<Location | undefined>(undefined);
   const [geoInfo, setGeoInfo] = useState<string | undefined>(undefined);
@@ -41,13 +45,35 @@ export function Routes({settingsData}: Props) {
     return () => latestRequest.current?.abort("Component unmounted");
   }, []);
 
+  async function processDeviationEnrichment(newJourneys: Journey[]) {
+    const allMessages = newJourneys
+      .flatMap(j => j.legs.flatMap(leg => convertInfoMessages(leg.infos ?? []).map(c => c.message)));
+    const uniqueMessages = [...new Set(allMessages)];
+    if (uniqueMessages.length === 0) {
+      setDeviationEnrichment(new Map());
+      return;
+    }
+    const results = await interpretDeviations(uniqueMessages, setError);
+    if (results) {
+      const enrichmentMap = new Map<string, BackendInterpretationResult>();
+      uniqueMessages.forEach((msg, i) => {
+        if (results[i]) {
+          enrichmentMap.set(msg, results[i]);
+        }
+      });
+      setDeviationEnrichment(enrichmentMap);
+    }
+  }
+
   function updateDepartures(maxWalk: number) {
     function generateRoute(lat: number, long: number, maxInitialWalkTime: number) {
       const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId, maxInitialWalkTime);
       fetchAbortable<{journeys: Journey[], systemMessages: SystemMessage[]}>(url, latestRequest, (data) => {
         setJourneys(data.journeys);
         setSystemMessages(data.systemMessages);
-        if (!data.journeys) {
+        if (data.journeys) {
+          processDeviationEnrichment(data.journeys);
+        } else {
           setState("No routes, are you already there?")
         }
       }, setError);
@@ -58,6 +84,7 @@ export function Routes({settingsData}: Props) {
     setGeoInfo(undefined);
     setJourneys(undefined);
     setSystemMessages(undefined);
+    setDeviationEnrichment(new Map());
 
     if (!navigator.geolocation) {
       setGeoInfo('Geolocation is not supported by your browser');
@@ -115,7 +142,7 @@ export function Routes({settingsData}: Props) {
               {journeys.map((journey, index) => {
                 return (
                   <div key={index}>
-                    <SldJourney journey={journey} />
+                    <SldJourney journey={journey} deviationEnrichment={deviationEnrichment} />
                   </div>
                 )
               })

@@ -12,13 +12,15 @@ import {SldSchedule} from "./sld-schedule.tsx";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {findJourneyLegs, isFootPathForLeg} from "../../../util/journey-utils.ts";
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
+import {BackendInterpretationResult, EnrichedDeviation, isShown} from "../../../types/deviations-common.ts";
 import {Journey, Leg} from "../../../types/sl-journeyplaner-responses.ts";
 
 type Props = {
-  journey: Journey
+  journey: Journey;
+  deviationEnrichment: Map<string, BackendInterpretationResult>;
 }
 
-export function SldJourney({journey}: Props) {
+export function SldJourney({journey, deviationEnrichment}: Props) {
   const [showLegs, setShowLegs] = useState<boolean>(false);
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
   const {inDebugMode} = useContext(InDebugModeContext);
@@ -36,10 +38,12 @@ export function SldJourney({journey}: Props) {
   }
 
   function journeyDeviation(): boolean {
-    return journey.legs
-      .map(leg => convertInfoMessages(leg.infos))
-      .filter(itm => itm.length > 0)
-      .length > 0;
+    return journey.legs.some(leg =>
+      convertInfoMessages(leg.infos ?? []).some(common => {
+        const result = deviationEnrichment.get(common.message);
+        return result !== undefined && isShown({ ...common, ...result } as EnrichedDeviation);
+      })
+    );
   }
 
   const adjustedLegs = adjustInitialWalks(journey.legs);
@@ -101,7 +105,7 @@ export function SldJourney({journey}: Props) {
 
       {showLegs && (
         <div className="relative z-10 -mt-2">
-          <SldJourneyDetails legs={adjustedLegs} />
+          <SldJourneyDetails legs={adjustedLegs} deviationEnrichment={deviationEnrichment} />
         </div>
       )}
     </div>
