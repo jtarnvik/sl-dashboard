@@ -1,6 +1,7 @@
 import {useContext, useState} from "react";
 import classNames from "classnames";
-import {IoWarningOutline} from "react-icons/io5";
+import {IoShareOutline, IoWarningOutline} from "react-icons/io5";
+import {useNavigate} from "react-router-dom";
 import {convertInfoMessages} from "../../common/deviation-modal";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
@@ -9,11 +10,14 @@ import {SldDuration} from "./sld-duration.tsx";
 import {SldJourneyDetails} from "./sld-journey-details.tsx";
 import {SldJourneyTitle} from "./sld-journey-title.tsx";
 import {SldSchedule} from "./sld-schedule.tsx";
+import ErrorContext from "../../../contexts/error-context.ts";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {findJourneyLegs, isFootPathForLeg} from "../../../util/journey-utils.ts";
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
 import {BackendInterpretationResult, EnrichedDeviation, isShown} from "../../../types/deviations-common.ts";
 import {Journey, Leg} from "../../../types/sl-journeyplaner-responses.ts";
+import {createSharedRoute} from "../../../communication/backend.ts";
+import {useUserLoginState, UserLoginState} from "../../../hook/use-user.ts";
 
 type Props = {
   journey: Journey;
@@ -24,6 +28,17 @@ export function SldJourney({journey, deviationEnrichment}: Props) {
   const [showLegs, setShowLegs] = useState<boolean>(false);
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
   const {inDebugMode} = useContext(InDebugModeContext);
+  const {setError} = useContext(ErrorContext);
+  const loginState = useUserLoginState();
+  const navigate = useNavigate();
+
+  async function handleShare(e: React.MouseEvent) {
+    e.stopPropagation();
+    const id = await createSharedRoute(JSON.stringify(journey), setError);
+    if (id) {
+      navigate(`/route/${id}`);
+    }
+  }
 
   function adjustInitialWalks(legs: Leg[]) {
     const result = legs.slice();
@@ -89,11 +104,22 @@ export function SldJourney({journey, deviationEnrichment}: Props) {
               }
             </div>
           </div>
-          {journeyDeviation() &&
-            <div className="deviation-color">
-              <IoWarningOutline size={24} />
-            </div>
-          }
+          <div className="flex items-center gap-2">
+            {journeyDeviation() &&
+              <div className="deviation-color">
+                <IoWarningOutline size={24} />
+              </div>
+            }
+            {loginState === UserLoginState.LoggedIn &&
+              <button
+                onClick={handleShare}
+                className="text-[#184fc2] hover:text-[#578ff3] cursor-pointer"
+                title="Dela resväg"
+              >
+                <IoShareOutline size={22} />
+              </button>
+            }
+          </div>
         </div>
         <div hidden={true}>
           duration: {shortSwedishHumanizer(journey.tripDuration * 1000)} -
