@@ -175,6 +175,7 @@ export function Settings({settingsOpen, setSettingsOpen, currentSettings, onSave
                 const stopData: SettingsData = {
                   stopPointId: itm.id,
                   stopPointName: itm.disassembledName ?? itm.name,
+                  useAiInterpretation: pendingUseAiInterpretation,
                 };
                 const isSelected = selectedStop?.stopPointId === itm.id;
                 return (
