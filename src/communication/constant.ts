@@ -25,6 +25,9 @@ export const URL_BACKEND_ADMIN_REJECT_ACCESS_REQUEST = (id: number) => `/api/adm
 export const URL_BACKEND_ADMIN_USERS = "/api/admin/users";
 export const URL_BACKEND_ADMIN_DELETE_USER = (id: number) => `/api/admin/users/${id}`;
 
+export const URL_BACKEND_SHARED_ROUTE_CREATE = "/api/protected/routes";
+export const URL_BACKEND_SHARED_ROUTE_GET = (id: string) => `/api/public/routes/${id}`;
+
 export const URL_BACKEND_SETTINGS = "/api/protected/settings";
 export const URL_BACKEND_DELETE_ACCOUNT = "/api/protected/account";
 export const URL_BACKEND_INTERPRET_DEVIATIONS = "/api/protected/deviations/interpret";

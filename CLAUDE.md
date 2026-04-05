@@ -182,7 +182,51 @@ Implementation Steps
 There are a few large blocks of implementation. Each block has its own letter and each step within that block 
 has its own order by number.
 
-A - Create sharable route links.
+A - Sharable route links. A logged-in user can share a specific journey from the routes pane. The shared route
+is stored in the backend and accessible via a public link of the form `https://sl.tarnvik.com/#/route/<10-hex-char-id>`.
+The id is a randomly generated hex string (not a guessable DB integer). The route data (a single `Journey` object)
+is stored as opaque JSON in a single column — no relational model needed. Shared routes expire after 24 hours.
+Viewing a shared route requires no login. Deviations are not shown in the shared view.
+
+A1 - DONE BE, New `shared_route` table and cleanup job.
+- New Liquibase changeset: table `shared_route` with `id VARCHAR(10) PRIMARY KEY`, `route_data CLOB NOT NULL`,
+  `create_date DATETIME`. No id_gen row (string PK). Enable RLS for PostgreSQL.
+- New entity, repository.
+- New `SharedRouteCleanupJob` in `port.incoming.scheduled`: deletes rows where `create_date < now() - 24h`.
+  Runs at midnight (`0 0 0 * * *`). Annotate with `@Transactional`.
+
+A2 - DONE BE, New endpoints.
+- `POST /api/protected/routes` — creates a shared route. Accepts `{ routeData: String }` (raw JSON).
+  Generates a 10-hex-char ID using `SecureRandom`. Stores and returns `{ id: String }`. Requires login.
+- `GET /api/public/routes/{id}` — returns `{ routeData: String }`. Public, no auth. Returns 404 if not found or expired.
+
+A3 - DONE FE, Types and backend communication.
+- Add `createSharedRoute(routeData: string, setError)` to `src/communication/backend.ts` — POSTs to `/api/protected/routes`,
+  returns the id string.
+- Add `fetchSharedRoute(id: string)` — GETs from `/api/public/routes/{id}`, returns the parsed `Journey` or null.
+  Uses the `backend` axios instance (public endpoint, credentials ignored server-side).
+- Add the two new URL constants to `src/communication/constant.ts`.
+
+A4 - FE, Share button in `SldJourney`.
+- Add a share icon button (e.g. `IoShareOutline` from react-icons) to `SldJourney`, visible only when logged in.
+- On click: serialize the `journey` prop to JSON, POST to backend via `createSharedRoute`, then navigate to
+  `/#/route/<id>` using react-router `useNavigate`. On failure: report via `ErrorContext`.
+
+A5 - FE, Always-expanded mode for `SldJourney`.
+- Add an `alwaysExpanded?: boolean` prop to `SldJourney`. When true, render fully expanded with no collapse toggle.
+
+A6 - FE, New `SharedRouteView` at `/route/:id`.
+- Fetches route data from the public backend endpoint on mount. Shows a loading state while fetching.
+- On 404 or error: show "Länken har gått ut eller är ogiltig."
+- On success: renders a single `SldJourney` with `alwaysExpanded={true}` and an empty deviation enrichment map
+  (no backend call, no deviations displayed).
+- Page heading: "Delad resväg" (via `PageTitleContext`). `LoginTeaser` shown below the route.
+- Rendered inside `Layout` (Navbar visible as normal). Add route to the router in `App.tsx`.
+
+---
+
+A.5 - Better info when deviations are fetched. Now the UI just looks silly.
+A.6 - FE, Same goes for login. Usually things just happen in the background, assume communication going with google, Add spinner.
 
 B - FE/BE, Improve GUI for trips and deviations
 

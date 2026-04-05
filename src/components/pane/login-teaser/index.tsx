@@ -7,7 +7,7 @@ export function LoginTeaser() {
     <Card>
       <div className="py-2 flex flex-col">
         <p className="text-sm mb-2">
-          Logga in för att se avvikelseinformation, reseplanering och övriga funktioner. Helt gratis.
+          Logga in för att se AI tolkad avvikelseinformation, reseplanering och övriga funktioner. Helt gratis.
         </p>
         <div className="flex justify-end">
           <Link to="/gdpr" className="text-xs text-gray-400 hover:text-gray-600">

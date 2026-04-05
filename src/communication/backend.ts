@@ -14,9 +14,12 @@ import {
   URL_BACKEND_LOGIN,
   URL_BACKEND_LOGOUT,
   URL_BACKEND_SETTINGS,
+  URL_BACKEND_SHARED_ROUTE_CREATE,
+  URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
 import {AccessRequestItem, AllowedUserItem, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
+import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
 const backend = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -169,6 +172,25 @@ export async function hideDeviation(id: number, setError: SetError): Promise<boo
   } catch {
     setError("Kunde inte dölja avvikelsen.");
     return false;
+  }
+}
+
+export async function createSharedRoute(routeData: string, setError: SetError): Promise<string | null> {
+  try {
+    const response = await backend.post<{ id: string }>(URL_BACKEND_SHARED_ROUTE_CREATE, { routeData });
+    return response.data.id;
+  } catch {
+    setError("Kunde inte dela resvägen.");
+    return null;
+  }
+}
+
+export async function fetchSharedRoute(id: string): Promise<Journey | null> {
+  try {
+    const response = await backend.get<{ routeData: string }>(URL_BACKEND_SHARED_ROUTE_GET(id));
+    return JSON.parse(response.data.routeData) as Journey;
+  } catch {
+    return null;
   }
 }
 
