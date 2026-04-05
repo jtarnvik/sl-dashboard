@@ -20,6 +20,7 @@ export function Settings({settingsOpen, setSettingsOpen, currentSettings, onSave
 
   const {inDebugMode, setInDebugMode} = useContext(InDebugModeContext);
   const [pendingDebugMode, setPendingDebugMode] = useState<boolean>(inDebugMode);
+  const [pendingUseAiInterpretation, setPendingUseAiInterpretation] = useState<boolean>(currentSettings.useAiInterpretation);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResponse, setSearchResponse] = useState<StopFinderResponse | undefined>(undefined);
   const [searchInProgress, setSearchInProgress] = useState<boolean>(false);
@@ -56,6 +57,7 @@ export function Settings({settingsOpen, setSettingsOpen, currentSettings, onSave
   function handleClose() {
     // Reset staged state on close so the modal always opens fresh with the current values.
     setPendingDebugMode(inDebugMode);
+    setPendingUseAiInterpretation(currentSettings.useAiInterpretation);
     setSelectedStop(currentSettings);
     setSearchTerm("");
     setSearchResponse(undefined);
@@ -67,7 +69,7 @@ export function Settings({settingsOpen, setSettingsOpen, currentSettings, onSave
       return;
     }
     setInDebugMode(pendingDebugMode);
-    onSave(selectedStop);
+    onSave({ ...selectedStop, useAiInterpretation: pendingUseAiInterpretation });
     setSettingsOpen(false);
   }
 
@@ -83,6 +85,21 @@ export function Settings({settingsOpen, setSettingsOpen, currentSettings, onSave
   return (
     <ModalDialog isOpen={settingsOpen} onClose={handleClose} title="Inställningar">
       <div className="flex flex-col gap-5 font-size-settings">
+
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={pendingUseAiInterpretation}
+              onChange={(e) => setPendingUseAiInterpretation(e.target.checked)}
+              className="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+            />
+            <span className="font-medium text-gray-700">Använd AI-tolkning av avvikelser</span>
+          </label>
+          <p className="text-sm text-gray-500">
+            När aktiv filtreras tillgänglighetsavvikelser bort och du kan dölja enskilda avvikelser.
+          </p>
+        </div>
 
         <div className="space-y-2">
           <label className="flex items-center gap-2 cursor-pointer">

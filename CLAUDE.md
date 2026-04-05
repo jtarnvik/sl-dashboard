@@ -265,21 +265,27 @@ A6 - DONE - FE/BE, Add hide button for individual deviations.
 - On success, remove the deviation from the current view immediately
 - Only available to logged-in users
 
-A7 - FE, Add frontend cache for deviation interpretations.
-- Cache backend interpretation results in memory (e.g. a Map keyed by deviation text) for the lifetime of the
-  page session
-- On each SL refresh cycle, check the cache before sending texts to the backend — only send uncached texts
-- Merge cached results with fresh backend results before enrichment
-- Note: may not be needed. The backend caches interpretations in the DB by SHA-256 hash, so repeated calls for
-  the same text are fast (no Claude API call, just a DB lookup). If the round-trip latency to api.tarnvik.com
-  is acceptable, frontend caching adds complexity for little gain — evaluate at implementation time and skip
-  if responses feel fast enough
+A7 - MOVED TO FUTURE ENHANCEMENTS.
 
 A8 - DONE - Handled by A4.1 (FE pre-filter for "." and BE hardcoded map).
 
-A9 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
+A9 - DONE - FE/BE, Add a setting to toggle between AI-filtered deviations and showing everything.
 
-Between A and B at next re-alphabetize fix this. Create sharable route links.
+BE:
+- Add `use_ai_interpretation BOOLEAN NOT NULL DEFAULT TRUE` column to `user_settings` table via a new Liquibase changeset
+- Update `UserSettings` entity, `SettingsRequest`/`SettingsResponse` DTOs, `UserSettingsMapper`, and `UserSettingsService.saveSettings()` to include the new field
+- In `DeviationController.interpret()`: fetch the calling user's `UserSettings`; if `use_ai_interpretation = false` (or no settings row exists), return all input texts as `SHOWN`/`UNKNOWN`/`null`/`null` without any DB or AI call. When `true` (the default), use the existing flow unchanged.
+
+FE:
+- Add `useAiInterpretation: boolean` to `UserSettings` in `src/types/backend.ts` and to the global `SettingsData` type in `src/types/common.d.ts`
+- Update `DEFAULT_SETTINGS` in `constant.ts` to include `useAiInterpretation: true`
+- Add a toggle checkbox to the Settings modal for this field
+- Update the `onSave` call to pass the new field to the backend
+- In `DeviationModal`: suppress the "Dölj" button when the user's `useAiInterpretation` setting is false — hiding is only meaningful in AI mode. Read the setting from `useUser()`.
+- T he existing `isValidDeviationText()` pre-filter (removes ".") continues to apply in all modes.
+- In `Main.tsx`: add `useAiInterpretation` to the `key` prop of `Departures`, `Deviations`, and `Routes` panes so that toggling the setting causes a full remount, re-running all fetch and enrichment effects with the new setting automatically. No changes needed inside the pane components themselves.
+
+A.5 Between A and B at next re-alphabetize fix this. Create sharable route links.
 
 B - FE/BE, Improve GUI for trips and deviations
 
@@ -291,6 +297,8 @@ C1 - FE Examine how deviations work for buses, Do I handle lines correctly?
 C1 - FE bug, the "Inställningar" menu item only works if the user is at the main page.
 C2 - FE how to handle long list of departures
 C3 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
+C4 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
+C5 - FE, the deviation modal, make some kind of line between different deviations, the 
 
 D - Reset hidden
 
@@ -303,6 +311,11 @@ G - FE/BE, Map support for trips and online maps for moving buses.
 ## Future Enhancements
 
 Ideas that are not currently needed but should be remembered if the need arises.
+
+### Frontend cache for deviation interpretations
+Cache backend interpretation results in a `Map<string, BackendInterpretationResult>` keyed by deviation text for the lifetime of the page session. On each SL refresh cycle, check the cache before sending texts to the backend — only send uncached texts, then merge cached and fresh results before enrichment.
+
+Deferred because the backend already caches by SHA-256 hash, so repeated calls skip the Claude API and are just a fast DB lookup. Add only if round-trip latency to the backend becomes noticeable.
 
 ### Deviation context in AI prompt
 Short departure-level deviation texts (e.g. "Inställd", "Försenad") are handled by the hardcoded map in A4.1.

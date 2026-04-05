@@ -8,7 +8,7 @@ import { Deviation as DeviationSearch } from '../../../types/deviations';
 import { InfoMessage } from '../../../types/sl-journeyplaner-responses';
 import { Deviation } from '../../../types/sl-responses';
 import { CommonDeviation, EnrichedDeviation } from '../../../types/deviations-common';
-import { useUserLoginState, UserLoginState } from '../../../hook/use-user.ts';
+import { useUser, useUserLoginState, UserLoginState } from '../../../hook/use-user.ts';
 import ErrorContext from '../../../contexts/error-context.ts';
 
 export function filterDeviationsByStops(deviations: DeviationSearch[], focusStops: number[]): DeviationSearch[] {
@@ -161,6 +161,7 @@ type Props = {
 export function DeviationModal({ onClose, open, deviations }: Props) {
   const { setError } = useContext(ErrorContext);
   const loginState = useUserLoginState();
+  const { user } = useUser();
   const [visible, setVisible] = useState<EnrichedDeviation[]>(deviations);
 
   useEffect(() => {
@@ -194,7 +195,8 @@ export function DeviationModal({ onClose, open, deviations }: Props) {
     return importanceRank(a) - importanceRank(b);
   });
 
-  const onHide = loginState === UserLoginState.LoggedIn ? handleHide : undefined;
+  const useAi = user?.settings?.useAiInterpretation ?? true;
+  const onHide = loginState === UserLoginState.LoggedIn && useAi ? handleHide : undefined;
 
   return (
     <ModalDialog

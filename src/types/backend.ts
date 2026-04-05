@@ -1,6 +1,7 @@
 export interface UserSettings {
   stopPointId: string;
   stopPointName: string;
+  useAiInterpretation: boolean;
 }
 
 export interface User {

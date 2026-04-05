@@ -30,7 +30,7 @@ export const URL_BACKEND_DELETE_ACCOUNT = "/api/protected/account";
 export const URL_BACKEND_INTERPRET_DEVIATIONS = "/api/protected/deviations/interpret";
 export const URL_BACKEND_HIDE_DEVIATION = (id: number) => `/api/protected/deviations/${id}/hide`;
 
-export const DEFAULT_SETTINGS: SettingsData = { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen" };
+export const DEFAULT_SETTINGS: SettingsData = { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen", useAiInterpretation: true };
 
 // Focus stops for deviation filtering (StopArea.id from the deviations API).
 // When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.

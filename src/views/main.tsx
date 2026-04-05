@@ -25,7 +25,11 @@ export function Main() {
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
 
   const settingsData: SettingsData = isLoggedIn && user?.settings
-    ? { stopPointId: user.settings.stopPointId, stopPointName: user.settings.stopPointName }
+    ? {
+        stopPointId: user.settings.stopPointId,
+        stopPointName: user.settings.stopPointName,
+        useAiInterpretation: user.settings.useAiInterpretation,
+      }
     : DEFAULT_SETTINGS;
 
   useEffect(() => {
@@ -50,12 +54,12 @@ export function Main() {
       <main>
         <div className="flex flex-col space-y-2 px-2 mb-2">
           <ErrorHandler></ErrorHandler>
-          <Departures stopPoint16Chars={settingsData.stopPointId} />
+          <Departures key={`departures-${settingsData.useAiInterpretation}`} stopPoint16Chars={settingsData.stopPointId} />
           {isLoggedIn ? (
             <>
-              {/* key forces a full remount when the stop changes, resetting all route planning state */}
-              <Routes key={settingsData.stopPointId} settingsData={settingsData} />
-              <Deviations />
+              {/* key forces a full remount when the stop or AI setting changes */}
+              <Routes key={`${settingsData.stopPointId}-${settingsData.useAiInterpretation}`} settingsData={settingsData} />
+              <Deviations key={`deviations-${settingsData.useAiInterpretation}`} />
             </>
           ) : (
             loginState === UserLoginState.NotLoggedIn && <LoginTeaser />
