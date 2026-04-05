@@ -22,10 +22,12 @@ import {useUserLoginState, UserLoginState} from "../../../hook/use-user.ts";
 type Props = {
   journey: Journey;
   deviationEnrichment: Map<string, BackendInterpretationResult>;
+  alwaysExpanded?: boolean;
 }
 
-export function SldJourney({journey, deviationEnrichment}: Props) {
+export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false}: Props) {
   const [showLegs, setShowLegs] = useState<boolean>(false);
+  const expanded = alwaysExpanded || showLegs;
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
   const {inDebugMode} = useContext(InDebugModeContext);
   const {setError} = useContext(ErrorContext);
@@ -66,10 +68,10 @@ export function SldJourney({journey, deviationEnrichment}: Props) {
   const headerLegs = findJourneyLegs(adjustedLegs);
   const journeyClasses = classNames({
     'bg-[#F8F9FA] border border-gray-200 shadow-sm p-[10px]': true,
-    'cursor-pointer': true,
-    'mb-2': !showLegs,
-    'rounded-md': !showLegs,
-    'rounded-md rounded-b-none': showLegs,
+    'cursor-pointer': !alwaysExpanded,
+    'mb-2': !expanded,
+    'rounded-md': !expanded,
+    'rounded-md rounded-b-none': expanded,
     'relative z-20': true
   });
 
@@ -88,7 +90,7 @@ export function SldJourney({journey, deviationEnrichment}: Props) {
 
       <div
         className={journeyClasses}
-        onClick={() => setShowLegs(!showLegs)}
+        onClick={alwaysExpanded ? undefined : () => setShowLegs(!showLegs)}
       >
         <div className="flex justify-between">
           <SldSchedule headerLegs={headerLegs} />
@@ -110,7 +112,7 @@ export function SldJourney({journey, deviationEnrichment}: Props) {
                 <IoWarningOutline size={24} />
               </div>
             }
-            {loginState === UserLoginState.LoggedIn &&
+            {loginState === UserLoginState.LoggedIn && !alwaysExpanded &&
               <button
                 onClick={handleShare}
                 className="text-[#184fc2] hover:text-[#578ff3] cursor-pointer"
@@ -129,7 +131,7 @@ export function SldJourney({journey, deviationEnrichment}: Props) {
         </div>
       </div>
 
-      {showLegs && (
+      {expanded && (
         <div className="relative z-10 -mt-2">
           <SldJourneyDetails legs={adjustedLegs} deviationEnrichment={deviationEnrichment} />
         </div>

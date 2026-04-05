@@ -13,6 +13,7 @@ import { Main } from './views/main.tsx';
 import { MyAccount } from './views/my-account.tsx';
 import { PendingUsers } from './views/admin/pending-users.tsx';
 import { ExistingUsers } from './views/admin/existing-users.tsx';
+import { SharedRouteView } from './views/shared-route.tsx';
 import './App.css';
 
 const router = createHashRouter([
@@ -24,6 +25,7 @@ const router = createHashRouter([
       { path: '/admin/pending', element: <PendingUsers /> },
       { path: '/admin/users', element: <ExistingUsers /> },
       { path: '/gdpr', element: <Gdpr /> },
+      { path: '/route/:id', element: <SharedRouteView /> },
     ],
   },
   { path: '/denied', element: <Denied /> },
