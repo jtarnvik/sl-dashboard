@@ -243,16 +243,13 @@ A4 - DONE - FE, Connect the routes pane to the backend.
 - Update both the journey-level warning icon and the leg-level deviation display
 - Loading state: extend existing routes loading state
 
-A4.1 - FE, We need to rework how deviations are interpreted. Some deviations are reported with very thorough
-messages, typically for deviations connected to the intire line, dypically found in the deviations pane. But when the 
-devitions are connected to a singel departue, they are typically very brief and can even be just a single word "Inställd". 
-The AI interpreter needs to know if the text is connected to a specific departure or not to give a specific interpretation.
-Design discuss how to handle this. Should we add a context field to the backend entity? Where the context could be "Dennavvikelse berör 
-specifikt denna avgång"  eller "Denna avvikelse berör linje 43" eller "Denna avvikelse berör linje 43 och hållplatsen/erna X, Y,X"
-The context shold be obvious at the FE.
-There is a need to make sure that the context does not end up in the hash at that would make all the diviations different.
-I think I could hardocde a few interpretations. Maybe for "." and for "Inställd". This does not mean the context is not needed for other things
-Design/Discuss. Right now the AI gets one word deviations and cant do much with them. See also A8. 
+A4.1 - DONE - FE/BE, Handle short/noise departure deviation texts.
+- FE: Filter texts with length <= 1 (e.g. ".") before sending to backend — `isValidDeviationText()` in deviations-common.ts,
+  applied in all three panes before the backend call
+- BE: Hardcoded interpretation map in DeviationService checked before DB/AI lookup. Keyed on lowercased text so casing
+  variants are handled. Current entries: "inställd", "inställt" (SHOWN/HIGH/cancelations), "försenad", "försenat"
+  (SHOWN/MEDIUM/delays). Hardcoded results have null id so they cannot be hidden by the user (intentional).
+- Hardcoded results bypass the DB entirely — no hash, no storage, no AI call.
 
 A5 - FE, Show importance icons on deviation display.
 - In the DeviationModal (or equivalent), show a visual indicator of importance (LOW/MEDIUM/HIGH) alongside
@@ -275,17 +272,7 @@ A7 - FE, Add frontend cache for deviation interpretations.
   is acceptable, frontend caching adds complexity for little gain — evaluate at implementation time and skip
   if responses feel fast enough
 
-A8 - FE/BE, this deviation is seen now and then 
---
-      "deviations": [
-        {
-          "importance_level": 7,
-          "consequence": "INFORMATION",
-          "message": "."
-        }
-      ]
---
-How does the AI handle that? Should we just set up a hardcoded manual interpretation?
+A8 - DONE - Handled by A4.1 (FE pre-filter for "." and BE hardcoded map).
 
 A9 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
 
@@ -307,6 +294,25 @@ E - Bulletin board
 F - Preload deviations
 
 G - FE/BE, Map support for trips and online maps for moving buses.
+
+## Future Enhancements
+
+Ideas that are not currently needed but should be remembered if the need arises.
+
+### Deviation context in AI prompt
+Short departure-level deviation texts (e.g. "Inställd", "Försenad") are handled by the hardcoded map in A4.1.
+For other ambiguous short texts where the hardcoded map has no entry, the AI still receives the text with no context
+about whether it is departure-specific or line-wide. Adding a context preamble to the Claude prompt — e.g.
+"Denna avvikelse gäller specifikt avgång 14:32 med linje 43" vs "Denna avvikelse gäller linje 43 generellt" —
+would help the AI give a more accurate interpretation.
+
+Key constraint: the context must NOT be part of the SHA-256 hash key used for DB caching. The hash must remain
+based on the deviation text alone, so that "Inställd" on train 43 and "Inställd" on bus 117 hit the same cache
+entry. The context is extra prompt enrichment only, not a cache discriminator.
+
+Implementation sketch: pass a nullable context string alongside each deviation text to the backend; the service
+appends it to the Claude prompt but excludes it from sha256(). The FE would derive context from the source
+(departure line/stop info for the departures pane, journey leg info for the routes pane).
 
 ## Issues
 

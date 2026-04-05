@@ -9,7 +9,7 @@ import {LineJourney} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
-import {BackendInterpretationResult, EnrichedDeviation, isShown} from "../../../types/deviations-common.ts";
+import {BackendInterpretationResult, EnrichedDeviation, isShown, isValidDeviationText} from "../../../types/deviations-common.ts";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
@@ -58,7 +58,7 @@ export function Departures({stopPoint16Chars}: Props) {
     const allMessages = deps
       .flatMap(dep => dep.deviations ?? [])
       .map(dev => dev.message)
-      .filter(Boolean);
+      .filter(isValidDeviationText);
     const uniqueMessages = [...new Set(allMessages)];
     if (uniqueMessages.length === 0) {
       setDeviationEnrichment(new Map());

@@ -20,6 +20,10 @@ export interface BackendInterpretationResult {
   cancelations: boolean | null;
 }
 
+export function isValidDeviationText(text: string): boolean {
+  return text.trim().length > 1;
+}
+
 export function isShown(d: EnrichedDeviation): boolean {
   return d.action !== 'HIDDEN_ACCESSIBILITY' && d.action !== 'HIDDEN_BY_USER';
 }

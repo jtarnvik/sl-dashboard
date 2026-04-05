@@ -6,7 +6,7 @@ import {Card} from "../../common/card";
 import {SLButton} from "../../common/sl-button";
 import {SldJourney} from "./sld-journey.tsx";
 import {convertInfoMessages} from "../../common/deviation-modal";
-import {BackendInterpretationResult} from "../../../types/deviations-common.ts";
+import {BackendInterpretationResult, isValidDeviationText} from "../../../types/deviations-common.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
 import {Journey, SystemMessage} from "../../../types/sl-journeyplaner-responses";
 import ErrorContext from "../../../contexts/error-context.ts";
@@ -47,7 +47,8 @@ export function Routes({settingsData}: Props) {
 
   async function processDeviationEnrichment(newJourneys: Journey[]) {
     const allMessages = newJourneys
-      .flatMap(j => j.legs.flatMap(leg => convertInfoMessages(leg.infos ?? []).map(c => c.message)));
+      .flatMap(j => j.legs.flatMap(leg => convertInfoMessages(leg.infos ?? []).map(c => c.message)))
+      .filter(isValidDeviationText);
     const uniqueMessages = [...new Set(allMessages)];
     if (uniqueMessages.length === 0) {
       setDeviationEnrichment(new Map());

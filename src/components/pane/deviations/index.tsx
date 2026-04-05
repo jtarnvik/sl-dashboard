@@ -19,7 +19,7 @@ import InDebugModeContext from '../../../contexts/debug-context.ts';
 import { Legend } from '../departures/legend.tsx';
 import { AbortControllerState } from '../../../types/communication.ts';
 import { Deviation } from '../../../types/deviations.ts';
-import { EnrichedDeviation, enrichDeviations, isShown } from '../../../types/deviations-common.ts';
+import { EnrichedDeviation, enrichDeviations, isShown, isValidDeviationText } from '../../../types/deviations-common.ts';
 import { deviationIcons, normalIcons } from './legend-data.tsx';
 import ErrorContext from '../../../contexts/error-context.ts';
 
@@ -56,7 +56,8 @@ export function Deviations() {
     setEnriched: (deviations: EnrichedDeviation[]) => void,
     setInProgress: (inProgress: boolean) => void
   ) {
-    const common = convertDeviationSearch(filterDeviationsByStops(data, focusStops), focusStops);
+    const common = convertDeviationSearch(filterDeviationsByStops(data, focusStops), focusStops)
+      .filter(d => isValidDeviationText(d.message));
     if (common.length === 0) {
       setEnriched([]);
       setInProgress(false);
