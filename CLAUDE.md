@@ -216,7 +216,6 @@ C1 - FE, Better GUI for trips
 D - FE/BE, More work, not broken down yet
 D0 - Add a periodical check for new deviations to BE to speed up future use
 D1 - FE Examine how deviations work for buses, Do I handle lines correctly?
-D1 - FE bug, the "Inställningar" menu item only works if the user is at the main page.
 D2 - FE how to handle long list of departures
 D3 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
 D4 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling

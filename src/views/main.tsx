@@ -2,12 +2,10 @@ import { useContext, useEffect, useState } from 'react';
 
 import { DEFAULT_SETTINGS } from '../communication/constant.ts';
 import { loadStopHint } from '../util/stop-hint.ts';
-import { saveSettings } from '../communication/backend.ts';
 import { ErrorHandler } from '../components/error-handler';
 import { Departures } from '../components/pane/departures';
 import { Deviations } from '../components/pane/deviations';
 import { Routes } from '../components/pane/routes';
-import { Settings } from '../components/settings';
 import { SLButton } from '../components/common/sl-button';
 import ErrorContext from '../contexts/error-context.ts';
 import InDebugModeContext from '../contexts/debug-context.ts';
@@ -18,9 +16,8 @@ import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user.ts'
 export function Main() {
   const { setError } = useContext(ErrorContext);
   const { setHeading } = useContext(PageTitleContext);
-  const { user, updateSettings } = useUser();
+  const { user } = useUser();
   const loginState = useUserLoginState();
-  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [inDebugMode, setInDebugMode] = useState<boolean>(false);
 
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
@@ -36,19 +33,6 @@ export function Main() {
   useEffect(() => {
     setHeading(settingsData.stopPointName);
   }, [settingsData.stopPointName, setHeading]);
-
-  useEffect(() => {
-    const openSettings = () => setSettingsOpen(true);
-    window.addEventListener('openSettings', openSettings);
-    return () => window.removeEventListener('openSettings', openSettings);
-  }, []);
-
-  async function handleSaveSettings(data: SettingsData) {
-    const success = await saveSettings(data, setError);
-    if (success) {
-      updateSettings(data);
-    }
-  }
 
   return (
     <InDebugModeContext.Provider value={{ inDebugMode, setInDebugMode }}>
@@ -72,14 +56,6 @@ export function Main() {
               Utlös testfel
             </SLButton>
           </div>
-        )}
-        {isLoggedIn && (
-          <Settings
-            settingsOpen={settingsOpen}
-            setSettingsOpen={setSettingsOpen}
-            currentSettings={settingsData}
-            onSave={handleSaveSettings}
-          />
         )}
       </main>
     </InDebugModeContext.Provider>
