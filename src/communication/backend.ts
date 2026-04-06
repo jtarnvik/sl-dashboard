@@ -14,10 +14,11 @@ import {
   URL_BACKEND_LOGIN,
   URL_BACKEND_LOGOUT,
   URL_BACKEND_SETTINGS,
+  URL_BACKEND_ADMIN_STATISTICS,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, StatisticsData, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -172,6 +173,16 @@ export async function hideDeviation(id: number, setError: SetError): Promise<boo
   } catch {
     setError("Kunde inte dölja avvikelsen.");
     return false;
+  }
+}
+
+export async function fetchStatistics(setError: SetError): Promise<StatisticsData | null> {
+  try {
+    const response = await backend.get<StatisticsData>(URL_BACKEND_ADMIN_STATISTICS);
+    return response.data;
+  } catch {
+    setError("Kunde inte hämta statistik.");
+    return null;
   }
 }
 

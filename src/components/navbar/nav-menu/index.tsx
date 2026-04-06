@@ -85,6 +85,12 @@ export function NavMenu({ logout, isAdmin }: Props) {
               >
                 Användare
               </button>
+              <button
+                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                onClick={() => { navigate('/admin/statistics'); setMenuOpen(false); }}
+              >
+                Statistik
+              </button>
               <hr className="border-gray-200" />
             </>
           )}

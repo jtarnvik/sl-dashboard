@@ -28,3 +28,9 @@ export interface AccessRequestItem extends UserRowItem {
 export interface AllowedUserItem extends UserRowItem {
   role: string | null;
 }
+
+export interface StatisticsData {
+  routesShared: number;
+  aiInterpretationQueries: number;
+  userCount: number;
+}

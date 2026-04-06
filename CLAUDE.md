@@ -182,6 +182,7 @@ Implementation Steps
 There are a few large blocks of implementation. Each block has its own letter and each step within that block 
 has its own order by number.
 
+
 A - Better info when deviations are fetched. Now the UI just looks silly.
 
 B - FE, Same goes for login. Usually things just happen in the background, assume communication going with google, Add spinner.
