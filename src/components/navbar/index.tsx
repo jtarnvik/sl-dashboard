@@ -27,8 +27,10 @@ export function Navbar() {
         </div>
         {isLoggedIn ? (
           <NavMenu logout={logout} isAdmin={isAdmin} />
+        ) : isLoading ? (
+          <div className="w-6 h-6 rounded-full border-2 border-white border-t-transparent animate-spin" />
         ) : (
-          <SLButton onClick={login} disabled={isLoading}>
+          <SLButton onClick={login}>
             Logga in
           </SLButton>
         )}
