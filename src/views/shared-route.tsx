@@ -15,11 +15,10 @@ export function SharedRouteView() {
   const navigate = useNavigate();
   const [journey, setJourney] = useState<Journey | null | undefined>(undefined);
 
-  const shareUrl = window.location.href;
-  const canShare = !!navigator.canShare?.({ url: shareUrl });
+  const canShare = !!navigator.canShare?.({ url: window.location.href });
 
   async function handleShare() {
-    await navigator.share({ title: 'Min resväg', text: "jesper ", url: shareUrl });
+    await navigator.share({ title: 'Min resväg' });
   }
 
   useEffect(() => {
