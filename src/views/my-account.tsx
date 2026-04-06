@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { deleteAccount } from '../communication/backend';
+import { clearHiddenDeviations, deleteAccount } from '../communication/backend';
 import { ErrorHandler } from '../components/error-handler';
 import { ModalDialog } from '../components/common/modal-dialog';
 import { SLButton } from '../components/common/sl-button';
@@ -30,6 +30,13 @@ export function MyAccount() {
     }
   }, [loginState, navigate]);
 
+  async function handleClearHiddenDeviations() {
+    const success = await clearHiddenDeviations(setError);
+    if (success) {
+      window.dispatchEvent(new Event('hiddenDeviationsReset'));
+    }
+  }
+
   async function handleDeleteAccount() {
     setConfirmDeleteOpen(false);
     const success = await deleteAccount(setError);
@@ -45,7 +52,14 @@ export function MyAccount() {
         <ErrorHandler />
         <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col gap-3">
           <button
-            className="text-left text-sm text-red-600 hover:text-red-800"
+            className="text-sm text-[#184fc2] hover:text-[#578ff3] cursor-pointer self-start"
+            onClick={handleClearHiddenDeviations}
+          >
+            Återställ dolda avvikelser
+          </button>
+          <hr className="border-gray-200" />
+          <button
+            className="text-sm text-red-600 hover:text-red-800 cursor-pointer self-start"
             onClick={() => setConfirmDeleteOpen(true)}
           >
             Ta bort mitt konto

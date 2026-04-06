@@ -157,8 +157,9 @@ Custom events dispatched on `window` are used for cross-tree communication betwe
 |---|---|---|---|
 | `"unauthorized"` | `backend.ts` (Axios response interceptor) | `App.tsx` | Forces logout when any API call returns 401 |
 | `"pendingCountChanged"` | `pending-users.tsx` (after approve/reject) | `NavMenu` | Refreshes the pending access request count badge |
-| `"openSettings"` | `NavMenu` (Inställningar menu item) | `Main` | Opens the settings modal |
+| `"openSettings"` | `NavMenu` (Inställningar menu item) | `Layout` | Opens the settings modal |
 | `"deviationHidden"` | `deviation-modal/index.tsx` (after successful hide) | `Departures`, `Deviations`, `Routes` panes | Removes the hidden deviation (by `detail.id`) from each pane's local state |
+| `"hiddenDeviationsReset"` | `MyAccount` (after successful clear-all) | `Main` | Increments `departuresGen` and `deviationsGen` to force remount and re-fetch of both panes |
 
 ### Component conventions
 
@@ -181,51 +182,25 @@ Implementation Steps
 
 There are a few large blocks of implementation. Each block has its own letter and each step within that block 
 has its own order by number.
-                      
-Z - FE, Stable launch experience.
-
-Z1 - FE, localStorage stop hint.
-- Define a `STOP_HINT_KEY` constant in `constant.ts` for the localStorage key.
-- Add `loadStopHint(): SettingsData | null` and `saveStopHint(settings: SettingsData): void` helpers in a new
-  `src/util/stop-hint.ts` file. `saveStopHint` writes `stopPointId`, `stopPointName` and `useAiInterpretation` to
-  localStorage. `loadStopHint` reads and parses them, returning null if absent or malformed.
-- In `App.tsx`, write the hint in two places (before panes re-render, not inside a component):
-  - When `checkLoginStatus` resolves with a logged-in user: save hint from `user.settings`.
-  - When `updateSettings` is called: save hint from the new settings.
-
-Z2 - FE, Use hint in departures pane.
-- In `Main.tsx`, derive `settingsData` with the priority chain: backend settings (logged-in user) →
-  `loadStopHint()` → `DEFAULT_SETTINGS`. This replaces the current fallback that goes straight to `DEFAULT_SETTINGS`
-  for non-logged-in / loading states.
-- No changes needed inside the `Departures`, `Routes`, or `Deviations` components themselves.
-
-Z3 - FE, Navbar spinner during auth loading.
-- In `Navbar` (or wherever the login button / `NavMenu` is rendered), show a small neutral spinner in place of
-  the login button while `loginState === UserLoginState.Loading`.
-- Once state is known, render the login button or `NavMenu` as normal — no layout shift.
-
 
 A - Better info when deviations are fetched. Now the UI just looks silly.
-
-B - FE, Same goes for login. Usually things just happen in the background, assume communication going with google, Add spinner.
 
 C - FE/BE, Improve GUI for trips and deviations
 
 C1 - FE, Better GUI for trips
 
 D - FE/BE, More work, not broken down yet
-D0 - Add a periodical check for new deviations to BE to speed up future use
 D1 - FE Examine how deviations work for buses, Do I handle lines correctly?
 D2 - FE how to handle long list of departures
+D6 - Make a better sorting of large departure boards. Group by type?
 D3 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
 D4 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
 D5 - FE, the deviation modal, make some kind of line between different deviations, the
 
-E - Reset hidden
-
 F - Bulletin board
 
 G - Preload deviations
+G1 - Add a periodical check for new deviations to BE to speed up future use
 
 H - FE/BE, Map support for trips and online maps for moving buses.
 

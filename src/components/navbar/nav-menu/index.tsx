@@ -52,7 +52,7 @@ export function NavMenu({ logout, isAdmin }: Props) {
   return (
     <div className="relative" ref={menuRef}>
       <button
-        className="relative text-white text-2xl px-2 py-1 focus:outline-hidden hover:bg-[#578ff3] rounded-sm"
+        className="relative text-white text-2xl px-2 py-1 focus:outline-hidden hover:bg-[#578ff3] rounded-sm cursor-pointer"
         onClick={() => setMenuOpen(prev => !prev)}
         aria-label="Meny"
       >
@@ -68,7 +68,7 @@ export function NavMenu({ logout, isAdmin }: Props) {
           {isAdmin && (
             <>
               <button
-                className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between ${pendingCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 hover:bg-gray-100'}`}
+                className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between ${pendingCount === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 hover:bg-gray-100 cursor-pointer'}`}
                 onClick={() => { if (pendingCount !== 0) { navigate('/admin/pending'); setMenuOpen(false); } }}
                 disabled={pendingCount === 0}
               >
@@ -80,13 +80,13 @@ export function NavMenu({ logout, isAdmin }: Props) {
                 )}
               </button>
               <button
-                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
                 onClick={() => { navigate('/admin/users'); setMenuOpen(false); }}
               >
                 Användare
               </button>
               <button
-                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
                 onClick={() => { navigate('/admin/statistics'); setMenuOpen(false); }}
               >
                 Statistik
@@ -95,21 +95,21 @@ export function NavMenu({ logout, isAdmin }: Props) {
             </>
           )}
           <button
-            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
             onClick={() => { navigate('/my-account'); setMenuOpen(false); }}
           >
             Mitt konto
           </button>
           <hr className="border-gray-200" />
           <button
-            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
             onClick={() => { window.dispatchEvent(new Event('openSettings')); setMenuOpen(false); }}
           >
             Inställningar
           </button>
           <hr className="border-gray-200" />
           <button
-            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
             onClick={() => { logout(); setMenuOpen(false); }}
           >
             Logga ut

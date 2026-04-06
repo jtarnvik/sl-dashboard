@@ -128,7 +128,7 @@ function DeviationRow({ enriched, onHide }: DeviationRowProps) {
           <>
             <div className="flex items-start justify-between gap-2">
               <span>{enriched.shortMessage}</span>
-              <button onClick={() => setExpanded(!expanded)} className="shrink-0 mt-[2px]">
+              <button onClick={() => setExpanded(!expanded)} className="shrink-0 mt-[2px] cursor-pointer">
                 {expanded ? <IoChevronUp size={16} /> : <IoChevronDown size={16} />}
               </button>
             </div>
@@ -141,7 +141,7 @@ function DeviationRow({ enriched, onHide }: DeviationRowProps) {
           <div className="mt-1">
             <button
               onClick={() => onHide(enriched.id!)}
-              className="text-s text-[#184fc2] hover:text-[#578ff3]"
+              className="text-s text-[#184fc2] hover:text-[#578ff3] cursor-pointer"
             >
               Dölj
             </button>

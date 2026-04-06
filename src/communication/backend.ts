@@ -9,6 +9,7 @@ import {
   URL_BACKEND_ADMIN_USERS,
   URL_BACKEND_DELETE_ACCOUNT,
   URL_BACKEND_GET_CHECK_AUTH,
+  URL_BACKEND_CLEAR_HIDDEN_DEVIATIONS,
   URL_BACKEND_HIDE_DEVIATION,
   URL_BACKEND_INTERPRET_DEVIATIONS,
   URL_BACKEND_LOGIN,
@@ -172,6 +173,16 @@ export async function hideDeviation(id: number, setError: SetError): Promise<boo
     return true;
   } catch {
     setError("Kunde inte dölja avvikelsen.");
+    return false;
+  }
+}
+
+export async function clearHiddenDeviations(setError: SetError): Promise<boolean> {
+  try {
+    await backend.delete(URL_BACKEND_CLEAR_HIDDEN_DEVIATIONS);
+    return true;
+  } catch {
+    setError("Kunde inte återställa dolda avvikelser.");
     return false;
   }
 }

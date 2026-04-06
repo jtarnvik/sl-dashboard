@@ -25,7 +25,7 @@ export function ErrorHandler() {
         <span>{error}</span>
         {retry && (
           <button type="button"
-                  className="text-[#184fc2] underline hover:no-underline font-medium shrink-0"
+                  className="text-[#184fc2] underline hover:no-underline font-medium shrink-0 cursor-pointer"
                   onClick={retryAndDismiss}
           >
             Prova igen
@@ -33,7 +33,7 @@ export function ErrorHandler() {
         )}
       </div>
       <button type="button"
-              className="ml-3 text-gray-400 hover:text-gray-600 shrink-0"
+              className="ml-3 text-gray-400 hover:text-gray-600 shrink-0 cursor-pointer"
               onClick={dismiss}
       >
         <RxCross2 className="w-4 h-4" />

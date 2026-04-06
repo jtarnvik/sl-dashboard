@@ -60,7 +60,7 @@ export function SharedRouteView() {
       )}
       <div className="mt-4 flex justify-between items-center">
         {canShare
-          ? <button onClick={handleShare} className="text-[#184fc2] hover:text-[#578ff3]" title="Dela resväg">
+          ? <button onClick={handleShare} className="text-[#184fc2] hover:text-[#578ff3] cursor-pointer" title="Dela resväg">
               <IoShareOutline size={24} />
             </button>
           : <span />
