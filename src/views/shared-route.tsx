@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { IoShareOutline } from 'react-icons/io5';
 
 import { fetchSharedRoute } from '../communication/backend.ts';
 import { SldJourney } from '../components/pane/routes/sld-journey.tsx';
@@ -13,6 +14,13 @@ export function SharedRouteView() {
   const { setHeading } = useContext(PageTitleContext);
   const navigate = useNavigate();
   const [journey, setJourney] = useState<Journey | null | undefined>(undefined);
+
+  const shareUrl = window.location.href;
+  const canShare = !!navigator.canShare?.({ url: shareUrl });
+
+  async function handleShare() {
+    await navigator.share({ title: 'Min resväg', text: "jesper ", url: shareUrl });
+  }
 
   useEffect(() => {
     setHeading('Min resväg');
@@ -46,7 +54,13 @@ export function SharedRouteView() {
       <div className="mt-4">
         <LoginTeaser />
       </div>
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex justify-between items-center">
+        {canShare
+          ? <button onClick={handleShare} className="text-[#184fc2] hover:text-[#578ff3]" title="Dela resväg">
+              <IoShareOutline size={24} />
+            </button>
+          : <span />
+        }
         <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
       </div>
     </div>

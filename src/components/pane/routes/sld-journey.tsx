@@ -1,6 +1,7 @@
 import {useContext, useState} from "react";
 import classNames from "classnames";
-import {IoShareOutline, IoWarningOutline} from "react-icons/io5";
+import {IoWarningOutline} from "react-icons/io5";
+import { RiUserSharedLine } from "react-icons/ri";
 import {useNavigate} from "react-router-dom";
 import {convertInfoMessages} from "../../common/deviation-modal";
 import {ModalDialog} from "../../common/modal-dialog";
@@ -118,7 +119,7 @@ export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false
                 className="text-[#184fc2] hover:text-[#578ff3] cursor-pointer"
                 title="Dela resväg"
               >
-                <IoShareOutline size={22} />
+                <RiUserSharedLine size={22} />
               </button>
             }
           </div>
