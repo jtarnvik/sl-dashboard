@@ -6,6 +6,7 @@ import PageTitleContext from './contexts/page-title-context.ts';
 import UserContext from './contexts/user-context.ts';
 import { User, UserSettings } from './types/backend.ts';
 import { checkLoginStatus, login, logout } from './communication/backend.ts';
+import { saveStopHint } from './util/stop-hint.ts';
 import { Denied } from './views/denied.tsx';
 import { Gdpr } from './views/gdpr.tsx';
 import { Layout } from './views/layout.tsx';
@@ -50,6 +51,7 @@ function App() {
   }
 
   function updateSettings(settings: UserSettings) {
+    saveStopHint(settings);
     setUser(prev => prev ? { ...prev, settings } : prev);
   }
 
@@ -57,7 +59,12 @@ function App() {
     const handleUnauthorized = () => setUser(null);
     window.addEventListener("unauthorized", handleUnauthorized);
 
-    checkLoginStatus(setError).then(setUser);
+    checkLoginStatus(setError).then(user => {
+      if (user?.settings) {
+        saveStopHint(user.settings);
+      }
+      setUser(user);
+    });
 
     return () => window.removeEventListener("unauthorized", handleUnauthorized);
   }, []);

@@ -181,6 +181,28 @@ Implementation Steps
 
 There are a few large blocks of implementation. Each block has its own letter and each step within that block 
 has its own order by number.
+                      
+Z - FE, Stable launch experience.
+
+Z1 - FE, localStorage stop hint.
+- Define a `STOP_HINT_KEY` constant in `constant.ts` for the localStorage key.
+- Add `loadStopHint(): SettingsData | null` and `saveStopHint(settings: SettingsData): void` helpers in a new
+  `src/util/stop-hint.ts` file. `saveStopHint` writes `stopPointId`, `stopPointName` and `useAiInterpretation` to
+  localStorage. `loadStopHint` reads and parses them, returning null if absent or malformed.
+- In `App.tsx`, write the hint in two places (before panes re-render, not inside a component):
+  - When `checkLoginStatus` resolves with a logged-in user: save hint from `user.settings`.
+  - When `updateSettings` is called: save hint from the new settings.
+
+Z2 - FE, Use hint in departures pane.
+- In `Main.tsx`, derive `settingsData` with the priority chain: backend settings (logged-in user) →
+  `loadStopHint()` → `DEFAULT_SETTINGS`. This replaces the current fallback that goes straight to `DEFAULT_SETTINGS`
+  for non-logged-in / loading states.
+- No changes needed inside the `Departures`, `Routes`, or `Deviations` components themselves.
+
+Z3 - FE, Navbar spinner during auth loading.
+- In `Navbar` (or wherever the login button / `NavMenu` is rendered), show a small neutral spinner in place of
+  the login button while `loginState === UserLoginState.Loading`.
+- Once state is known, render the login button or `NavMenu` as normal — no layout shift.
 
 
 A - Better info when deviations are fetched. Now the UI just looks silly.

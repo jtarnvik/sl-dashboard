@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 
 import { DEFAULT_SETTINGS } from '../communication/constant.ts';
+import { loadStopHint } from '../util/stop-hint.ts';
 import { saveSettings } from '../communication/backend.ts';
 import { ErrorHandler } from '../components/error-handler';
 import { Departures } from '../components/pane/departures';
@@ -30,7 +31,7 @@ export function Main() {
         stopPointName: user.settings.stopPointName,
         useAiInterpretation: user.settings.useAiInterpretation,
       }
-    : DEFAULT_SETTINGS;
+    : (loadStopHint() ?? DEFAULT_SETTINGS);
 
   useEffect(() => {
     setHeading(settingsData.stopPointName);

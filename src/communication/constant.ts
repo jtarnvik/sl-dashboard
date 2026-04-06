@@ -35,6 +35,7 @@ export const URL_BACKEND_INTERPRET_DEVIATIONS = "/api/protected/deviations/inter
 export const URL_BACKEND_HIDE_DEVIATION = (id: number) => `/api/protected/deviations/${id}/hide`;
 
 export const DEFAULT_SETTINGS: SettingsData = { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen", useAiInterpretation: true };
+export const STOP_HINT_KEY = "sl-dashboard-stop-hint";
 
 // Focus stops for deviation filtering (StopArea.id from the deviations API).
 // When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.
