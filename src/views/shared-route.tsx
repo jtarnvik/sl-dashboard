@@ -7,12 +7,14 @@ import { SldJourney } from '../components/pane/routes/sld-journey.tsx';
 import { LoginTeaser } from '../components/pane/login-teaser';
 import { SLButton } from '../components/common/sl-button';
 import PageTitleContext from '../contexts/page-title-context.ts';
+import { useUserLoginState, UserLoginState } from '../hook/use-user.ts';
 import { Journey } from '../types/sl-journeyplaner-responses.ts';
 
 export function SharedRouteView() {
   const { id } = useParams<{ id: string }>();
   const { setHeading } = useContext(PageTitleContext);
   const navigate = useNavigate();
+  const loginState = useUserLoginState();
   const [journey, setJourney] = useState<Journey | null | undefined>(undefined);
 
   const shareUrl = window.location.href;
@@ -25,7 +27,7 @@ export function SharedRouteView() {
   useEffect(() => {
     setHeading('Min resväg');
     document.title = 'Min resväg';
-    return () => { document.title = 'SL-Dashboard'; };
+    return () => { document.title = 'Nästa avgång'; };
   }, [setHeading]);
 
   useEffect(() => {
@@ -51,9 +53,11 @@ export function SharedRouteView() {
           alwaysExpanded={true}
         />
       )}
-      <div className="mt-4">
-        <LoginTeaser />
-      </div>
+      {loginState === UserLoginState.NotLoggedIn && (
+        <div className="mt-4">
+          <LoginTeaser />
+        </div>
+      )}
       <div className="mt-4 flex justify-between items-center">
         {canShare
           ? <button onClick={handleShare} className="text-[#184fc2] hover:text-[#578ff3]" title="Dela resväg">
