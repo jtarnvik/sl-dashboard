@@ -4,6 +4,7 @@ import {IoWarningOutline} from "react-icons/io5";
 import { RiUserSharedLine } from "react-icons/ri";
 import {useNavigate} from "react-router-dom";
 import {convertInfoMessages} from "../../common/deviation-modal";
+import {DeviationWrapper} from "../../common/deviation-wrapper";
 import {SpinnerOverlay} from "../../common/spinner-overlay";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
@@ -63,12 +64,16 @@ export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false
     return result;
   }
 
-  function journeyDeviation(): boolean {
-    return journey.legs.some(leg =>
-      convertInfoMessages(leg.infos ?? []).some(common => {
-        const result = deviationEnrichment.get(common.message);
-        return result !== undefined && isShown({ ...common, ...result } as EnrichedDeviation);
-      })
+  function getJourneyDeviations(): EnrichedDeviation[] {
+    return journey.legs.flatMap(leg =>
+      convertInfoMessages(leg.infos ?? [])
+        .map(common => {
+          const result = deviationEnrichment.get(common.message);
+          if (!result) { return null; }
+          return { ...common, ...result } as EnrichedDeviation;
+        })
+        .filter((d): d is EnrichedDeviation => d !== null)
+        .filter(isShown)
     );
   }
 
@@ -104,21 +109,25 @@ export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false
         <div className="flex justify-between">
           <SldSchedule headerLegs={headerLegs} />
           <SpinnerOverlay showSpinner={interpretationPending && journeyHasDeviationsToInterpret(journey)}>
-            <SldDuration headerLegs={headerLegs} />
+            <div onClick={(e) => e.stopPropagation()}>
+              <DeviationWrapper deviations={getJourneyDeviations()}>
+                <SldDuration headerLegs={headerLegs} />
+              </DeviationWrapper>
+            </div>
           </SpinnerOverlay>
         </div>
         <div className="flex justify-between">
           <div>
             <SldJourneyTitle headerLegs={headerLegs} />
             <div className="flex justify-between gap-2">
-              <SldBreadCrumbs legs={adjustedLegs} />
+              <SldBreadCrumbs legs={adjustedLegs} deviationEnrichment={deviationEnrichment} />
               {inDebugMode &&
                 <SLButton onClick={() => setJsonOpen(true)} thin>JSON</SLButton>
               }
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {journeyDeviation() &&
+            {getJourneyDeviations().length > 0 &&
               <div className="deviation-color">
                 <IoWarningOutline size={24} />
               </div>

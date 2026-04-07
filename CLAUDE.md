@@ -242,6 +242,37 @@ A4 - DONE - FE, Spinner in the deviations pane.
   Icons should show their normal color (no deviations = default, has deviations = orange) immediately; the spinner communicates
   that the state may still change.
 
+A5 - DONE - FE, Better deviation feedback in the routes pane.
+Currently a single orange warning icon appears on the journey card when any leg has deviations, but gives no indication
+of which leg is affected. The duration text is also plain — unlike departures where the time turns orange via DeviationWrapper.
+Goal: turn the duration text orange + clickable (opens deviation modal), and move per-leg warning indicators into the
+breadcrumb row so the user can see which transport segment has a deviation.
+Design decisions:
+- `DeviationWrapper` is reused for the duration text (same pattern as departures). It bundles click-to-modal, so clicking
+  the orange duration opens the deviation modal. The existing standalone warning icon is kept but loses its click behavior
+  (it becomes a pure visual indicator, since the duration text is now the click target).
+- Per-leg indicators live in `SldBreadCrumbs`, not in a separate component. A small orange warning icon or dot appears
+  next to the transport badge for any leg that has a shown deviation.
+
+Steps:
+- In `SldJourney`, refactor `journeyDeviation()` into `getJourneyDeviations(): EnrichedDeviation[]` — same logic but
+  returns the array instead of a boolean. Use `.length > 0` where a boolean was previously used.
+- Wrap `<SldDuration>` (inside its existing `<SpinnerOverlay>`) with `<DeviationWrapper deviations={getJourneyDeviations()}>`.
+  Remove the `onClick` from the standalone warning icon div (keep the icon and its orange color).
+- Refactor `convertLegsToProducts()` in `SldBreadCrumbs` to return `{ transportation: Transportation, leg: Leg }[]`
+  instead of `Transportation[]`, preserving the leg reference for deviation lookup.
+- Add `deviationEnrichment: Map<string, BackendInterpretationResult>` as a new prop to `SldBreadCrumbs`.
+  Pass it down from `SldJourney`.
+- In the breadcrumb render loop, for each item check if the leg has any shown deviations (flatMap `leg.infos` through
+  `convertInfoMessages`, look up in `deviationEnrichment`, filter with `isShown`). If so, render a small
+  `<IoWarningOutline>` in orange next to the `<LineTransportation>` badge.
+  Timing: before the BE returns, `deviationEnrichment` is an empty Map so no indicators appear. They materialise
+  only after interpretation completes and the map is populated — the same moment the duration text turns orange.
+  The leg reference is used only to identify which messages to look up; the show/hide decision is entirely driven
+  by `deviationEnrichment`, not by raw `leg.infos`.
+
+A6 - FE. SPinner is good for icons, less so for text. Assume that depends on the letters with parts below the normal botom. How to handle?
+
 
 
 B - FE, Handle empty departures response gracefully.
@@ -254,6 +285,7 @@ flashing empty content on transient glitches while still being honest when data 
 is empty (no previous data to fall back on), show a "Inga avgångar för tillfället" message instead.
 - It is unreasonable to expect the SL departures API to return empty responses bewtween 06:00 and 23:00 every day, so if this happens 
 imn that time frame, we should schedule a new api attempt after 5 secs. 
+
 
 C - FE/BE, Improve GUI for trips and deviations
 
