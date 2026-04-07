@@ -4,7 +4,7 @@ import { RiUserSharedLine } from "react-icons/ri";
 import {useNavigate} from "react-router-dom";
 import {convertInfoMessages} from "../../common/deviation-modal";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
-import {SpinnerOverlay} from "../../common/spinner-overlay";
+import {ScanningUnderline} from "../../common/scanning-underline";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
@@ -107,13 +107,13 @@ export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false
       >
         <div className="flex justify-between">
           <SldSchedule headerLegs={headerLegs} />
-          <SpinnerOverlay showSpinner={interpretationPending && journeyHasDeviationsToInterpret(journey)}>
+          <ScanningUnderline active={interpretationPending && journeyHasDeviationsToInterpret(journey)}>
             <div onClick={(e) => e.stopPropagation()}>
               <DeviationWrapper deviations={getJourneyDeviations()}>
                 <SldDuration headerLegs={headerLegs} />
               </DeviationWrapper>
             </div>
-          </SpinnerOverlay>
+          </ScanningUnderline>
         </div>
         <div className="flex justify-between">
           <div>

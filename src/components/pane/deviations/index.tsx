@@ -13,7 +13,7 @@ import { interpretDeviations } from '../../../communication/backend.ts';
 import { convertDeviationSearch, DeviationModal, filterDeviationsByStops } from '../../common/deviation-modal';
 import { Card } from '../../common/card';
 import { getColorRef, TransportationIconCommon, TransportationMode } from '../../common/line';
-import { SpinnerOverlay } from '../../common/spinner-overlay';
+import { ScanningUnderline } from '../../common/scanning-underline';
 import { ModalDialog } from '../../common/modal-dialog';
 import { SLButton } from '../../common/sl-button';
 import InDebugModeContext from '../../../contexts/debug-context.ts';
@@ -124,31 +124,31 @@ export function Deviations() {
     <Card>
       <div className="flex justify-between">
         <div onClick={() => { if (trainEnriched.length > 0) { setOpenModal('train'); } }}>
-          <SpinnerOverlay showSpinner={trainInProgress}>
+          <ScanningUnderline active={trainInProgress} lineOffset={4}>
             <TransportationIconCommon
               mode={TransportationMode.TRAIN}
               className={trainAdjustments}
               inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainEnriched.length > 0)}
             />
-          </SpinnerOverlay>
+          </ScanningUnderline>
         </div>
         <div onClick={() => { if (subwayEnriched.length > 0) { setOpenModal('subway'); } }}>
-          <SpinnerOverlay showSpinner={subwayInProgress}>
+          <ScanningUnderline active={subwayInProgress} lineOffset={3}>
             <TransportationIconCommon
               mode={TransportationMode.SUBWAY}
               className={subwayAdjustments}
               inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayEnriched.length > 0)}
             />
-          </SpinnerOverlay>
+          </ScanningUnderline>
         </div>
         <div onClick={() => { if (busEnriched.length > 0) { setOpenModal('bus'); } }}>
-          <SpinnerOverlay showSpinner={busInProgress}>
+          <ScanningUnderline active={busInProgress} lineOffset={3}>
             <TransportationIconCommon
               mode={TransportationMode.BUS}
               className={busAdjustments}
               inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busEnriched.length > 0)}
             />
-          </SpinnerOverlay>
+          </ScanningUnderline>
         </div>
       </div>
       <div className="w-full flex justify-end space-x-1 mt-2">

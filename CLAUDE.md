@@ -197,34 +197,38 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE, Show a spinner while deviation interpretation is in progress.
+A - FE, Show a scanning indicator while deviation interpretation is in progress.
 The AI interpretation call is async and can take a second or two. Without feedback, the UI looks broken or stale.
-A small inline spinner on the affected element (not a full-screen overlay) communicates that enrichment is in flight.
+A small inline scanning line under the affected element (not a full-screen overlay) communicates that enrichment is in flight.
 Design decisions:
-- `SpinnerOverlay` is a new standalone component, not an extension of `DeviationWrapper` — `DeviationWrapper` is
-  concern-specific (wraps text for click-to-deviation-modal) and should not carry spinner responsibility.
-- The spinner only appears on items that actually have deviation texts being interpreted. Showing it on unaffected
+- `ScanningUnderline` is a new standalone component (`src/components/common/scanning-underline/`), not an extension of
+  `DeviationWrapper` — `DeviationWrapper` is concern-specific (wraps text for click-to-deviation-modal) and should not
+  carry scanning responsibility.
+- The indicator only appears on items that actually have deviation texts being interpreted. Showing it on unaffected
   items (rows with no deviations, journeys with no info messages) would be misleading.
 - A4 reuses the existing per-type `*InProgress` flags rather than adding new ones — those flags already cover the
   full SL-fetch + AI-interpret flow per transport type, which is the right granularity here.
+- A scanning line (8px wide, travels left-to-right and back, 1.2s ease-in-out) was chosen over a spinning circle
+  because it looks better under text; `left` percentage is used in the animation rather than `transform: translateX`
+  because `translateX` percentages are relative to the element's own width, not the container.
+- A `lineOffset` prop (default 0) shifts the line downward to clear icon background colors in the deviations pane.
 
-A1 - DONE - FE, New `SpinnerOverlay` component.
-- Create `src/components/common/spinner-overlay/index.tsx`.
-- Props: `{ children: ReactNode, showSpinner: boolean }`.
-- Renders children inside a `relative` div. When `showSpinner` is true, overlays an 8px (Tailwind `w-2 h-2`) CSS border-spin circle
-  absolutely positioned at `bottom-0 right-0`. Use the same border-spin technique as the navbar loading spinner (white border,
-  transparent top border, `animate-spin`), but with a dark/blue border color to work on light backgrounds.
-- When `showSpinner` is false, renders children unchanged (no wrapper overhead visible).
+A1 - DONE - FE, New `ScanningUnderline` component.
+- Created `src/components/common/scanning-underline/index.tsx`.
+- Props: `{ children: ReactNode, active: boolean, lineOffset?: number }`.
+- Renders children inside a `relative` div. When `active` is true, absolutely positions an 8px scanning line at the
+  bottom of the container. The line travels left to right and back via CSS `@keyframes scan`.
+- When `active` is false, renders children unchanged (no wrapper overhead visible).
 
-A2 - DONE - FE, Spinner in the departures pane.
+A2 - DONE - FE, Scanning indicator in the departures pane.
 - Add `interpretationPending` boolean state to `src/components/pane/departures/index.tsx`, initially `false`.
 - Set it `true` just before calling `interpretDeviations()` in `processDeviationEnrichment`, and `false` when the call
   resolves (both success and error paths).
 - In the JSX, wrap the existing `<DeviationWrapper>` for each departure row's time cell with
-  `<SpinnerOverlay showSpinner={interpretationPending && departure.deviations.length > 0}>`.
-  Only rows that have deviations (and are therefore included in the interpretation call) show the spinner.
+  `<ScanningUnderline active={interpretationPending && (departure.deviations ?? []).length > 0}>`.
+  Only rows that have deviations (and are therefore included in the interpretation call) show the indicator.
 
-A3 - DONE - FE, Spinner in the routes pane.
+A3 - DONE - FE, Scanning indicator in the routes pane.
 - Add `interpretationPending` boolean state to `src/components/pane/routes/index.tsx`, initially `false`.
 - Set it `true` just before calling `interpretDeviations()` in `processDeviationEnrichment`, and `false` when the call resolves.
 - Add an optional `interpretationPending?: boolean` prop to `SldJourney` (defaults to `false`).
@@ -232,15 +236,15 @@ A3 - DONE - FE, Spinner in the routes pane.
 - In `SldJourney`, add a helper that checks whether the journey contributes any valid deviation texts (same
   logic as the collection in `processDeviationEnrichment`: flatMap `leg.infos`, run through `convertInfoMessages`,
   filter with `isValidDeviationText`). Call this `journeyHasDeviationsToInterpret(journey)`.
-- Wrap `<SldDuration>` with `<SpinnerOverlay showSpinner={interpretationPending && journeyHasDeviationsToInterpret(journey)}>`.
-  Only journey cards that actually have deviation texts pending interpretation show the spinner.
+- Wrap `<SldDuration>` with `<ScanningUnderline active={interpretationPending && journeyHasDeviationsToInterpret(journey)}>`.
+  Only journey cards that actually have deviation texts pending interpretation show the indicator.
 
-A4 - DONE - FE, Spinner in the deviations pane.
+A4 - DONE - FE, Scanning indicator in the deviations pane.
 - The pane already has `trainInProgress`, `subwayInProgress`, `busInProgress` flags.
-- Wrap each `<TransportationIconCommon>` with `<SpinnerOverlay showSpinner={*InProgress}>`.
-- Remove the grey-color-while-loading behavior from `getModeBackgroundColor()` (or equivalent) — the spinner replaces it.
-  Icons should show their normal color (no deviations = default, has deviations = orange) immediately; the spinner communicates
-  that the state may still change.
+- Wrap each `<TransportationIconCommon>` with `<ScanningUnderline active={*InProgress} lineOffset={3or4}>`.
+- Remove the grey-color-while-loading behavior from `getModeBackgroundColor()` — the scanning line replaces it.
+  Icons show their normal color immediately; the scanning line communicates that the state may still change.
+- `lineOffset={4}` for the train icon, `lineOffset={3}` for subway and bus (line clears the icon background color).
 
 A5 - DONE - FE, Better deviation feedback in the routes pane.
 Currently a single orange warning icon appears on the journey card when any leg has deviations, but gives no indication
@@ -249,16 +253,17 @@ Goal: turn the duration text orange + clickable (opens deviation modal), and mov
 breadcrumb row so the user can see which transport segment has a deviation.
 Design decisions:
 - `DeviationWrapper` is reused for the duration text (same pattern as departures). It bundles click-to-modal, so clicking
-  the orange duration opens the deviation modal. The existing standalone warning icon is kept but loses its click behavior
-  (it becomes a pure visual indicator, since the duration text is now the click target).
-- Per-leg indicators live in `SldBreadCrumbs`, not in a separate component. A small orange warning icon or dot appears
-  next to the transport badge for any leg that has a shown deviation.
+  the orange duration opens the deviation modal. The standalone warning icon next to the share button was removed.
+- Per-leg indicators live in `SldBreadCrumbs`, not in a separate component. A small orange `IoWarningOutline` (size 20,
+  `mt-0.5`) appears next to the transport badge for any leg that has a shown deviation.
+- `stopPropagation` is needed on the div wrapping `DeviationWrapper` to prevent the modal click from bubbling to the
+  journey card's expand/collapse onClick.
 
 Steps:
 - In `SldJourney`, refactor `journeyDeviation()` into `getJourneyDeviations(): EnrichedDeviation[]` — same logic but
   returns the array instead of a boolean. Use `.length > 0` where a boolean was previously used.
-- Wrap `<SldDuration>` (inside its existing `<SpinnerOverlay>`) with `<DeviationWrapper deviations={getJourneyDeviations()}>`.
-  Remove the `onClick` from the standalone warning icon div (keep the icon and its orange color).
+- Wrap `<SldDuration>` (inside its existing `<ScanningUnderline>`) with a stopPropagation div and
+  `<DeviationWrapper deviations={getJourneyDeviations()}>`. Remove the standalone warning icon.
 - Refactor `convertLegsToProducts()` in `SldBreadCrumbs` to return `{ transportation: Transportation, leg: Leg }[]`
   instead of `Transportation[]`, preserving the leg reference for deviation lookup.
 - Add `deviationEnrichment: Map<string, BackendInterpretationResult>` as a new prop to `SldBreadCrumbs`.
@@ -270,8 +275,6 @@ Steps:
   only after interpretation completes and the map is populated — the same moment the duration text turns orange.
   The leg reference is used only to identify which messages to look up; the show/hide decision is entirely driven
   by `deviationEnrichment`, not by raw `leg.infos`.
-
-A6 - FE. SPinner is good for icons, less so for text. Assume that depends on the letters with parts below the normal botom. How to handle?
 
 
 
