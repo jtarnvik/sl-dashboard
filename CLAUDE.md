@@ -32,13 +32,15 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 - Authentication state (`user`: `undefined` = loading, `null` = not logged in, `User` object = logged in) and the `login` / `logout` / `updateSettings` functions.
 - Three React contexts: `ErrorContext` (global error string + retry function), `UserContext` (auth state and actions), and `PageTitleContext` (current page heading shown in the navbar).
 
-**`Main.tsx`** renders the main page (`/`). It derives `settingsData` from `user.settings` when logged in, or `DEFAULT_SETTINGS` otherwise. It also manages `settingsOpen` state, listens for the `openSettings` window event, and provides `InDebugModeContext` to the debug mode button and panes.
+**`Main.tsx`** renders the main page (`/`). It derives `settingsData` with the priority chain: backend settings (logged-in) → `loadStopHint()` → `DEFAULT_SETTINGS`. It manages integer generation counters (`departuresGen`, `routesGen`, `deviationsGen`) used as `key` props on the panes — incrementing a counter forces a full remount and re-fetch of that pane. It also provides `InDebugModeContext` to the debug mode button and panes.
+
+**`Layout.tsx`** wraps all routes with `Navbar`, an `ErrorBoundary`, and the `Settings` modal. It owns `settingsOpen` state and listens for the `openSettings` window event so the modal can be opened from any route.
 
 ### Login states and visible content
 
 | State | Navbar right | Panes shown |
 |---|---|---|
-| Loading | "Logga in" (disabled) | Departures only |
+| Loading | Spinner | Departures only |
 | Not logged in | "Logga in" (active) | Departures + LoginTeaser |
 | Logged in | Hamburger menu | Departures + Routes + Deviations |
 
@@ -46,12 +48,12 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 
 ### Navbar (`src/components/navbar/`)
 
-`Navbar` is a fixed top bar. It shows the SL logo, the current page heading from `PageTitleContext`, and either a login button (not logged in) or `NavMenu` (logged in).
+`Navbar` is a fixed top bar. The logo is clickable and navigates to `/`. It shows the current page heading from `PageTitleContext`, and on the right: a spinner while auth loads, a login button when not logged in, or `NavMenu` when logged in.
 
 `NavMenu` (`src/components/navbar/nav-menu/`) is the hamburger dropdown for logged-in users:
-- Admin-only items at top: "Väntande användare" (with badge for pending count), "Användare"
+- Admin-only items at top: "Väntande användare" (with badge for pending count), "Användare", "Statistik"
 - "Mitt konto" — navigates to `/my-account`
-- "Inställningar" — dispatches `openSettings` window event (handled by `Main.tsx`)
+- "Inställningar" — dispatches `openSettings` window event (handled by `Layout`)
 - "Logga ut"
 
 The hamburger icon shows a red badge when there are pending access requests. The count is fetched on mount and on every menu open.
@@ -61,9 +63,11 @@ The hamburger icon shows a red badge when there are pending access requests. The
 | View | Route | Auth | Description |
 |---|---|---|---|
 | `Main` | `/` | Any | Main dashboard with panes |
-| `MyAccount` | `/my-account` | Logged in | Delete account + GDPR link |
+| `MyAccount` | `/my-account` | Logged in | Reset hidden deviations, delete account, GDPR link |
 | `PendingUsers` | `/admin/pending` | Admin | Approve/reject access requests |
 | `ExistingUsers` | `/admin/users` | Admin | List and delete allowed users |
+| `Statistics` | `/admin/statistics` | Admin | Usage statistics (shared routes, AI queries, user count) |
+| `SharedRouteView` | `/route/:id` | Any | View a shared journey; shows login teaser to non-logged-in users |
 | `Gdpr` | `/gdpr` | Any | GDPR info page |
 | `Denied` | `/denied` | — | Shown when access is denied during OAuth2 |
 
@@ -107,10 +111,10 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 ### Settings architecture
 
 Settings (selected stop point) are only available to logged-in users:
-- **Logged-in users**: stored in the backend database. `GET /api/auth/me` always returns a non-null `settings` object (backend defaults to Skogslöparvägen if none saved). Saved via `PUT /api/protected/settings`. After a successful save, `updateSettings(data)` patches the local `UserContext` state without a round trip.
-- **Non-logged-in users**: always use `DEFAULT_SETTINGS`. The Settings modal is not rendered for non-logged-in users.
+- **Logged-in users**: stored in the backend database. `GET /api/auth/me` always returns a non-null `settings` object (backend defaults to Skogslöparvägen if none saved). Saved via `PUT /api/protected/settings`. After a successful save, `updateSettings(data)` patches the local `UserContext` state without a round trip, and also writes a localStorage hint via `saveStopHint()`.
+- **Loading / not logged in**: `Main.tsx` uses the priority chain `loadStopHint() ?? DEFAULT_SETTINGS` so the app shows the last-known stop immediately rather than flashing the hardcoded default. The Settings modal is not rendered for non-logged-in users.
 
-`DEFAULT_SETTINGS` and `URL_BACKEND_SETTINGS` are defined in `src/communication/constant.ts`. `saveSettings()` is in `src/communication/backend.ts`.
+`DEFAULT_SETTINGS`, `URL_BACKEND_SETTINGS`, and `STOP_HINT_KEY` are defined in `src/communication/constant.ts`. `saveSettings()` is in `src/communication/backend.ts`. `loadStopHint()` / `saveStopHint()` are in `src/util/stop-hint.ts`.
 
 ### `Deviation` type name collision
 
@@ -180,10 +184,76 @@ Prefer 125 character wide lines in this file where the format allows it.
 
 Implementation Steps
 
-There are a few large blocks of implementation. Each block has its own letter and each step within that block 
+There are a few large blocks of implementation. Each block has its own letter and each step within that block
 has its own order by number.
 
-A - Better info when deviations are fetched. Now the UI just looks silly.
+When discussing or designing a block or step, read the relevant source files first before asking clarifying
+questions or proposing steps. Design suggestions based on assumptions about the code rather than the actual code
+produce steps that may be subtly wrong. If it is unclear which files are relevant, identify and read them before
+starting the discussion.
+
+When rewriting or detailing a block or step, preserve the motivating context — the "why" behind design choices
+that are not obvious from the code. Capture this at the block level (the `X - ...` line) as a brief sentence or
+two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
+"why" notes when rewriting step details.
+
+A - FE, Show a spinner while deviation interpretation is in progress.
+The AI interpretation call is async and can take a second or two. Without feedback, the UI looks broken or stale.
+A small inline spinner on the affected element (not a full-screen overlay) communicates that enrichment is in flight.
+Design decisions:
+- `SpinnerOverlay` is a new standalone component, not an extension of `DeviationWrapper` — `DeviationWrapper` is
+  concern-specific (wraps text for click-to-deviation-modal) and should not carry spinner responsibility.
+- The spinner only appears on items that actually have deviation texts being interpreted. Showing it on unaffected
+  items (rows with no deviations, journeys with no info messages) would be misleading.
+- A4 reuses the existing per-type `*InProgress` flags rather than adding new ones — those flags already cover the
+  full SL-fetch + AI-interpret flow per transport type, which is the right granularity here.
+
+A1 - DONE - FE, New `SpinnerOverlay` component.
+- Create `src/components/common/spinner-overlay/index.tsx`.
+- Props: `{ children: ReactNode, showSpinner: boolean }`.
+- Renders children inside a `relative` div. When `showSpinner` is true, overlays an 8px (Tailwind `w-2 h-2`) CSS border-spin circle
+  absolutely positioned at `bottom-0 right-0`. Use the same border-spin technique as the navbar loading spinner (white border,
+  transparent top border, `animate-spin`), but with a dark/blue border color to work on light backgrounds.
+- When `showSpinner` is false, renders children unchanged (no wrapper overhead visible).
+
+A2 - DONE - FE, Spinner in the departures pane.
+- Add `interpretationPending` boolean state to `src/components/pane/departures/index.tsx`, initially `false`.
+- Set it `true` just before calling `interpretDeviations()` in `processDeviationEnrichment`, and `false` when the call
+  resolves (both success and error paths).
+- In the JSX, wrap the existing `<DeviationWrapper>` for each departure row's time cell with
+  `<SpinnerOverlay showSpinner={interpretationPending && departure.deviations.length > 0}>`.
+  Only rows that have deviations (and are therefore included in the interpretation call) show the spinner.
+
+A3 - DONE - FE, Spinner in the routes pane.
+- Add `interpretationPending` boolean state to `src/components/pane/routes/index.tsx`, initially `false`.
+- Set it `true` just before calling `interpretDeviations()` in `processDeviationEnrichment`, and `false` when the call resolves.
+- Add an optional `interpretationPending?: boolean` prop to `SldJourney` (defaults to `false`).
+- Pass the state down from `routes/index.tsx` to each `<SldJourney>`.
+- In `SldJourney`, add a helper that checks whether the journey contributes any valid deviation texts (same
+  logic as the collection in `processDeviationEnrichment`: flatMap `leg.infos`, run through `convertInfoMessages`,
+  filter with `isValidDeviationText`). Call this `journeyHasDeviationsToInterpret(journey)`.
+- Wrap `<SldDuration>` with `<SpinnerOverlay showSpinner={interpretationPending && journeyHasDeviationsToInterpret(journey)}>`.
+  Only journey cards that actually have deviation texts pending interpretation show the spinner.
+
+A4 - DONE - FE, Spinner in the deviations pane.
+- The pane already has `trainInProgress`, `subwayInProgress`, `busInProgress` flags.
+- Wrap each `<TransportationIconCommon>` with `<SpinnerOverlay showSpinner={*InProgress}>`.
+- Remove the grey-color-while-loading behavior from `getModeBackgroundColor()` (or equivalent) — the spinner replaces it.
+  Icons should show their normal color (no deviations = default, has deviations = orange) immediately; the spinner communicates
+  that the state may still change.
+
+
+
+B - FE, Handle empty departures response gracefully.
+The SL departures API occasionally returns a valid 200 response with an empty `departures` array — either a
+transient server-side glitch or genuinely no departures (e.g. very early morning). Currently the pane silently
+shows nothing, which looks broken to the user.
+Solution: retain the last known departures when a new response comes back empty, but add a subtle visual indicator
+that the displayed data may be stale (e.g. a muted label or icon near the "Uppdaterad" timestamp). This avoids
+flashing empty content on transient glitches while still being honest when data is old. If the very first response
+is empty (no previous data to fall back on), show a "Inga avgångar för tillfället" message instead.
+- It is unreasonable to expect the SL departures API to return empty responses bewtween 06:00 and 23:00 every day, so if this happens 
+imn that time frame, we should schedule a new api attempt after 5 secs. 
 
 C - FE/BE, Improve GUI for trips and deviations
 
@@ -196,6 +266,7 @@ D6 - Make a better sorting of large departure boards. Group by type?
 D3 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
 D4 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
 D5 - FE, the deviation modal, make some kind of line between different deviations, the
+D6 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.
 
 F - Bulletin board
 

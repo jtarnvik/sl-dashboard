@@ -18,7 +18,7 @@ export function Main() {
   const { setHeading } = useContext(PageTitleContext);
   const { user } = useUser();
   const loginState = useUserLoginState();
-  const [inDebugMode, setInDebugMode] = useState<boolean>(false);
+  const { inDebugMode } = useContext(InDebugModeContext);
 
   // Generation counters — increment to force a full remount and re-fetch of the pane.
   // Each counter is updated by the events that should trigger a refresh of that pane:
@@ -65,8 +65,7 @@ export function Main() {
   }, []);
 
   return (
-    <InDebugModeContext.Provider value={{ inDebugMode, setInDebugMode }}>
-      <main>
+    <main>
         <div className="flex flex-col space-y-2 px-2 mb-2">
           <ErrorHandler></ErrorHandler>
           <Departures key={`dep-${departuresGen}`} stopPoint16Chars={settingsData.stopPointId} />
@@ -86,7 +85,6 @@ export function Main() {
             </SLButton>
           </div>
         )}
-      </main>
-    </InDebugModeContext.Provider>
+    </main>
   );
 }

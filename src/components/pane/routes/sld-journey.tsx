@@ -4,6 +4,7 @@ import {IoWarningOutline} from "react-icons/io5";
 import { RiUserSharedLine } from "react-icons/ri";
 import {useNavigate} from "react-router-dom";
 import {convertInfoMessages} from "../../common/deviation-modal";
+import {SpinnerOverlay} from "../../common/spinner-overlay";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
@@ -24,9 +25,16 @@ type Props = {
   journey: Journey;
   deviationEnrichment: Map<string, BackendInterpretationResult>;
   alwaysExpanded?: boolean;
+  interpretationPending?: boolean;
 }
 
-export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false}: Props) {
+function journeyHasDeviationsToInterpret(journey: Journey): boolean {
+  return journey.legs
+    .flatMap(leg => convertInfoMessages(leg.infos ?? []))
+    .some(c => c.message && c.message.trim().length > 0);
+}
+
+export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false, interpretationPending = false}: Props) {
   const [showLegs, setShowLegs] = useState<boolean>(false);
   const expanded = alwaysExpanded || showLegs;
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
@@ -95,7 +103,9 @@ export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false
       >
         <div className="flex justify-between">
           <SldSchedule headerLegs={headerLegs} />
-          <SldDuration headerLegs={headerLegs} />
+          <SpinnerOverlay showSpinner={interpretationPending && journeyHasDeviationsToInterpret(journey)}>
+            <SldDuration headerLegs={headerLegs} />
+          </SpinnerOverlay>
         </div>
         <div className="flex justify-between">
           <div>

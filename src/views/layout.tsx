@@ -7,6 +7,7 @@ import { Navbar } from '../components/navbar';
 import { Settings } from '../components/settings';
 import { saveSettings } from '../communication/backend.ts';
 import ErrorContext from '../contexts/error-context.ts';
+import InDebugModeContext from '../contexts/debug-context.ts';
 import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user.ts';
 import { loadStopHint } from '../util/stop-hint.ts';
 import { DEFAULT_SETTINGS } from '../communication/constant.ts';
@@ -16,6 +17,7 @@ export function Layout() {
   const { user, updateSettings } = useUser();
   const loginState = useUserLoginState();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inDebugMode, setInDebugMode] = useState(false);
 
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
 
@@ -41,7 +43,7 @@ export function Layout() {
   }
 
   return (
-    <>
+    <InDebugModeContext.Provider value={{ inDebugMode, setInDebugMode }}>
       <Navbar />
       <div className="h-14" />
       <ErrorBoundary FallbackComponent={ErrorBoundryFallback}>
@@ -55,6 +57,6 @@ export function Layout() {
           onSave={handleSaveSettings}
         />
       )}
-    </>
+    </InDebugModeContext.Provider>
   );
 }

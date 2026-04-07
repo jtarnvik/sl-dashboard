@@ -33,6 +33,7 @@ export function Routes({settingsData}: Props) {
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
   const [, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined);
   const [deviationEnrichment, setDeviationEnrichment] = useState<Map<string, BackendInterpretationResult>>(new Map());
+  const [interpretationPending, setInterpretationPending] = useState(false);
 
   const [, setLocation] = useState<Location | undefined>(undefined);
   const [geoInfo, setGeoInfo] = useState<string | undefined>(undefined);
@@ -71,15 +72,20 @@ export function Routes({settingsData}: Props) {
       setDeviationEnrichment(new Map());
       return;
     }
-    const results = await interpretDeviations(uniqueMessages, setError);
-    if (results) {
-      const enrichmentMap = new Map<string, BackendInterpretationResult>();
-      uniqueMessages.forEach((msg, i) => {
-        if (results[i]) {
-          enrichmentMap.set(msg, results[i]);
-        }
-      });
-      setDeviationEnrichment(enrichmentMap);
+    setInterpretationPending(true);
+    try {
+      const results = await interpretDeviations(uniqueMessages, setError);
+      if (results) {
+        const enrichmentMap = new Map<string, BackendInterpretationResult>();
+        uniqueMessages.forEach((msg, i) => {
+          if (results[i]) {
+            enrichmentMap.set(msg, results[i]);
+          }
+        });
+        setDeviationEnrichment(enrichmentMap);
+      }
+    } finally {
+      setInterpretationPending(false);
     }
   }
 
@@ -160,7 +166,7 @@ export function Routes({settingsData}: Props) {
               {journeys.map((journey, index) => {
                 return (
                   <div key={index}>
-                    <SldJourney journey={journey} deviationEnrichment={deviationEnrichment} />
+                    <SldJourney journey={journey} deviationEnrichment={deviationEnrichment} interpretationPending={interpretationPending} />
                   </div>
                 )
               })

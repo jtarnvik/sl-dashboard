@@ -13,6 +13,7 @@ import { interpretDeviations } from '../../../communication/backend.ts';
 import { convertDeviationSearch, DeviationModal, filterDeviationsByStops } from '../../common/deviation-modal';
 import { Card } from '../../common/card';
 import { getColorRef, TransportationIconCommon, TransportationMode } from '../../common/line';
+import { SpinnerOverlay } from '../../common/spinner-overlay';
 import { ModalDialog } from '../../common/modal-dialog';
 import { SLButton } from '../../common/sl-button';
 import InDebugModeContext from '../../../contexts/debug-context.ts';
@@ -111,12 +112,8 @@ export function Deviations() {
   function getModeBackgroundColor(
     mode: TransportationMode,
     designation: string,
-    inProgress: boolean,
     hasDeviations: boolean
   ): { backgroundColor: string } {
-    if (inProgress) {
-      return { backgroundColor: 'bg-gray-400' };
-    }
     if (hasDeviations) {
       return { backgroundColor: '#F97316' };
     }
@@ -127,25 +124,31 @@ export function Deviations() {
     <Card>
       <div className="flex justify-between">
         <div onClick={() => { if (trainEnriched.length > 0) { setOpenModal('train'); } }}>
-          <TransportationIconCommon
-            mode={TransportationMode.TRAIN}
-            className={trainAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainInProgress, trainEnriched.length > 0)}
-          />
+          <SpinnerOverlay showSpinner={trainInProgress}>
+            <TransportationIconCommon
+              mode={TransportationMode.TRAIN}
+              className={trainAdjustments}
+              inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainEnriched.length > 0)}
+            />
+          </SpinnerOverlay>
         </div>
         <div onClick={() => { if (subwayEnriched.length > 0) { setOpenModal('subway'); } }}>
-          <TransportationIconCommon
-            mode={TransportationMode.SUBWAY}
-            className={subwayAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayInProgress, subwayEnriched.length > 0)}
-          />
+          <SpinnerOverlay showSpinner={subwayInProgress}>
+            <TransportationIconCommon
+              mode={TransportationMode.SUBWAY}
+              className={subwayAdjustments}
+              inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayEnriched.length > 0)}
+            />
+          </SpinnerOverlay>
         </div>
         <div onClick={() => { if (busEnriched.length > 0) { setOpenModal('bus'); } }}>
-          <TransportationIconCommon
-            mode={TransportationMode.BUS}
-            className={busAdjustments}
-            inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busInProgress, busEnriched.length > 0)}
-          />
+          <SpinnerOverlay showSpinner={busInProgress}>
+            <TransportationIconCommon
+              mode={TransportationMode.BUS}
+              className={busAdjustments}
+              inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busEnriched.length > 0)}
+            />
+          </SpinnerOverlay>
         </div>
       </div>
       <div className="w-full flex justify-end space-x-1 mt-2">

@@ -9,6 +9,7 @@ import {LineJourney} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
+import {SpinnerOverlay} from "../../common/spinner-overlay";
 import {BackendInterpretationResult, EnrichedDeviation, isShown, isValidDeviationText} from "../../../types/deviations-common.ts";
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
@@ -36,6 +37,7 @@ export function Departures({stopPoint16Chars}: Props) {
 
   const [departures, setDepartures] = useState<SlDeparturesResponse | undefined>(undefined);
   const [deviationEnrichment, setDeviationEnrichment] = useState<Map<string, BackendInterpretationResult>>(new Map());
+  const [interpretationPending, setInterpretationPending] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<DateTime | undefined>(undefined);
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
@@ -64,15 +66,20 @@ export function Departures({stopPoint16Chars}: Props) {
       setDeviationEnrichment(new Map());
       return;
     }
-    const results = await interpretDeviations(uniqueMessages, setError);
-    if (results) {
-      const enrichmentMap = new Map<string, BackendInterpretationResult>();
-      uniqueMessages.forEach((msg, i) => {
-        if (results[i]) {
-          enrichmentMap.set(msg, results[i]);
-        }
-      });
-      setDeviationEnrichment(enrichmentMap);
+    setInterpretationPending(true);
+    try {
+      const results = await interpretDeviations(uniqueMessages, setError);
+      if (results) {
+        const enrichmentMap = new Map<string, BackendInterpretationResult>();
+        uniqueMessages.forEach((msg, i) => {
+          if (results[i]) {
+            enrichmentMap.set(msg, results[i]);
+          }
+        });
+        setDeviationEnrichment(enrichmentMap);
+      }
+    } finally {
+      setInterpretationPending(false);
     }
   }, [setError]);
 
@@ -186,7 +193,7 @@ export function Departures({stopPoint16Chars}: Props) {
                   <Destination journey={departure.journey} destination={departure.destination} />
                 </div>
                 <div className="grid-time justify-self-end departure-row">
-                  <div className={"relative " }>
+                  <SpinnerOverlay showSpinner={interpretationPending && (departure.deviations ?? []).length > 0}>
                     <DeviationWrapper deviations={
                       (departure.deviations ?? [])
                         .map(dev => {
@@ -199,7 +206,7 @@ export function Departures({stopPoint16Chars}: Props) {
                     }>
                       {departure.display}
                     </DeviationWrapper>
-                  </div>
+                  </SpinnerOverlay>
                 </div>
               </div>
             );
