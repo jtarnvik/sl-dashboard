@@ -47,10 +47,10 @@ export function SldBreadCrumbs({ legs, deviationEnrichment }: Props) {
       {items.map((item, index) => {
         return (
           <React.Fragment key={index}>
-            <div className="relative">
+            <div className="flex items-center gap-1">
               <LineTransportation transpo={item.transportation} />
               {legHasDeviation(item.leg, deviationEnrichment) && (
-                <IoWarningOutline size={12} className="absolute -top-1 -right-1 deviation-color" />
+                <IoWarningOutline size={20} className="deviation-color mt-0.5" />
               )}
             </div>
             {index < items.length - 1 && (

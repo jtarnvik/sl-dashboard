@@ -1,6 +1,5 @@
 import {useContext, useState} from "react";
 import classNames from "classnames";
-import {IoWarningOutline} from "react-icons/io5";
 import { RiUserSharedLine } from "react-icons/ri";
 import {useNavigate} from "react-router-dom";
 import {convertInfoMessages} from "../../common/deviation-modal";
@@ -127,12 +126,7 @@ export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {getJourneyDeviations().length > 0 &&
-              <div className="deviation-color">
-                <IoWarningOutline size={24} />
-              </div>
-            }
-            {loginState === UserLoginState.LoggedIn && !alwaysExpanded &&
+{loginState === UserLoginState.LoggedIn && !alwaysExpanded &&
               <button
                 onClick={handleShare}
                 className="text-[#184fc2] hover:text-[#578ff3] cursor-pointer"
