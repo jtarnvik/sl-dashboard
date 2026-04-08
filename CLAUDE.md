@@ -32,9 +32,9 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 - Authentication state (`user`: `undefined` = loading, `null` = not logged in, `User` object = logged in) and the `login` / `logout` / `updateSettings` functions.
 - Three React contexts: `ErrorContext` (global error string + retry function), `UserContext` (auth state and actions), and `PageTitleContext` (current page heading shown in the navbar).
 
-**`Main.tsx`** renders the main page (`/`). It derives `settingsData` with the priority chain: backend settings (logged-in) → `loadStopHint()` → `DEFAULT_SETTINGS`. It manages integer generation counters (`departuresGen`, `routesGen`, `deviationsGen`) used as `key` props on the panes — incrementing a counter forces a full remount and re-fetch of that pane. It also provides `InDebugModeContext` to the debug mode button and panes.
+**`Main.tsx`** renders the main page (`/`). It derives `settingsData` with the priority chain: backend settings (logged-in) → `loadStopHint()` → `DEFAULT_SETTINGS`. It manages integer generation counters (`departuresGen`, `routesGen`, `deviationsGen`) used as `key` props on the panes — incrementing a counter forces a full remount and re-fetch of that pane.
 
-**`Layout.tsx`** wraps all routes with `Navbar`, an `ErrorBoundary`, and the `Settings` modal. It owns `settingsOpen` state and listens for the `openSettings` window event so the modal can be opened from any route.
+**`Layout.tsx`** wraps all routes with `Navbar`, an `ErrorBoundary`, and the `Settings` modal. It owns `settingsOpen` state and listens for the `openSettings` window event so the modal can be opened from any route. It also owns `InDebugModeContext` — the provider lives here (not in `Main`) so that `Settings` and all pane components share the same context instance.
 
 ### Login states and visible content
 
@@ -77,9 +77,9 @@ All routes except `/denied` are rendered inside `Layout`, which wraps them with 
 
 | Component | What it does |
 |-----------|-------------|
-| `src/components/pane/departures/` | Polls SL departures API every 60s for the selected stop. Animates departing rows before removing them. Shows a legend modal and (in debug mode) raw JSON. |
-| `src/components/pane/deviations/` | Fetches deviation messages for hardcoded lines: trains 43/44, bus 117, metro 17/18/19. Shows colored transport icons (orange = has deviations). |
-| `src/components/pane/routes/` | On-demand route planner. Gets browser geolocation, then calls the SL journey planner API to find trips to the selected stop. User picks max walk time (15 or 60 min). |
+| `src/components/pane/departures/` | Polls SL departures API every 60s for the selected stop. Animates departing rows before removing them. Sends deviation texts to the backend for AI interpretation; rows with pending interpretations show a `ScanningUnderline` indicator. Shows a legend modal and (in debug mode) raw JSON. |
+| `src/components/pane/deviations/` | Fetches deviation messages for hardcoded lines: trains 43/44, bus 117, metro 17/18/19. Sends texts to the backend for AI interpretation. Shows colored transport icons (orange = has deviations); a `ScanningUnderline` indicator appears under each icon while its interpretation is in flight. |
+| `src/components/pane/routes/` | On-demand route planner. Gets browser geolocation, then calls the SL journey planner API to find trips to the selected stop. User picks max walk time (15 or 60 min). Journey cards show AI-interpreted deviation info: the duration text turns orange and opens a deviation modal via `DeviationWrapper`; per-leg warning icons in `SldBreadCrumbs` indicate which segment is affected. |
 
 ### SL API endpoints (`src/communication/constant.ts`)
 
@@ -97,7 +97,8 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 - **Axios + AbortController**: All API calls store the controller in a `useRef`. New requests abort the previous one. `isAbortError()` in `src/types/communication.ts` suppresses abort errors.
 - **`useVisibility` hook** (`src/hook/use-visibility.ts`): Refreshes data when the browser tab becomes visible again.
 - **`TransportationMode` enum** and `LineCommon` component (`src/components/common/line/`) are the central abstraction for rendering transport icons with line badges. Two variants exist: `LineJourney` (for departures, uses `sl-responses` types) and `LineTransportation` (for journey legs, uses `sl-journeyplaner-responses` types).
-- **`DeviationWrapper`** (`src/components/common/deviation-wrapper/`) wraps departure display text to show deviation indicators inline.
+- **`DeviationWrapper`** (`src/components/common/deviation-wrapper/`) wraps any text or element to show deviation indicators inline and open a deviation modal on click. Used in both the departures pane (time cell) and the routes pane (journey duration).
+- **`ScanningUnderline`** (`src/components/common/scanning-underline/`) wraps any element and shows an animated 8px scanning line beneath it when `active` is true. Used to indicate that AI interpretation of deviation texts is in flight. A `lineOffset` prop shifts the line down to clear icon background colors.
 - **`useUserLoginState` / `useUser`** (`src/hook/use-user.ts`): Custom hooks for consuming `UserContext`. `useUserLoginState()` returns a `UserLoginState` enum (`Loading` | `NotLoggedIn` | `LoggedIn`) derived from the `user` value (`undefined` = loading, `null` = not logged in, `User` object = logged in). `useUser()` returns the full context including `login`, `logout`, and `updateSettings` actions. Prefer these hooks over calling `useContext(UserContext)` directly.
 
 ### Type files
@@ -197,88 +198,7 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE, Show a scanning indicator while deviation interpretation is in progress.
-The AI interpretation call is async and can take a second or two. Without feedback, the UI looks broken or stale.
-A small inline scanning line under the affected element (not a full-screen overlay) communicates that enrichment is in flight.
-Design decisions:
-- `ScanningUnderline` is a new standalone component (`src/components/common/scanning-underline/`), not an extension of
-  `DeviationWrapper` — `DeviationWrapper` is concern-specific (wraps text for click-to-deviation-modal) and should not
-  carry scanning responsibility.
-- The indicator only appears on items that actually have deviation texts being interpreted. Showing it on unaffected
-  items (rows with no deviations, journeys with no info messages) would be misleading.
-- A4 reuses the existing per-type `*InProgress` flags rather than adding new ones — those flags already cover the
-  full SL-fetch + AI-interpret flow per transport type, which is the right granularity here.
-- A scanning line (8px wide, travels left-to-right and back, 1.2s ease-in-out) was chosen over a spinning circle
-  because it looks better under text; `left` percentage is used in the animation rather than `transform: translateX`
-  because `translateX` percentages are relative to the element's own width, not the container.
-- A `lineOffset` prop (default 0) shifts the line downward to clear icon background colors in the deviations pane.
-
-A1 - DONE - FE, New `ScanningUnderline` component.
-- Created `src/components/common/scanning-underline/index.tsx`.
-- Props: `{ children: ReactNode, active: boolean, lineOffset?: number }`.
-- Renders children inside a `relative` div. When `active` is true, absolutely positions an 8px scanning line at the
-  bottom of the container. The line travels left to right and back via CSS `@keyframes scan`.
-- When `active` is false, renders children unchanged (no wrapper overhead visible).
-
-A2 - DONE - FE, Scanning indicator in the departures pane.
-- Add `interpretationPending` boolean state to `src/components/pane/departures/index.tsx`, initially `false`.
-- Set it `true` just before calling `interpretDeviations()` in `processDeviationEnrichment`, and `false` when the call
-  resolves (both success and error paths).
-- In the JSX, wrap the existing `<DeviationWrapper>` for each departure row's time cell with
-  `<ScanningUnderline active={interpretationPending && (departure.deviations ?? []).length > 0}>`.
-  Only rows that have deviations (and are therefore included in the interpretation call) show the indicator.
-
-A3 - DONE - FE, Scanning indicator in the routes pane.
-- Add `interpretationPending` boolean state to `src/components/pane/routes/index.tsx`, initially `false`.
-- Set it `true` just before calling `interpretDeviations()` in `processDeviationEnrichment`, and `false` when the call resolves.
-- Add an optional `interpretationPending?: boolean` prop to `SldJourney` (defaults to `false`).
-- Pass the state down from `routes/index.tsx` to each `<SldJourney>`.
-- In `SldJourney`, add a helper that checks whether the journey contributes any valid deviation texts (same
-  logic as the collection in `processDeviationEnrichment`: flatMap `leg.infos`, run through `convertInfoMessages`,
-  filter with `isValidDeviationText`). Call this `journeyHasDeviationsToInterpret(journey)`.
-- Wrap `<SldDuration>` with `<ScanningUnderline active={interpretationPending && journeyHasDeviationsToInterpret(journey)}>`.
-  Only journey cards that actually have deviation texts pending interpretation show the indicator.
-
-A4 - DONE - FE, Scanning indicator in the deviations pane.
-- The pane already has `trainInProgress`, `subwayInProgress`, `busInProgress` flags.
-- Wrap each `<TransportationIconCommon>` with `<ScanningUnderline active={*InProgress} lineOffset={3or4}>`.
-- Remove the grey-color-while-loading behavior from `getModeBackgroundColor()` — the scanning line replaces it.
-  Icons show their normal color immediately; the scanning line communicates that the state may still change.
-- `lineOffset={4}` for the train icon, `lineOffset={3}` for subway and bus (line clears the icon background color).
-
-A5 - DONE - FE, Better deviation feedback in the routes pane.
-Currently a single orange warning icon appears on the journey card when any leg has deviations, but gives no indication
-of which leg is affected. The duration text is also plain — unlike departures where the time turns orange via DeviationWrapper.
-Goal: turn the duration text orange + clickable (opens deviation modal), and move per-leg warning indicators into the
-breadcrumb row so the user can see which transport segment has a deviation.
-Design decisions:
-- `DeviationWrapper` is reused for the duration text (same pattern as departures). It bundles click-to-modal, so clicking
-  the orange duration opens the deviation modal. The standalone warning icon next to the share button was removed.
-- Per-leg indicators live in `SldBreadCrumbs`, not in a separate component. A small orange `IoWarningOutline` (size 20,
-  `mt-0.5`) appears next to the transport badge for any leg that has a shown deviation.
-- `stopPropagation` is needed on the div wrapping `DeviationWrapper` to prevent the modal click from bubbling to the
-  journey card's expand/collapse onClick.
-
-Steps:
-- In `SldJourney`, refactor `journeyDeviation()` into `getJourneyDeviations(): EnrichedDeviation[]` — same logic but
-  returns the array instead of a boolean. Use `.length > 0` where a boolean was previously used.
-- Wrap `<SldDuration>` (inside its existing `<ScanningUnderline>`) with a stopPropagation div and
-  `<DeviationWrapper deviations={getJourneyDeviations()}>`. Remove the standalone warning icon.
-- Refactor `convertLegsToProducts()` in `SldBreadCrumbs` to return `{ transportation: Transportation, leg: Leg }[]`
-  instead of `Transportation[]`, preserving the leg reference for deviation lookup.
-- Add `deviationEnrichment: Map<string, BackendInterpretationResult>` as a new prop to `SldBreadCrumbs`.
-  Pass it down from `SldJourney`.
-- In the breadcrumb render loop, for each item check if the leg has any shown deviations (flatMap `leg.infos` through
-  `convertInfoMessages`, look up in `deviationEnrichment`, filter with `isShown`). If so, render a small
-  `<IoWarningOutline>` in orange next to the `<LineTransportation>` badge.
-  Timing: before the BE returns, `deviationEnrichment` is an empty Map so no indicators appear. They materialise
-  only after interpretation completes and the map is populated — the same moment the duration text turns orange.
-  The leg reference is used only to identify which messages to look up; the show/hide decision is entirely driven
-  by `deviationEnrichment`, not by raw `leg.infos`.
-
-
-
-B - FE, Handle empty departures response gracefully.
+A - FE, Handle empty departures response gracefully.
 The SL departures API occasionally returns a valid 200 response with an empty `departures` array — either a
 transient server-side glitch or genuinely no departures (e.g. very early morning). Currently the pane silently
 shows nothing, which looks broken to the user.
@@ -286,29 +206,31 @@ Solution: retain the last known departures when a new response comes back empty,
 that the displayed data may be stale (e.g. a muted label or icon near the "Uppdaterad" timestamp). This avoids
 flashing empty content on transient glitches while still being honest when data is old. If the very first response
 is empty (no previous data to fall back on), show a "Inga avgångar för tillfället" message instead.
-- It is unreasonable to expect the SL departures API to return empty responses bewtween 06:00 and 23:00 every day, so if this happens 
-imn that time frame, we should schedule a new api attempt after 5 secs. 
+- It is unreasonable to expect the SL departures API to return empty responses bewtween 06:00 and 23:00 every day, so if this happens
+in that time frame, we should schedule a new api attempt after 5 secs.
+- Idicate stale data with an icon next to the refresh?                                                                            
 
 
-C - FE/BE, Improve GUI for trips and deviations
+B - FE/BE, Improve GUI for trips and deviations
 
-C1 - FE, Better GUI for trips
+B1 - FE, Better GUI for trips
 
-D - FE/BE, More work, not broken down yet
-D1 - FE Examine how deviations work for buses, Do I handle lines correctly?
-D2 - FE how to handle long list of departures
-D6 - Make a better sorting of large departure boards. Group by type?
-D3 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
-D4 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
-D5 - FE, the deviation modal, make some kind of line between different deviations, the
-D6 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.
+C - FE/BE, More work, not broken down yet
+C1 - FE Examine how deviations work for buses, Do I handle lines correctly?
+C2 - FE how to handle long list of departures
+C3 - Make a better sorting of large departure boards. Group by type?
+C4 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
+C5 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
+C6 - FE, the deviation modal, make some kind of line between different deviations, the
+C7 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.
+C8 - Add a live scan line preview to the symboler modals, and an orange time and explain it is clickable and indicates a deviation.                                                                             
 
-F - Bulletin board
+D - Bulletin board
 
-G - Preload deviations
-G1 - Add a periodical check for new deviations to BE to speed up future use
+E - Preload deviations
+E1 - Add a periodical check for new deviations to BE to speed up future use
 
-H - FE/BE, Map support for trips and online maps for moving buses.
+F - FE/BE, Map support for trips and online maps for moving buses.
 
 ## Future Enhancements
 
@@ -320,7 +242,7 @@ Cache backend interpretation results in a `Map<string, BackendInterpretationResu
 Deferred because the backend already caches by SHA-256 hash, so repeated calls skip the Claude API and are just a fast DB lookup. Add only if round-trip latency to the backend becomes noticeable.
 
 ### Deviation context in AI prompt
-Short departure-level deviation texts (e.g. "Inställd", "Försenad") are handled by the hardcoded map in A4.1.
+Short departure-level deviation texts (e.g. "Inställd", "Försenad") are handled by the hardcoded map in the backend.
 For other ambiguous short texts where the hardcoded map has no entry, the AI still receives the text with no context
 about whether it is departure-specific or line-wide. Adding a context preamble to the Claude prompt — e.g.
 "Denna avvikelse gäller specifikt avgång 14:32 med linje 43" vs "Denna avvikelse gäller linje 43 generellt" —
