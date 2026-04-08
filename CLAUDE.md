@@ -246,9 +246,12 @@ A4c - FE, Implement the time selector in Route 1 line 2. "Nu" radio is default a
 The second radio reveals a native `<input type="time">` (HH:MM) — no library needed, works well on mobile. When a future time is
 selected, pass it to `URL_GET_TRAVEL_COORD_TO_v2` via the `itd_time` / `itd_trip_date_time_dep_arr` params (already in constant.ts
 as commented-out placeholders). Only future times on today's date are supported for now.
-
+   
+A5 - Handle the message
+"No routes, are you already there?" Remove the text field. Maybe a popup? Or remove?
 
 B - FE/BE, More work, not broken down yet
+B0 - FE It the Journeys / Leg pane. In the "Gå till" Add the destination.
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
 B2 - FE how to handle long list of departures
 B3 - Make a better sorting of large departure boards. Group by type?

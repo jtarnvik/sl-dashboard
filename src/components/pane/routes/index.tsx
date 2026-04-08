@@ -146,10 +146,6 @@ export function Routes({settingsData}: Props) {
     );
   }
 
-  function tempButtonUpdate(maxWalk: number) {
-    updateDepartures(maxWalk);
-  }
-
   const hasJourneys = !!journeys && journeys.length > 0;
 
   useEffect(() => {
@@ -168,10 +164,33 @@ export function Routes({settingsData}: Props) {
         'col-start-1 row-start-1 px-4 py-1 bg-[#F1F2F3] border border-gray-200 shadow-sm text-gray-800',
         hasJourneys ? 'rounded-t-lg border-b-0 relative z-10' : 'rounded-lg'
       )}>
-        Ta mig hem <SLButton onClick={() => tempButtonUpdate(15)} thin>15 min</SLButton>&nbsp;
-        <SLButton onClick={() => tempButtonUpdate(60)} thin>60 min</SLButton> Max promenadtid
-        {state}
-        {geoInfo && <div>{geoInfo}</div>}
+        <div className="text-gray-800 pt-1">Ta mig till</div>
+        <div className="flex items-center gap-2 pb-1">
+          <SLButton onClick={() => updateDepartures(15)} thin>Hem</SLButton>
+          <input
+            type="text"
+            disabled
+            placeholder="Sök hållplats…"
+            className="flex-1 rounded-sm border border-gray-300 bg-white px-2 py-px text-sm text-gray-400 cursor-not-allowed"
+          />
+        </div>
+        <div className="text-gray-800">Avfärd</div>
+        <div className="flex items-center gap-3 pb-1">
+          <label className="flex items-center gap-1">
+            <input type="radio" name="departure-time" defaultChecked disabled className="accent-[#184fc2]" />
+            Nu
+          </label>
+          <label className="flex items-center gap-1 text-gray-400">
+            <input type="radio" name="departure-time" disabled className="accent-[#184fc2]" />
+            <input
+              type="time"
+              disabled
+              className="rounded-sm border border-gray-300 bg-white px-1 py-px text-sm text-gray-400 cursor-not-allowed"
+            />
+          </label>
+        </div>
+        {state && <div className="text-sm pb-1">{state}</div>}
+        {geoInfo && <div className="text-sm pb-1">{geoInfo}</div>}
         {hasJourneys && (
           <div className="absolute -bottom-2 left-[-1px] right-[-1px] h-2 bg-[#F1F2F3] border-x border-gray-200" />
         )}
