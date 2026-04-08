@@ -1,6 +1,9 @@
 import {useContext, useEffect, useRef, useState} from "react";
+import axios from "axios";
 import classNames from "classnames";
-import {URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
+import {Combobox, ComboboxInput, ComboboxOption, ComboboxOptions} from "@headlessui/react";
+import {IoCloseCircle} from "react-icons/io5";
+import {URL_GET_STOP_POINT, URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {interpretDeviations} from "../../../communication/backend.ts";
 import {SLButton} from "../../common/sl-button";
@@ -8,7 +11,7 @@ import {SldJourney} from "./sld-journey.tsx";
 import {convertInfoMessages} from "../../common/deviation-modal";
 import {BackendInterpretationResult, isValidDeviationText} from "../../../types/deviations-common.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
-import {Journey, SystemMessage} from "../../../types/sl-journeyplaner-responses";
+import {Journey, StopFinderLocation, StopFinderResponse, SystemMessage} from "../../../types/sl-journeyplaner-responses";
 import ErrorContext from "../../../contexts/error-context.ts";
 
 type Location = {
@@ -41,10 +44,19 @@ export function Routes({settingsData}: Props) {
   const [, setRoutePlanningInProgress] = useState<boolean>(false);
   const [state, setState] = useState<string>("");
 
+  const [query, setQuery] = useState('');
+  const [stopResults, setStopResults] = useState<StopFinderLocation[]>([]);
+  const [selectedStop, setSelectedStop] = useState<StopFinderLocation | null>(null);
+  const searchAbortRef = useRef<AbortController | undefined>(undefined);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reads ref.current at unmount time, not at setup time
-    return () => latestRequest.current?.abort("Component unmounted");
+    return () => {
+      latestRequest.current?.abort("Component unmounted");
+      clearTimeout(debounceRef.current);
+      searchAbortRef.current?.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -90,9 +102,11 @@ export function Routes({settingsData}: Props) {
     }
   }
 
-  function updateDepartures(maxWalk: number) {
+  function updateDepartures(maxWalk: number, destinationId?: string) {
+    const destination = destinationId ?? settingsData.stopPointId;
+
     function generateRoute(lat: number, long: number, maxInitialWalkTime: number) {
-      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, settingsData.stopPointId, maxInitialWalkTime);
+      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, destination, maxInitialWalkTime);
       fetchAbortable<{journeys: Journey[], systemMessages: SystemMessage[]}>(url, latestRequest, (data) => {
         setJourneys(data.journeys);
         setSystemMessages(data.systemMessages);
@@ -146,6 +160,49 @@ export function Routes({settingsData}: Props) {
     );
   }
 
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    setSelectedStop(null);
+    clearTimeout(debounceRef.current);
+
+    if (value.trim().length < 3) {
+      setStopResults([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      searchAbortRef.current?.abort();
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+      try {
+        const response = await axios.get<StopFinderResponse>(URL_GET_STOP_POINT(value.trim()), {
+          signal: controller.signal
+        });
+        setStopResults((response.data.locations ?? []).slice(0, 5));
+      } catch {
+        // abort errors and network errors are ignored silently
+      }
+    }, 300);
+  }
+
+  function handleStopSelect(location: StopFinderLocation) {
+    setSelectedStop(location);
+    setQuery(location.disassembledName ?? location.name);
+    setStopResults([]);
+    updateDepartures(15, location.id);
+  }
+
+  function handleClear() {
+    setSelectedStop(null);
+    setQuery('');
+    setStopResults([]);
+    setJourneys(undefined);
+    setSystemMessages(undefined);
+    setDeviationEnrichment(new Map());
+    setState('');
+    setGeoInfo(undefined);
+  }
+
   const hasJourneys = !!journeys && journeys.length > 0;
 
   useEffect(() => {
@@ -167,12 +224,41 @@ export function Routes({settingsData}: Props) {
         <div className="text-gray-800 pt-1">Ta mig till</div>
         <div className="flex items-center gap-2 pb-1">
           <SLButton onClick={() => updateDepartures(15)} thin>Hem</SLButton>
-          <input
-            type="text"
-            disabled
-            placeholder="Sök hållplats…"
-            className="flex-1 rounded-sm border border-gray-300 bg-white px-2 py-px text-sm text-gray-400 cursor-not-allowed"
-          />
+          <div className="relative flex-1">
+            <Combobox onChange={(loc: StopFinderLocation | null) => { if (loc) { handleStopSelect(loc); } }}>
+              <ComboboxInput
+                value={query}
+                onChange={(e) => handleQueryChange(e.target.value)}
+                placeholder="Sök hållplats…"
+                className="w-full rounded-sm border border-gray-300 bg-white px-2 py-px pr-6 text-sm text-gray-800"
+              />
+              {stopResults.length > 0 && (
+                <ComboboxOptions static className="absolute left-0 right-0 top-full z-30 mt-1 rounded-sm border border-gray-200 bg-white shadow-md">
+                  {stopResults.map(loc => (
+                    <ComboboxOption
+                      key={loc.id}
+                      value={loc}
+                      className="cursor-pointer px-3 py-1 text-sm data-focus:bg-[#184fc2] data-focus:text-white"
+                    >
+                      {loc.disassembledName ?? loc.name}
+                      {loc.parent?.name && (
+                        <span className="ml-1 text-xs opacity-60">{loc.parent.name}</span>
+                      )}
+                    </ComboboxOption>
+                  ))}
+                </ComboboxOptions>
+              )}
+            </Combobox>
+            {selectedStop && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <IoCloseCircle className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
         <div className="text-gray-800">Avfärd</div>
         <div className="flex items-center gap-3 pb-1">
