@@ -198,81 +198,180 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE, Handle empty departures response gracefully.
-The SL departures API occasionally returns a valid 200 response with an empty `departures` array — either a
-transient server-side glitch or genuinely no departures (e.g. very early morning). Currently the pane silently
-shows nothing, which looks broken to the user. Between 06:00 and 23:00 an empty response is almost certainly a
-glitch, so the component should recover automatically rather than waiting for the next 60-second cycle.
+A - FE/BE, Improve GUI for trips and deviations.
+The current layout stacks Routes and Deviations vertically, which wastes horizontal space on wider screens and buries deviations below the
+(potentially long) routes pane. The goal is a side-by-side layout with the Routes pane forming an L-shape when expanded, keeping routes
+and deviations simultaneously visible. The Routes controls section will also be redesigned: a simple one-click "Ta mig hem" (15 min walk),
+plus a more flexible form for specifying a custom destination and departure time (default "now"). The expanded journey cards remain
+largely unchanged initially.
 
-Design decisions:
-- Retain the last known departures when a new response is empty — avoids flashing blank content on transient glitches.
-- Add a stale indicator icon next to the "Uppdaterad" timestamp so the user knows the displayed data may be old.
-- Do NOT update the "Uppdaterad" timestamp when retaining stale data — the age of the timestamp is part of what
-  communicates staleness.
-- Between 06:00 and 23:00, schedule a 5-second retry on every empty response, repeating until a non-empty response
-  arrives (at which point the retry loop stops). Outside that window, wait for the normal 60-second interval.
-- The 5-second retry timeout must be tracked in a ref and cancelled on component unmount to avoid state updates
-  on an unmounted component.
-- When there is no prior data (first response is empty), show "Inga avgångar för tillfället" with a clickable
-  "Uppdatera" link that triggers `updateDepartures`. Still schedule the 5-second retry in the 06:00–23:00 window.
+This is a schematic of the current GUI.
+```
+┌────────────────────────────────────────┐
+│┌──────────────────────────────────────┐│
+││                                      ││
+││ Header/Menu                          ││
+││                                      ││
+│└──────────────────────────────────────┘│
+│┌──────────────────────────────────────┐│
+││                                      ││
+││  Departures                          ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+│└──────────────────────────────────────┘│
+│┌──────────────────────────────────────┐│
+││                                      ││
+││ Routes (Grows with routes created)   ││
+││                                      ││
+│└──────────────────────────────────────┘│
+│┌──────────────────────────────────────┐│
+││                                      ││
+││ Deviations                           ││
+││                                      ││
+│└──────────────────────────────────────┘│
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+│                                        │
+└────────────────────────────────────────┘
+```
+I would like to make the base GUI look like this
+```
+┌────────────────────────────────────────┐      
+│┌──────────────────────────────────────┐│      
+││                                      ││      
+││ Header/menu                          ││      
+││                                      ││      
+│└──────────────────────────────────────┘│      
+│┌──────────────────────────────────────┐│      
+││                                      ││      
+││ Departures                           ││      
+││                                      ││      
+││                                      ││      
+││                                      ││      
+││                                      ││      
+││                                      ││      
+││                                      ││      
+││                                      ││      
+││                                      ││      
+│└──────────────────────────────────────┘│      
+│┌────────────────────────────┐┌───────┐ │      
+││                            ││  ┌──┐ │ │   Devation Icon   
+││ Routes                     ││  │ ◄┼─┼─┼──────
+││ New buttons and info       ││  └──┘ │ │      
+││                            ││  ┌──┐ │ │      
+││                            ││  │  │ │ │      
+││                            ││  └──┘ │ │      
+││                            ││  ┌──┐ │ │      
+││                            ││  │  │ │ │      
+││                            ││  └──┘ │ │      
+││                            ││     ◄─┼─┼──── Deviation Pane 
+│└────────────────────────────┘└───────┘ │      
+│                                        │      
+│                                        │      
+│                                        │      
+│                                        │      
+│                                        │      
+│                                        │      
+│                                        │      
+│                                        │      
+│                                        │      
+│                                        │      
+│                                        │      
+└────────────────────────────────────────┘      
+```
 
-Implementation notes:
-- Add `isStale: boolean` state, initially `false`. Set to `true` when retaining old data due to an empty response,
-  reset to `false` when a non-empty response is successfully processed.
-- The empty-response check must happen before the existing animation logic (`removedIds`) — when the new list is
-  empty, all old IDs would appear "removed" and fall into the "too many, just update" branch, incorrectly clearing
-  the display. Intercept before that logic runs.
-- The stale indicator icon lives in the top row next to "Uppdaterad X", shown only when `isStale` is true.
-  Use a muted color (e.g. `text-gray-400`) so it is visible but not alarming.
+And when a route is searched for the expanded route pane should look like this 
 
-A1 - FE, Stale state and empty-response handling in `updateDepartures`.
-- Add `isStale` boolean state (initially `false`) and a `retryTimeout` ref (`useRef<ReturnType<typeof setTimeout> | undefined>`).
-- In `updateDepartures`, before the existing animation/`removedIds` logic, check if `data.departures` is empty:
-  - If empty AND `lastDepartures.current` is non-empty: set `isStale(true)`, do not update `departures` state or
-    `lastUpdated`, do not call `processDeviationEnrichment`. Schedule retry if in 06:00–23:00 window (see A2).
-  - If empty AND `lastDepartures.current` is empty or undefined: set `departures` to the empty response (so the
-    "no data" message renders), set `isStale(true)`. Schedule retry if in window.
-  - If non-empty: clear any pending retry timeout, set `isStale(false)`, proceed with existing logic unchanged.
-- Cancel `retryTimeout` on component unmount (add to the existing cleanup `useEffect`).
+```
+┌────────────────────────────────────────┐                
+│┌──────────────────────────────────────┐│                
+││                                      ││                
+││ Header/menu                          ││                
+││                                      ││                
+│└──────────────────────────────────────┘│                
+│┌──────────────────────────────────────┐│                
+││                                      ││                
+││ Departures                           ││                
+││                                      ││                
+││                                      ││                
+││                                      ││                
+││                                      ││                
+││                                      ││                
+││                                      ││                
+││                                      ││                
+││                                      ││                
+│└──────────────────────────────────────┘│                
+│ ┬──────────────────────────┐ ┌───────┐ │                
+│ │ Routes                   │ │  ┌──┐ │ │           
+│ │                          │ │  │  │ │ │                
+│ │                          │ │  └──┘ │ │                
+│ │                          │ │  ┌──┐ │ │                
+│ │                          │ │  │  │ │ │                
+│ │                          │ │  └──┘ │ │                
+│ │                          │ │  ┌──┐ │ │                
+│ │                          │ │  │  │ │ │                
+│ │                          │ │  └──┘ │ │  
+│ │                          │ │       │ │                
+│ │                          │ └───────┘ │                
+│ │                          │           │                
+│ │                          └────────┐  │                
+│ │                                   │  │                
+│ │                                   │  │                
+│ │                                   │  │                
+│ │                                   │  │                
+│ │                                   │  │                
+│ │                                   │  │                
+│ │                                   │  │                
+│ └───────────────────────────────────┘  │                
+│                                        │                
+└────────────────────────────────────────┘                
+```
 
-A2 - FE, 5-second retry scheduling helper.
-- Add a `scheduleRetryIfNeeded()` helper inside the component. Checks current hour (`DateTime.now().hour`);
-  if between 6 and 22 inclusive (i.e. 06:00–22:59), clears any existing retry timeout and sets a new one that
-  calls `updateDepartures` after 5000ms.
-- Called from `updateDepartures` whenever an empty response is received (both stale-retain and no-prior-data cases).
+A1 - FE, Side-by-side layout for Routes and Deviations with L-shape expansion and redesigned Routes controls.
 
-A3 - FE, Stale indicator in the header row.
-- In the JSX top row (`"Uppdaterad X"` / `"Avgår"`), render a small warning icon (e.g. `MdWarningAmber` from
-  `react-icons/md`) immediately after the timestamp text, conditionally on `isStale`. Use `text-amber-400` and
-  `inline` sizing (e.g. `size-4`) so it sits neatly next to the text without disrupting the row height.
+Layout: on mobile, stacked layout unchanged. On md+ (≥ 768px), Routes and Deviations appear side-by-side (Routes ~70% left, Deviations ~30%
+right). When journeys are fetched, the Routes area expands downward to full width forming an L-shape — header left + full-width journey cards
+below — styled as ONE continuous pane (single card background throughout the L). Deviations stays in the upper-right as its own distinct card.
 
-A4 - FE, "Inga avgångar" message when no prior data.
-- When `departurePres` is empty AND `departures` is defined (i.e. we received a response but it was empty), render
-  a single row in place of the departure list: `"Inga avgångar för tillfället — "` followed by a clickable
-  `"Uppdatera"` span (SL blue `text-[#184fc2]`, `cursor-pointer`) that calls `updateDepartures`.
-- This replaces the current silent empty-list render.
+Controls redesign (general intent, to be detailed in sub-steps):
+- A simple "Ta mig hem" button (15 min walk time) — one click, no configuration.
+- A more flexible form for specifying a custom destination stop and departure time (default "now").
+These replace the current "Ta mig hem / 15 min / 60 min" control layout.
 
+Journey cards: no changes initially.
 
-B - FE/BE, Improve GUI for trips and deviations
+B - FE/BE, More work, not broken down yet
+B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
+B2 - FE how to handle long list of departures
+B3 - Make a better sorting of large departure boards. Group by type?
+B4 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
+B5 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
+B6 - FE, the deviation modal, make some kind of line between different deviations, the
+B7 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.
+B8 - Add a live scan line preview to the symboler modals, and an orange time and explain it is clickable and indicates a deviation.
 
-B1 - FE, Better GUI for trips
+C - Bulletin board
 
-C - FE/BE, More work, not broken down yet
-C1 - FE Examine how deviations work for buses, Do I handle lines correctly?
-C2 - FE how to handle long list of departures
-C3 - Make a better sorting of large departure boards. Group by type?
-C4 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
-C5 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
-C6 - FE, the deviation modal, make some kind of line between different deviations, the
-C7 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.
-C8 - Add a live scan line preview to the symboler modals, and an orange time and explain it is clickable and indicates a deviation.                                                                             
+D - Preload deviations
+D1 - Add a periodical check for new deviations to BE to speed up future use
 
-D - Bulletin board
-
-E - Preload deviations
-E1 - Add a periodical check for new deviations to BE to speed up future use
-
-F - FE/BE, Map support for trips and online maps for moving buses.
+E - FE/BE, Map support for trips and online maps for moving buses.
 
 ## Future Enhancements
 
