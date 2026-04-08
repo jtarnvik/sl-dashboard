@@ -70,10 +70,12 @@ export function Main() {
           <ErrorHandler></ErrorHandler>
           <Departures key={`dep-${departuresGen}`} stopPoint16Chars={settingsData.stopPointId} />
           {isLoggedIn ? (
-            <>
-              <Routes key={`routes-${routesGen}`} settingsData={settingsData} />
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <Routes key={`routes-${routesGen}`} settingsData={settingsData} />
+              </div>
               <Deviations key={`dev-${deviationsGen}`} />
-            </>
+            </div>
           ) : (
             loginState === UserLoginState.NotLoggedIn && <LoginTeaser />
           )}

@@ -14,6 +14,7 @@ import { convertDeviationSearch, DeviationModal, filterDeviationsByStops } from 
 import { Card } from '../../common/card';
 import { getColorRef, TransportationIconCommon, TransportationMode } from '../../common/line';
 import { ScanningUnderline } from '../../common/scanning-underline';
+import { MdInfoOutline } from 'react-icons/md';
 import { ModalDialog } from '../../common/modal-dialog';
 import { SLButton } from '../../common/sl-button';
 import InDebugModeContext from '../../../contexts/debug-context.ts';
@@ -122,7 +123,7 @@ export function Deviations() {
 
   return (
     <Card>
-      <div className="flex justify-between">
+      <div className="flex flex-col items-center gap-2">
         <div onClick={() => { if (trainEnriched.length > 0) { setOpenModal('train'); } }}>
           <ScanningUnderline active={trainInProgress} lineOffset={4}>
             <TransportationIconCommon
@@ -150,12 +151,10 @@ export function Deviations() {
             />
           </ScanningUnderline>
         </div>
-      </div>
-      <div className="w-full flex justify-end space-x-1 mt-2">
         {inDebugMode &&
           <SLButton onClick={() => {}} thin>JSON</SLButton>
         }
-        <SLButton onClick={() => setLegendOpen(true)} thin>Symboler</SLButton>
+        <SLButton onClick={() => setLegendOpen(true)} thin><MdInfoOutline className="h-5 w-4" /></SLButton>
       </div>
       <ModalDialog isOpen={legendOpen} onClose={() => setLegendOpen(false)} title="Symboler" scrollable={false}>
         <Legend legendData={normalIcons} title="Normalt läge" />
