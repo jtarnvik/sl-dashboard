@@ -201,14 +201,56 @@ two, and within steps as inline notes where a non-obvious constraint or decision
 A - FE, Handle empty departures response gracefully.
 The SL departures API occasionally returns a valid 200 response with an empty `departures` array — either a
 transient server-side glitch or genuinely no departures (e.g. very early morning). Currently the pane silently
-shows nothing, which looks broken to the user.
-Solution: retain the last known departures when a new response comes back empty, but add a subtle visual indicator
-that the displayed data may be stale (e.g. a muted label or icon near the "Uppdaterad" timestamp). This avoids
-flashing empty content on transient glitches while still being honest when data is old. If the very first response
-is empty (no previous data to fall back on), show a "Inga avgångar för tillfället" message instead.
-- It is unreasonable to expect the SL departures API to return empty responses bewtween 06:00 and 23:00 every day, so if this happens
-in that time frame, we should schedule a new api attempt after 5 secs.
-- Idicate stale data with an icon next to the refresh?                                                                            
+shows nothing, which looks broken to the user. Between 06:00 and 23:00 an empty response is almost certainly a
+glitch, so the component should recover automatically rather than waiting for the next 60-second cycle.
+
+Design decisions:
+- Retain the last known departures when a new response is empty — avoids flashing blank content on transient glitches.
+- Add a stale indicator icon next to the "Uppdaterad" timestamp so the user knows the displayed data may be old.
+- Do NOT update the "Uppdaterad" timestamp when retaining stale data — the age of the timestamp is part of what
+  communicates staleness.
+- Between 06:00 and 23:00, schedule a 5-second retry on every empty response, repeating until a non-empty response
+  arrives (at which point the retry loop stops). Outside that window, wait for the normal 60-second interval.
+- The 5-second retry timeout must be tracked in a ref and cancelled on component unmount to avoid state updates
+  on an unmounted component.
+- When there is no prior data (first response is empty), show "Inga avgångar för tillfället" with a clickable
+  "Uppdatera" link that triggers `updateDepartures`. Still schedule the 5-second retry in the 06:00–23:00 window.
+
+Implementation notes:
+- Add `isStale: boolean` state, initially `false`. Set to `true` when retaining old data due to an empty response,
+  reset to `false` when a non-empty response is successfully processed.
+- The empty-response check must happen before the existing animation logic (`removedIds`) — when the new list is
+  empty, all old IDs would appear "removed" and fall into the "too many, just update" branch, incorrectly clearing
+  the display. Intercept before that logic runs.
+- The stale indicator icon lives in the top row next to "Uppdaterad X", shown only when `isStale` is true.
+  Use a muted color (e.g. `text-gray-400`) so it is visible but not alarming.
+
+A1 - FE, Stale state and empty-response handling in `updateDepartures`.
+- Add `isStale` boolean state (initially `false`) and a `retryTimeout` ref (`useRef<ReturnType<typeof setTimeout> | undefined>`).
+- In `updateDepartures`, before the existing animation/`removedIds` logic, check if `data.departures` is empty:
+  - If empty AND `lastDepartures.current` is non-empty: set `isStale(true)`, do not update `departures` state or
+    `lastUpdated`, do not call `processDeviationEnrichment`. Schedule retry if in 06:00–23:00 window (see A2).
+  - If empty AND `lastDepartures.current` is empty or undefined: set `departures` to the empty response (so the
+    "no data" message renders), set `isStale(true)`. Schedule retry if in window.
+  - If non-empty: clear any pending retry timeout, set `isStale(false)`, proceed with existing logic unchanged.
+- Cancel `retryTimeout` on component unmount (add to the existing cleanup `useEffect`).
+
+A2 - FE, 5-second retry scheduling helper.
+- Add a `scheduleRetryIfNeeded()` helper inside the component. Checks current hour (`DateTime.now().hour`);
+  if between 6 and 22 inclusive (i.e. 06:00–22:59), clears any existing retry timeout and sets a new one that
+  calls `updateDepartures` after 5000ms.
+- Called from `updateDepartures` whenever an empty response is received (both stale-retain and no-prior-data cases).
+
+A3 - FE, Stale indicator in the header row.
+- In the JSX top row (`"Uppdaterad X"` / `"Avgår"`), render a small warning icon (e.g. `MdWarningAmber` from
+  `react-icons/md`) immediately after the timestamp text, conditionally on `isStale`. Use `text-amber-400` and
+  `inline` sizing (e.g. `size-4`) so it sits neatly next to the text without disrupting the row height.
+
+A4 - FE, "Inga avgångar" message when no prior data.
+- When `departurePres` is empty AND `departures` is defined (i.e. we received a response but it was empty), render
+  a single row in place of the departure list: `"Inga avgångar för tillfället — "` followed by a clickable
+  `"Uppdatera"` span (SL blue `text-[#184fc2]`, `cursor-pointer`) that calls `updateDepartures`.
+- This replaces the current silent empty-list render.
 
 
 B - FE/BE, Improve GUI for trips and deviations

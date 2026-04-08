@@ -1,5 +1,5 @@
 import {useCallback, useContext, useEffect, useRef, useState} from "react";
-import {MdRefresh} from "react-icons/md";
+import {MdRefresh, MdWarningAmber} from "react-icons/md";
 import {DateTime, Duration} from "luxon";
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
@@ -33,7 +33,10 @@ export function Departures({stopPoint16Chars}: Props) {
 
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
   const lastDepartures = useRef<Departure[] | undefined>(undefined);
+  const retryTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const updateDeparturesRef = useRef<() => void>(() => {});
   const [departing, setDeparting] = useState<Set<string>>(new Set());
+  const [isStale, setIsStale] = useState(false);
 
   const [departures, setDepartures] = useState<SlDeparturesResponse | undefined>(undefined);
   const [deviationEnrichment, setDeviationEnrichment] = useState<Map<string, BackendInterpretationResult>>(new Map());
@@ -53,7 +56,10 @@ export function Departures({stopPoint16Chars}: Props) {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reads ref.current at unmount time, not at setup time
-    return () => latestRequest.current?.abort("Component unmounted");
+    return () => {
+      latestRequest.current?.abort("Component unmounted");
+      clearTimeout(retryTimeout.current);
+    };
   }, []);
 
   const processDeviationEnrichment = useCallback(async (deps: Departure[]) => {
@@ -83,9 +89,31 @@ export function Departures({stopPoint16Chars}: Props) {
     }
   }, [setError]);
 
+  const scheduleRetryIfNeeded = useCallback(() => {
+    const hour = DateTime.now().hour;
+    if (hour >= 6 && hour <= 22) {
+      clearTimeout(retryTimeout.current);
+      retryTimeout.current = setTimeout(() => updateDeparturesRef.current(), 5000);
+    }
+  }, []);
+
   const updateDepartures = useCallback(() => {
     const url = URL_GET_DEPARTURES_FROM_SITE(stopPoint16Chars.slice(-4));
     fetchAbortable<SlDeparturesResponse>(url, latestRequest, (data) => {
+      if (data.departures.length === 0) {
+        if (lastDepartures.current && lastDepartures.current.length > 0) {
+          setIsStale(true);
+        } else {
+          setDepartures(data);
+          setIsStale(true);
+        }
+        scheduleRetryIfNeeded();
+        return;
+      }
+
+      clearTimeout(retryTimeout.current);
+      retryTimeout.current = undefined;
+      setIsStale(false);
       processDeviationEnrichment(data.departures);
       const lastDepts = lastDepartures.current;
       if (lastDepts) {
@@ -125,7 +153,11 @@ export function Departures({stopPoint16Chars}: Props) {
         setDiffSinceLastUpdated(DateTime.now().diffNow())
       }
     }, setError);
-  }, [stopPoint16Chars, setError, processDeviationEnrichment]);
+  }, [stopPoint16Chars, setError, processDeviationEnrichment, scheduleRetryIfNeeded]);
+
+  useEffect(() => {
+    updateDeparturesRef.current = updateDepartures;
+  }, [updateDepartures]);
 
   useVisibility({onVisible: updateDepartures});
 
@@ -171,9 +203,20 @@ export function Departures({stopPoint16Chars}: Props) {
   return (
     <Card>
       <div className="flex justify-between">
-        <div>Uppdaterad {((diffSinceLastUpdated) ? shortSwedishHumanizer(diffSinceLastUpdated?.toMillis()) : "-")}</div>
+        <div className="flex items-center gap-1">
+          Uppdaterad {((diffSinceLastUpdated) ? shortSwedishHumanizer(diffSinceLastUpdated?.toMillis()) : "-")}
+          {isStale && <MdWarningAmber className="size-4 text-amber-400" />}
+        </div>
         <div>Avgår</div>
       </div>
+      {departurePres.length === 0 && departures !== undefined && (
+        <div className="text-sm text-gray-500 py-1">
+          Inga avgångar för tillfället —{" "}
+          <span className="text-[#184fc2] hover:text-[#578ff3] cursor-pointer" onClick={updateDepartures}>
+            Uppdatera
+          </span>
+        </div>
+      )}
       {departurePres.length > 0 &&
         departurePres.map((departure) => {
             const uniqueId = getUniqueId(departure);
