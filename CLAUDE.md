@@ -218,199 +218,35 @@ Controls redesign (general intent, to be detailed in sub-steps):
 
 Journey cards: no changes initially.
 
-This is a schematic of the current GUI.
-```
-┌────────────────────────────────────────┐
-│┌──────────────────────────────────────┐│
-││                                      ││
-││ Header/Menu                          ││
-││                                      ││
-│└──────────────────────────────────────┘│
-│┌──────────────────────────────────────┐│
-││                                      ││
-││  Departures                          ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-│└──────────────────────────────────────┘│
-│┌──────────────────────────────────────┐│
-││                                      ││
-││ Routes (Grows with routes created)   ││
-││                                      ││
-│└──────────────────────────────────────┘│
-│┌──────────────────────────────────────┐│
-││                                      ││
-││ Deviations                           ││
-││                                      ││
-│└──────────────────────────────────────┘│
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-│                                        │
-└────────────────────────────────────────┘
-```
-I would like to make the base GUI look like this
-```
-┌────────────────────────────────────────┐      
-│┌──────────────────────────────────────┐│      
-││                                      ││      
-││ Header/menu                          ││      
-││                                      ││      
-│└──────────────────────────────────────┘│      
-│┌──────────────────────────────────────┐│      
-││                                      ││      
-││ Departures                           ││      
-││                                      ││      
-││                                      ││      
-││                                      ││      
-││                                      ││      
-││                                      ││      
-││                                      ││      
-││                                      ││      
-││                                      ││      
-│└──────────────────────────────────────┘│      
-│┌────────────────────────────┐┌───────┐ │      
-││                            ││  ┌──┐ │ │   Devation Icon   
-││ Routes                     ││  │ ◄┼─┼─┼──────
-││ New buttons and info       ││  └──┘ │ │      
-││                            ││  ┌──┐ │ │      
-││                            ││  │  │ │ │      
-││                            ││  └──┘ │ │      
-││                            ││  ┌──┐ │ │      
-││                            ││  │  │ │ │      
-││                            ││  └──┘ │ │      
-││                            ││     ◄─┼─┼──── Deviation Pane 
-│└────────────────────────────┘└───────┘ │      
-│                                        │      
-│                                        │      
-│                                        │      
-│                                        │      
-│                                        │      
-│                                        │      
-│                                        │      
-│                                        │      
-│                                        │      
-│                                        │      
-│                                        │      
-└────────────────────────────────────────┘      
-```
-
-And when a route is searched for the expanded route pane should look like this 
-
-```
-┌────────────────────────────────────────┐                
-│┌──────────────────────────────────────┐│                
-││                                      ││                
-││ Header/menu                          ││                
-││                                      ││                
-│└──────────────────────────────────────┘│                
-│┌──────────────────────────────────────┐│                
-││                                      ││                
-││ Departures                           ││                
-││                                      ││                
-││                                      ││                
-││                                      ││                
-││                                      ││                
-││                                      ││                
-││                                      ││                
-││                                      ││                
-││                                      ││                
-│└──────────────────────────────────────┘│                
-│ ┬──────────────────────────┐ ┌───────┐ │                
-│ │ Routes                   │ │  ┌──┐ │ │           
-│ │                          │ │  │  │ │ │                
-│ │                          │ │  └──┘ │ │                
-│ │                          │ │  ┌──┐ │ │                
-│ │                          │ │  │  │ │ │                
-│ │                          │ │  └──┘ │ │                
-│ │                          │ │  ┌──┐ │ │                
-│ │                          │ │  │  │ │ │                
-│ │                          │ │  └──┘ │ │  
-│ │                          │ │       │ │                
-│ │                          │ └───────┘ │                
-│ │                          │           │                
-│ │                          └────────┐  │                
-│ │                                   │  │                
-│ │                                   │  │                
-│ │                                   │  │                
-│ │                                   │  │                
-│ │                                   │  │                
-│ │                                   │  │                
-│ │                                   │  │                
-│ └───────────────────────────────────┘  │                
-│                                        │                
-└────────────────────────────────────────┘                
-```
-                         
 A1 - DONE - FE, replace the Symbols button in the Deviaions pane with a icon button. Select the circle icon with an 'i' centered
 from the same icon package we use the warning icon from.
 
 A2 - DONE - FE, Reorganize the deviations pane as a horisontal stack with 3 icons the the re-made info button from A1.
 
-A3 - We have now achieved the first basic step of the new GUI, through A1 and A2. In the next part the route pane shall take up the 
-whole width below the deviations pane. Review the current code
-and discuss if this is possible and in that case how. My best solution is to have a two divs, 
-one the current route (ROUTE 1 below) and then another div (ROUTE 2) below being full width. These can be linked by colors to look like 
-one pane. We expand the journeys in the Route 2 pane.This solution is probably doable, but not very ideal. I have sketched my solution below.
-Do you have a better idea on how to make the L shaped GUI which is the goal.
-```
-┌────────────────────────────────────────┐
-│┌──────────────────────────────────────┐│
-││                                      ││
-││ Header/menu                          ││
-││                                      ││
-│└──────────────────────────────────────┘│
-│┌──────────────────────────────────────┐│
-││                                      ││
-││ Departures                           ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-│└──────────────────────────────────────┘│
-│┌───────────────────────────┐ ┌────────┐│
-││                           │ │  ┌──┐  ││
-││  Route 1                  │ │  │  │  ││
-││                           │ │  └──┘  ││
-││                           │ │  ┌──┐  ││
-││                           │ │  │  │  ││
-││                           │ │  └──┘  ││
-││                           │ │  ┌──┐  ││
-││                           │ │  │  │  ││
-││                           │ │  └──┘  ││
-│└───────────────────────────┘ └────────┘│
-│┌──────────────────────────────────────┐│
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-││  Route 2                             ││
-││                                      ││
-││                                      ││
-││                                      ││
-││                                      ││
-│└──────────────────────────────────────┘│
-│                                        │
-└────────────────────────────────────────┘
-```
+A3 - DONE - FE, L-shaped layout. Routes controls (Route 1) and Deviations side by side. When journeys load, Route 2 expands below at
+full width, visually connected to Route 1 via shared background and bridged borders. Implemented using CSS Grid with an absolutely
+positioned bridge element.
+
+A4 - FE, Redesign the Route 1 controls area. Two-line layout: line 1 has a "Hem" button and an autocomplete stop input;
+line 2 has a time selector (NOW default vs specific future time). Origin is always geolocation. Max walk time is fixed at 15 min
+(the 60 min button is dropped; a future setting B9 will make it configurable). The 60 min button is removed in A4a.
+
+A4a - FE, Replace current Route 1 controls with the two-line shell layout. Line 1: "Hem" button (triggers route with geolocation +
+15 min walk to the settings stop) + a disabled placeholder input for the autocomplete stop. Line 2: two radio buttons — "Nu" (default,
+selected) and a time input (disabled for now). Wire "Hem" to the existing `updateDepartures(15)` call. Drop the 60 min button.
+No autocomplete or time logic yet — those come in A4b and A4c.
+
+A4b - FE, Implement autocomplete for the stop input in Route 1. Use the `Combobox` component from `@headlessui/react` (already
+installed) — it handles keyboard navigation, ARIA roles, and open/close state; styled with Tailwind to match the rest of the UI.
+After 3+ characters are typed, query `URL_GET_STOP_POINT` with debouncing (300 ms) and abort-on-new-input. Show a dropdown of
+matching stop names. Selecting a stop stores it as the custom destination; clicking "Go" (or similar) triggers
+`updateDepartures(15)` toward that stop instead of `settingsData.stopPointId`. Cancel/clear button resets to the default "Hem" state.
+
+A4c - FE, Implement the time selector in Route 1 line 2. "Nu" radio is default and passes no time param to the API (current behaviour).
+The second radio reveals a native `<input type="time">` (HH:MM) — no library needed, works well on mobile. When a future time is
+selected, pass it to `URL_GET_TRAVEL_COORD_TO_v2` via the `itd_time` / `itd_trip_date_time_dep_arr` params (already in constant.ts
+as commented-out placeholders). Only future times on today's date are supported for now.
+
 
 B - FE/BE, More work, not broken down yet
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
@@ -421,6 +257,8 @@ B5 - FE, How to handle filter by routes and stops. Should this be moved to backe
 B6 - FE, the deviation modal, make some kind of line between different deviations, the
 B7 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.
 B8 - Add a live scan line preview to the symboler modals, and an orange time and explain it is clickable and indicates a deviation.
+B9 - FE/BE, Add a max walk time setting. Currently hardcoded to 15 min after A4a. Add a user setting (stored in backend alongside
+stopPointId) so users can choose their preferred max walk time. Default 15 min. Exposed in the Settings dialog.
 
 C - Bulletin board
 
