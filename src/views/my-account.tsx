@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { clearHiddenDeviations, deleteAccount } from '../communication/backend';
+import { clearHiddenDeviations, deleteAccount, fetchHasHiddenDeviations } from '../communication/backend';
 import { ErrorHandler } from '../components/error-handler';
 import { ModalDialog } from '../components/common/modal-dialog';
 import { SLButton } from '../components/common/sl-button';
@@ -16,10 +16,15 @@ export function MyAccount() {
   const { setError } = useContext(ErrorContext);
   const { setHeading } = useContext(PageTitleContext);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [hasHiddenDeviations, setHasHiddenDeviations] = useState<boolean>(false);
 
   useEffect(() => {
     setHeading('Mitt konto');
   }, [setHeading]);
+
+  useEffect(() => {
+    fetchHasHiddenDeviations(setError).then(setHasHiddenDeviations);
+  }, [setError]);
 
   useEffect(() => {
     if (loginState === UserLoginState.Loading) {
@@ -31,9 +36,12 @@ export function MyAccount() {
   }, [loginState, navigate]);
 
   async function handleClearHiddenDeviations() {
+    setHasHiddenDeviations(false);
     const success = await clearHiddenDeviations(setError);
     if (success) {
       window.dispatchEvent(new Event('hiddenDeviationsReset'));
+    } else {
+      setHasHiddenDeviations(true);
     }
   }
 
@@ -52,8 +60,9 @@ export function MyAccount() {
         <ErrorHandler />
         <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col gap-3">
           <button
-            className="text-sm text-[#184fc2] hover:text-[#578ff3] cursor-pointer self-start"
+            className="text-sm self-start disabled:text-gray-400 disabled:cursor-not-allowed text-[#184fc2] hover:text-[#578ff3] cursor-pointer"
             onClick={handleClearHiddenDeviations}
+            disabled={!hasHiddenDeviations}
           >
             Återställ dolda avvikelser
           </button>
@@ -65,7 +74,7 @@ export function MyAccount() {
             Ta bort mitt konto
           </button>
           <hr className="border-gray-200" />
-          <Link to="/gdpr" className="text-xs text-gray-400 hover:text-gray-600">
+          <Link to="/gdpr" className="text-xs text-gray-400 hover:text-gray-600 self-start">
             Om din data
           </Link>
         </div>

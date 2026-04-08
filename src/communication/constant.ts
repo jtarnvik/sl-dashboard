@@ -34,6 +34,7 @@ export const URL_BACKEND_DELETE_ACCOUNT = "/api/protected/account";
 export const URL_BACKEND_INTERPRET_DEVIATIONS = "/api/protected/deviations/interpret";
 export const URL_BACKEND_HIDE_DEVIATION = (id: number) => `/api/protected/deviations/${id}/hide`;
 export const URL_BACKEND_CLEAR_HIDDEN_DEVIATIONS = "/api/protected/deviations/hidden";
+export const URL_BACKEND_HAS_HIDDEN_DEVIATIONS = "/api/protected/deviations/hidden/exists";
 
 export const DEFAULT_SETTINGS: SettingsData = { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen", useAiInterpretation: true };
 export const STOP_HINT_KEY = "sl-dashboard-stop-hint";
