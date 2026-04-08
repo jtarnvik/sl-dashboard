@@ -70,11 +70,11 @@ export function Main() {
           <ErrorHandler></ErrorHandler>
           <Departures key={`dep-${departuresGen}`} stopPoint16Chars={settingsData.stopPointId} />
           {isLoggedIn ? (
-            <div className="flex items-start gap-2">
-              <div className="flex-1 min-w-0">
-                <Routes key={`routes-${routesGen}`} settingsData={settingsData} />
+            <div className="grid gap-2" style={{ gridTemplateColumns: '1fr auto' }}>
+              <Routes key={`routes-${routesGen}`} settingsData={settingsData} />
+              <div className="col-start-2 row-start-1">
+                <Deviations key={`dev-${deviationsGen}`} />
               </div>
-              <Deviations key={`dev-${deviationsGen}`} />
             </div>
           ) : (
             loginState === UserLoginState.NotLoggedIn && <LoginTeaser />

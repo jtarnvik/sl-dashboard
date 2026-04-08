@@ -205,6 +205,19 @@ and deviations simultaneously visible. The Routes controls section will also be 
 plus a more flexible form for specifying a custom destination and departure time (default "now"). The expanded journey cards remain
 largely unchanged initially.
 
+Side-by-side layout for Routes and Deviations with L-shape expansion and redesigned Routes controls.
+
+Layout: on mobile, stacked layout unchanged. On md+ (≥ 768px), Routes and Deviations appear side-by-side (Routes ~70% left, Deviations ~30%
+right). When journeys are fetched, the Routes area expands downward to full width forming an L-shape — header left + full-width journey cards
+below — styled as ONE continuous pane (single card background throughout the L). Deviations stays in the upper-right as its own distinct card.
+
+Controls redesign (general intent, to be detailed in sub-steps):
+- A simple "Ta mig hem" button (15 min walk time) — one click, no configuration.
+- A more flexible form for specifying a custom destination stop and departure time (default "now").
+  These replace the current "Ta mig hem / 15 min / 60 min" control layout.
+
+Journey cards: no changes initially.
+
 This is a schematic of the current GUI.
 ```
 ┌────────────────────────────────────────┐
@@ -342,19 +355,62 @@ And when a route is searched for the expanded route pane should look like this
 │                                        │                
 └────────────────────────────────────────┘                
 ```
+                         
+A1 - DONE - FE, replace the Symbols button in the Deviaions pane with a icon button. Select the circle icon with an 'i' centered
+from the same icon package we use the warning icon from.
 
-A1 - FE, Side-by-side layout for Routes and Deviations with L-shape expansion and redesigned Routes controls.
+A2 - DONE - FE, Reorganize the deviations pane as a horisontal stack with 3 icons the the re-made info button from A1.
 
-Layout: on mobile, stacked layout unchanged. On md+ (≥ 768px), Routes and Deviations appear side-by-side (Routes ~70% left, Deviations ~30%
-right). When journeys are fetched, the Routes area expands downward to full width forming an L-shape — header left + full-width journey cards
-below — styled as ONE continuous pane (single card background throughout the L). Deviations stays in the upper-right as its own distinct card.
-
-Controls redesign (general intent, to be detailed in sub-steps):
-- A simple "Ta mig hem" button (15 min walk time) — one click, no configuration.
-- A more flexible form for specifying a custom destination stop and departure time (default "now").
-These replace the current "Ta mig hem / 15 min / 60 min" control layout.
-
-Journey cards: no changes initially.
+A3 - We have now achieved the first basic step of the new GUI, through A1 and A2. In the next part the route pane shall take up the 
+whole width below the deviations pane. Review the current code
+and discuss if this is possible and in that case how. My best solution is to have a two divs, 
+one the current route (ROUTE 1 below) and then another div (ROUTE 2) below being full width. These can be linked by colors to look like 
+one pane. We expand the journeys in the Route 2 pane.This solution is probably doable, but not very ideal. I have sketched my solution below.
+Do you have a better idea on how to make the L shaped GUI which is the goal.
+```
+┌────────────────────────────────────────┐
+│┌──────────────────────────────────────┐│
+││                                      ││
+││ Header/menu                          ││
+││                                      ││
+│└──────────────────────────────────────┘│
+│┌──────────────────────────────────────┐│
+││                                      ││
+││ Departures                           ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+│└──────────────────────────────────────┘│
+│┌───────────────────────────┐ ┌────────┐│
+││                           │ │  ┌──┐  ││
+││  Route 1                  │ │  │  │  ││
+││                           │ │  └──┘  ││
+││                           │ │  ┌──┐  ││
+││                           │ │  │  │  ││
+││                           │ │  └──┘  ││
+││                           │ │  ┌──┐  ││
+││                           │ │  │  │  ││
+││                           │ │  └──┘  ││
+│└───────────────────────────┘ └────────┘│
+│┌──────────────────────────────────────┐│
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+││  Route 2                             ││
+││                                      ││
+││                                      ││
+││                                      ││
+││                                      ││
+│└──────────────────────────────────────┘│
+│                                        │
+└────────────────────────────────────────┘
+```
 
 B - FE/BE, More work, not broken down yet
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
