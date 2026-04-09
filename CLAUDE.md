@@ -236,14 +236,16 @@ A4a - DONE - FE, Replace current Route 1 controls with the two-line shell layout
 selected) and a time input (disabled for now). Wire "Hem" to the existing `updateDepartures(15)` call. Drop the 60 min button.
 No autocomplete or time logic yet — those come in A4b and A4c.
 
-A4b - FE, Implement autocomplete for the stop input in Route 1. Use the `Combobox` component from `@headlessui/react` (already
+A4b - DONE - FE, Implement autocomplete for the stop input in Route 1. Use the `Combobox` component from `@headlessui/react` (already
 installed) — it handles keyboard navigation, ARIA roles, and open/close state; styled with Tailwind to match the rest of the UI.
 After 3+ characters are typed, query `URL_GET_STOP_POINT` with debouncing (300 ms) and abort-on-new-input. Show a dropdown of
 matching stop names. Selecting a stop immediately triggers `updateDepartures(15)` toward that stop instead of
 `settingsData.stopPointId` — no extra button needed, selection is the intent signal. A clear button resets the input and
 restores the default "Hem" state (so the next "Hem" click goes back to the settings stop).
+   
+A4c - FE - Add a "Ankomst tid" radio button as well. Should be able to pass that in UTL, check how.
 
-A4c - FE, Implement the time selector in Route 1 line 2. "Nu" radio is default and passes no time param to the API (current behaviour).
+A4d - FE, Implement the time selector in Route 1 line 2. "Nu" radio is default and passes no time param to the API (current behaviour).
 The second radio reveals a native `<input type="time">` (HH:MM) — no library needed, works well on mobile. When a future time is
 selected, pass it to `URL_GET_TRAVEL_COORD_TO_v2` via the `itd_time` / `itd_trip_date_time_dep_arr` params (already in constant.ts
 as commented-out placeholders). Only future times on today's date are supported for now.
@@ -266,6 +268,11 @@ B9 - FE/BE, Add a max walk time setting. Currently hardcoded to 15 min after A4a
 stopPointId) so users can choose their preferred max walk time. Default 15 min. Exposed in the Settings dialog.
 B10 - The user screen is not align correctly in columns. Look in production
 B11 - Prova att routa til Norrvrå, lite många steg. Kanke byt ut mitten mot ...
+B12 - Use the Autocomplete stop selection box in the settings dialog as well. Create separate component to reuse.
+B13 - FE Deviations pane should have a little bit more padding at top and bottom. Make sure the route pane can handle it as well
+B14 -  Treat time selection as next day of time before now.
+B15 -  There is room for a thin grey line between the Now time and the journeys. Not all the way to the edge.
+B16 - Setting how to handle deviations. Now its specific stops on green and the complete buss line, and some specific places for trains. Do better.
 
 C - Bulletin board
 
