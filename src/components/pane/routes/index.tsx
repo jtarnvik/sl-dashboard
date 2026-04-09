@@ -44,6 +44,9 @@ export function Routes({settingsData}: Props) {
   const [, setRoutePlanningInProgress] = useState<boolean>(false);
   const [state, setState] = useState<string>("");
 
+  const [timeMode, setTimeMode] = useState<'now' | 'dep' | 'arr'>('now');
+  const [departureTime, setDepartureTime] = useState('');
+
   const [query, setQuery] = useState('');
   const [stopResults, setStopResults] = useState<StopFinderLocation[]>([]);
   const [selectedStop, setSelectedStop] = useState<StopFinderLocation | null>(null);
@@ -102,11 +105,15 @@ export function Routes({settingsData}: Props) {
     }
   }
 
-  function updateDepartures(maxWalk: number, destinationId?: string) {
+  function updateDepartures(maxWalk: number, destinationId?: string, timeModeOverride?: 'now' | 'dep' | 'arr', departureTimeOverride?: string) {
     const destination = destinationId ?? settingsData.stopPointId;
+    const effectiveMode = timeModeOverride ?? timeMode;
+    const effectiveTime = departureTimeOverride ?? departureTime;
+    const timeParam = effectiveMode !== 'now' && effectiveTime ? effectiveTime.replace(':', '') : undefined;
+    const timeType = effectiveMode !== 'now' ? effectiveMode : undefined;
 
     function generateRoute(lat: number, long: number, maxInitialWalkTime: number) {
-      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, destination, maxInitialWalkTime);
+      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, destination, maxInitialWalkTime, timeParam, timeType);
       fetchAbortable<{journeys: Journey[], systemMessages: SystemMessage[]}>(url, latestRequest, (data) => {
         setJourneys(data.journeys);
         setSystemMessages(data.systemMessages);
@@ -158,6 +165,23 @@ export function Routes({settingsData}: Props) {
         maximumAge: 0
       }
     );
+  }
+
+  function handleTimeModeChange(newMode: 'now' | 'dep' | 'arr') {
+    setTimeMode(newMode);
+    if (newMode === 'now') {
+      setDepartureTime('');
+      updateDepartures(15, selectedStop?.id, 'now', '');
+    } else if (departureTime.length === 5) {
+      updateDepartures(15, selectedStop?.id, newMode, departureTime);
+    }
+  }
+
+  function handleTimeChange(value: string) {
+    setDepartureTime(value);
+    if (value.length === 5) {
+      updateDepartures(15, selectedStop?.id, timeMode, value);
+    }
   }
 
   function handleQueryChange(value: string) {
@@ -260,20 +284,49 @@ export function Routes({settingsData}: Props) {
             )}
           </div>
         </div>
-        <div className="text-gray-800">Avfärd</div>
-        <div className="flex items-center gap-3 pb-1">
+        <div className="flex items-center pb-1">
           <label className="flex items-center gap-1">
-            <input type="radio" name="departure-time" defaultChecked disabled className="accent-[#184fc2]" />
+            <input
+              type="radio"
+              name="departure-time"
+              checked={timeMode === 'now'}
+              onChange={() => handleTimeModeChange('now')}
+              className="accent-[#184fc2]"
+            />
             Nu
           </label>
-          <label className="flex items-center gap-1 text-gray-400">
-            <input type="radio" name="departure-time" disabled className="accent-[#184fc2]" />
+        </div>
+        <div className="flex items-center gap-3 pb-1">
+          <label className="flex items-center gap-1">
             <input
-              type="time"
-              disabled
-              className="rounded-sm border border-gray-300 bg-white px-1 py-px text-sm text-gray-400 cursor-not-allowed"
+              type="radio"
+              name="departure-time"
+              checked={timeMode === 'dep'}
+              onChange={() => handleTimeModeChange('dep')}
+              className="accent-[#184fc2]"
             />
+            Avfärd
           </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="radio"
+              name="departure-time"
+              checked={timeMode === 'arr'}
+              onChange={() => handleTimeModeChange('arr')}
+              className="accent-[#184fc2]"
+            />
+            Ankomst
+          </label>
+          <input
+            type="time"
+            value={departureTime}
+            onChange={(e) => handleTimeChange(e.target.value)}
+            disabled={timeMode === 'now'}
+            className={classNames(
+              'rounded-sm border border-gray-300 bg-white px-1 py-px text-sm',
+              timeMode === 'now' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800'
+            )}
+          />
         </div>
         {state && <div className="text-sm pb-1">{state}</div>}
         {geoInfo && <div className="text-sm pb-1">{geoInfo}</div>}

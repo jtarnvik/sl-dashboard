@@ -67,7 +67,7 @@ function createWGS84(lat: number, long: number) {
   return `${fmt(long)}:${fmt(lat)}:WGS84[dd.ddddd]`;
 }
 
-export const URL_GET_TRAVEL_COORD_TO_v2 = (long: number, lat: number, dest: string, maxWalk: number) =>
+export const URL_GET_TRAVEL_COORD_TO_v2 = (long: number, lat: number, dest: string, maxWalk: number, departureTime?: string, timeType?: 'dep' | 'arr') =>
   "https://journeyplanner.integration.sl.se/v2/trips" +
   "?type_origin=coord" +
   "&type_destination=any" +
@@ -75,6 +75,5 @@ export const URL_GET_TRAVEL_COORD_TO_v2 = (long: number, lat: number, dest: stri
   "&name_destination=" + dest +
   "&calc_number_of_trips=3" +
   "&tr_it_mot_value100=" + maxWalk +
-  // "&itd_time=1922" +
-  // "&itd_trip_date_time_dep_arr=dep" +
-  "&calc_one_direction=true"         // if false, report one trip before departure.
+  (departureTime ? "&itd_time=" + departureTime + "&itd_trip_date_time_dep_arr=" + (timeType ?? 'dep') : "") +
+  "&calc_one_direction=" + (departureTime ? "false" : "true")  // false = include one trip before the specified time
