@@ -6,14 +6,16 @@ import {IoCloseCircle} from "react-icons/io5";
 import {MdSearch} from "react-icons/md";
 import {URL_GET_STOP_POINT, URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
-import {interpretDeviations} from "../../../communication/backend.ts";
+import {addRecentStop, clearRecentStops, interpretDeviations} from "../../../communication/backend.ts";
 import {SLButton} from "../../common/sl-button";
 import {SldJourney} from "./sld-journey.tsx";
 import {convertInfoMessages} from "../../common/deviation-modal";
 import {BackendInterpretationResult, isValidDeviationText} from "../../../types/deviations-common.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
 import {Journey, StopFinderLocation, StopFinderResponse, SystemMessage} from "../../../types/sl-journeyplaner-responses";
+import {RecentStop} from "../../../types/backend.ts";
 import ErrorContext from "../../../contexts/error-context.ts";
+import {useUser} from "../../../hook/use-user.ts";
 
 type Location = {
   latitude: number,
@@ -32,6 +34,7 @@ type Props = {
 
 export function Routes({settingsData}: Props) {
   const {setError} = useContext(ErrorContext);
+  const {user} = useUser();
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
   const route1Ref = useRef<HTMLDivElement>(null);
 
@@ -51,6 +54,8 @@ export function Routes({settingsData}: Props) {
   const [query, setQuery] = useState('');
   const [stopResults, setStopResults] = useState<StopFinderLocation[]>([]);
   const [selectedStop, setSelectedStop] = useState<StopFinderLocation | null>(null);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [recentStops, setRecentStops] = useState<RecentStop[]>(() => user?.settings?.recentStops ?? []);
   const searchAbortRef = useRef<AbortController | undefined>(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -224,11 +229,35 @@ export function Routes({settingsData}: Props) {
     }, 300);
   }
 
+  function recordRecentStop(stopPointId: string, stopPointName: string, stopPointParentName?: string) {
+    const updated = [
+      { stopPointId, stopPointName, stopPointParentName },
+      ...recentStops.filter(s => s.stopPointId !== stopPointId)
+    ].slice(0, 5);
+    setRecentStops(updated);
+    addRecentStop({ stopPointId, stopPointName, stopPointParentName }, setError);
+  }
+
   function handleStopSelect(location: StopFinderLocation) {
     setSelectedStop(location);
     setQuery(location.disassembledName ?? location.name);
     setStopResults([]);
+    recordRecentStop(location.id, location.disassembledName ?? location.name, location.parent?.name);
     updateDepartures(15, location.id);
+  }
+
+  function handleRecentStopSelect(stop: RecentStop) {
+    const synthetic: StopFinderLocation = { id: stop.stopPointId, name: stop.stopPointName, disassembledName: stop.stopPointName, coord: [0, 0], type: "stop" };
+    setSelectedStop(synthetic);
+    setQuery(stop.stopPointName);
+    setStopResults([]);
+    recordRecentStop(stop.stopPointId, stop.stopPointName);
+    updateDepartures(15, stop.stopPointId);
+  }
+
+  function handleClearRecentStops() {
+    setRecentStops([]);
+    clearRecentStops(setError);
   }
 
   function handleClear() {
@@ -243,6 +272,7 @@ export function Routes({settingsData}: Props) {
   }
 
   const hasJourneys = !!journeys && journeys.length > 0;
+  const showRecentStops = inputFocused && query.trim().length < 3 && recentStops.length > 0;
 
   useEffect(() => {
     if (hasJourneys && route1Ref.current) {
@@ -268,6 +298,8 @@ export function Routes({settingsData}: Props) {
               <ComboboxInput
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
                 placeholder="Sök hållplats…"
                 className="w-full rounded-sm border border-gray-300 bg-white px-2 py-px pr-6 text-sm text-gray-800"
               />
@@ -288,6 +320,29 @@ export function Routes({settingsData}: Props) {
                 </ComboboxOptions>
               )}
             </Combobox>
+            {showRecentStops && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-sm border border-gray-200 bg-white shadow-md">
+                {recentStops.map(stop => (
+                  <div
+                    key={stop.stopPointId}
+                    onMouseDown={(e) => { e.preventDefault(); handleRecentStopSelect(stop); }}
+                    className="cursor-pointer px-3 py-1 text-sm text-gray-800 hover:bg-[#184fc2] hover:text-white"
+                  >
+                    {stop.stopPointName}
+                    {stop.stopPointParentName && (
+                      <span className="ml-1 text-xs opacity-60">{stop.stopPointParentName}</span>
+                    )}
+                  </div>
+                ))}
+                <div className="border-t border-gray-200" />
+                <div
+                  onMouseDown={(e) => { e.preventDefault(); handleClearRecentStops(); }}
+                  className="cursor-pointer px-3 py-1 text-sm text-gray-800 hover:bg-[#184fc2] hover:text-white"
+                >
+                  Rensa
+                </div>
+              </div>
+            )}
             {selectedStop && (
               <button
                 type="button"

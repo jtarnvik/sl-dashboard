@@ -30,6 +30,7 @@ export const URL_BACKEND_SHARED_ROUTE_CREATE = "/api/protected/routes";
 export const URL_BACKEND_SHARED_ROUTE_GET = (id: string) => `/api/public/routes/${id}`;
 
 export const URL_BACKEND_SETTINGS = "/api/protected/settings";
+export const URL_BACKEND_RECENT_STOPS = "/api/protected/settings/recent-stops";
 export const URL_BACKEND_DELETE_ACCOUNT = "/api/protected/account";
 export const URL_BACKEND_INTERPRET_DEVIATIONS = "/api/protected/deviations/interpret";
 export const URL_BACKEND_HIDE_DEVIATION = (id: number) => `/api/protected/deviations/${id}/hide`;

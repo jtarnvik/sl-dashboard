@@ -20,8 +20,9 @@ export function Gdpr() {
 
       <h2 className="text-lg font-semibold mb-2">Vad vi lagrar</h2>
       <p className="mb-6">
-        Vi lagrar ditt namn och din e-postadress. Dessa hämtas från ditt Google-konto när du loggar
-        in och används enbart för att identifiera dig i tjänsten.
+        Vi lagrar ditt namn och din e-postadress från ditt Google-konto, din valda hemmahållplats
+        samt upp till fem senaste sökta hållplatser. Dessa uppgifter används enbart för att
+        tjänsten ska fungera som avsett.
       </p>
 
       <h2 className="text-lg font-semibold mb-2">Varför vi lagrar det</h2>

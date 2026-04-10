@@ -16,11 +16,12 @@ import {
   URL_BACKEND_LOGIN,
   URL_BACKEND_LOGOUT,
   URL_BACKEND_SETTINGS,
+  URL_BACKEND_RECENT_STOPS,
   URL_BACKEND_ADMIN_STATISTICS,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, StatisticsData, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, RecentStop, StatisticsData, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -233,6 +234,26 @@ export async function saveSettings(settings: UserSettings, setError: SetError): 
     return true;
   } catch {
     setError("Kunde inte spara inställningar.");
+    return false;
+  }
+}
+
+export async function addRecentStop(stop: RecentStop, setError: SetError): Promise<boolean> {
+  try {
+    await backend.post(URL_BACKEND_RECENT_STOPS, stop);
+    return true;
+  } catch {
+    setError("Kunde inte spara senaste hållplats.");
+    return false;
+  }
+}
+
+export async function clearRecentStops(setError: SetError): Promise<boolean> {
+  try {
+    await backend.delete(URL_BACKEND_RECENT_STOPS);
+    return true;
+  } catch {
+    setError("Kunde inte rensa senaste hållplatser.");
     return false;
   }
 }

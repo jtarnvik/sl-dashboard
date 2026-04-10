@@ -1,7 +1,14 @@
+export interface RecentStop {
+  stopPointId: string;
+  stopPointName: string;
+  stopPointParentName?: string;
+}
+
 export interface UserSettings {
   stopPointId: string;
   stopPointName: string;
   useAiInterpretation: boolean;
+  recentStops?: RecentStop[];
 }
 
 export interface User {

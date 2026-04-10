@@ -259,7 +259,7 @@ The second radio reveals a native `<input type="time">` (HH:MM) — no library n
 selected, pass it to `URL_GET_TRAVEL_COORD_TO_v2` via the `itd_time` / `itd_trip_date_time_dep_arr` params (already in constant.ts
 as commented-out placeholders). Only future times on today's date are supported for now.
    
-A5 - FE/BE, Store and display the last 5 autocomplete stop selections per user as recent stops ("favourites").
+A5 - DONE - FE/BE, Store and display the last 5 autocomplete stop selections per user as recent stops ("favourites").
 Allows quick re-use of frequently searched stops without retyping.
 
 Storage: add a nullable `recent_stops` TEXT/JSON column to the existing `user_settings` table (Liquibase changeset 022).
@@ -282,7 +282,6 @@ FE changes:
 
 B - FE/BE, More work, not broken down yet
 B-2 - F2, Handle the message "No routes, are you already there?" Remove the text field. Maybe a popup? Or remove?
-B-1 - FE, Store the last 4 stops searched for, show them as defaulst in the autocomplete until the first thre charshavebeen pressed-.
 B0 - FE It the Journeys / Leg pane. In the "Gå till" Add the destination.
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
 B2 - FE how to handle long list of departures
@@ -297,7 +296,6 @@ stopPointId) so users can choose their preferred max walk time. Default 15 min. 
 B10 - The user screen is not align correctly in columns. Look in production
 B11 - Prova att routa til Norrvrå, lite många steg. Kanke byt ut mitten mot ...
 B12 - Use the Autocomplete stop selection box in the settings dialog as well. Create separate component to reuse.
-B13 - FE Deviations pane should have a little bit more padding at top and bottom. Make sure the route pane can handle it as well
 B14 -  Treat time selection as next day of time before now.
 B15 -  There is room for a thin grey line between the Now time and the journeys. Not all the way to the edge.
 B16 - Setting how to handle deviations. Now its specific stops on green and the complete buss line, and some specific places for trains. Do better.
