@@ -243,8 +243,16 @@ matching stop names. Selecting a stop immediately triggers `updateDepartures(15)
 `settingsData.stopPointId` — no extra button needed, selection is the intent signal. A clear button resets the input and
 restores the default "Hem" state (so the next "Hem" click goes back to the settings stop).
    
-A4c - FE - Add a "Ankomst tid" radio button as well. Should be able to pass that in UTL, check how.
-- How to start the search when you only change the time? 
+A4c - DONE - FE - Adjust the route  selection logic.
+- The time selection and start of the search are slightly unintuitive. Lets make a specific search button to the right of the time selector.
+The button should be just an icon  to fit. We should now have only three ways to start a route search
+  x The "Hem" button
+  x The new search button (only enabled when arrive/departure time is selected)
+  x When a station is searched for in the dropdown
+- Switchingtime mode clears the time selector and clears the routes if there has been a previous search.
+- If a time before now is selected in the time selector that time is assumed to be tomorrow and tomorrows date shall be passed to the API
+- The calc_in_direction parameter shal only be false (ie include on tripe before time) when the time selector is set to departure, nor wor arrival.
+
 
 A4d - DONE - FE, Implement the time selector in Route 1 line 2. "Nu" radio is default and passes no time param to the API (current behaviour).
 The second radio reveals a native `<input type="time">` (HH:MM) — no library needed, works well on mobile. When a future time is

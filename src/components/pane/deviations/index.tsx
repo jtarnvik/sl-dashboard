@@ -123,7 +123,7 @@ export function Deviations() {
 
   return (
     <Card>
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-2 py-2">
         <div onClick={() => { if (trainEnriched.length > 0) { setOpenModal('train'); } }}>
           <ScanningUnderline active={trainInProgress} lineOffset={4}>
             <TransportationIconCommon

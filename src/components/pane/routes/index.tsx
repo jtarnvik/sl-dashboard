@@ -3,6 +3,7 @@ import axios from "axios";
 import classNames from "classnames";
 import {Combobox, ComboboxInput, ComboboxOption, ComboboxOptions} from "@headlessui/react";
 import {IoCloseCircle} from "react-icons/io5";
+import {MdSearch} from "react-icons/md";
 import {URL_GET_STOP_POINT, URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {interpretDeviations} from "../../../communication/backend.ts";
@@ -112,8 +113,22 @@ export function Routes({settingsData}: Props) {
     const timeParam = effectiveMode !== 'now' && effectiveTime ? effectiveTime.replace(':', '') : undefined;
     const timeType = effectiveMode !== 'now' ? effectiveMode : undefined;
 
+    let dateParam: string | undefined;
+    if (timeParam && effectiveTime) {
+      const now = new Date();
+      const [h, m] = effectiveTime.split(':').map(Number);
+      if (h * 60 + m < now.getHours() * 60 + now.getMinutes()) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const y = tomorrow.getFullYear();
+        const mo = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const d = String(tomorrow.getDate()).padStart(2, '0');
+        dateParam = `${y}${mo}${d}`;
+      }
+    }
+
     function generateRoute(lat: number, long: number, maxInitialWalkTime: number) {
-      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, destination, maxInitialWalkTime, timeParam, timeType);
+      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, destination, maxInitialWalkTime, timeParam, timeType, dateParam);
       fetchAbortable<{journeys: Journey[], systemMessages: SystemMessage[]}>(url, latestRequest, (data) => {
         setJourneys(data.journeys);
         setSystemMessages(data.systemMessages);
@@ -169,19 +184,19 @@ export function Routes({settingsData}: Props) {
 
   function handleTimeModeChange(newMode: 'now' | 'dep' | 'arr') {
     setTimeMode(newMode);
+    setDepartureTime('');
+    setJourneys(undefined);
+    setSystemMessages(undefined);
+    setDeviationEnrichment(new Map());
+    setState('');
+    setGeoInfo(undefined);
     if (newMode === 'now') {
-      setDepartureTime('');
       updateDepartures(15, selectedStop?.id, 'now', '');
-    } else if (departureTime.length === 5) {
-      updateDepartures(15, selectedStop?.id, newMode, departureTime);
     }
   }
 
   function handleTimeChange(value: string) {
     setDepartureTime(value);
-    if (value.length === 5) {
-      updateDepartures(15, selectedStop?.id, timeMode, value);
-    }
   }
 
   function handleQueryChange(value: string) {
@@ -327,6 +342,13 @@ export function Routes({settingsData}: Props) {
               timeMode === 'now' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800'
             )}
           />
+          <SLButton
+            onClick={() => updateDepartures(15, selectedStop?.id)}
+            thin
+            disabled={timeMode === 'now'}
+          >
+            <MdSearch className="h-5 w-4" />
+          </SLButton>
         </div>
         {state && <div className="text-sm pb-1">{state}</div>}
         {geoInfo && <div className="text-sm pb-1">{geoInfo}</div>}
