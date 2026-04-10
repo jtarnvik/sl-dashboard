@@ -259,10 +259,29 @@ The second radio reveals a native `<input type="time">` (HH:MM) — no library n
 selected, pass it to `URL_GET_TRAVEL_COORD_TO_v2` via the `itd_time` / `itd_trip_date_time_dep_arr` params (already in constant.ts
 as commented-out placeholders). Only future times on today's date are supported for now.
    
-A5 - Handle the message
-"No routes, are you already there?" Remove the text field. Maybe a popup? Or remove?
+A5 - FE/BE, Store and display the last 5 autocomplete stop selections per user as recent stops ("favourites").
+Allows quick re-use of frequently searched stops without retyping.
+
+Storage: add a nullable `recent_stops` TEXT/JSON column to the existing `user_settings` table (Liquibase changeset 022).
+Stored as a JSON array of `{stopPointId, stopPointName}` objects, max 5 entries, always read and written as a whole unit.
+
+BE changes:
+- Include `recentStops` array in the existing `GET /api/auth/me` settings response (already the source of truth for settings on load).
+- New `POST /api/protected/settings/recent-stops` — body `{stopPointId, stopPointName}`. Service prepends the entry,
+  removes any existing duplicate with the same stopPointId, then trims to max 5. Returns the updated list.
+- New `DELETE /api/protected/settings/recent-stops` — clears the list. Returns 204.
+
+FE changes:
+- When the autocomplete input is focused with fewer than 3 characters typed AND the user has recent stops: show a dropdown
+  with the recent stops as selectable options, followed by a `<hr>` divider, followed by a "Rensa" item.
+- Selecting a recent stop triggers a route search immediately (same as a normal autocomplete selection) and calls
+  `POST /api/protected/settings/recent-stops` to move it to the top of the list.
+- Selecting a stop from the normal autocomplete (≥3 chars) also calls `POST /api/protected/settings/recent-stops`.
+- Clicking "Rensa" calls `DELETE /api/protected/settings/recent-stops` and clears recent stops from local state.
+- Recent stops are loaded from the `recentStops` field already returned by `GET /api/auth/me` on login — no extra fetch needed.
 
 B - FE/BE, More work, not broken down yet
+B-2 - F2, Handle the message "No routes, are you already there?" Remove the text field. Maybe a popup? Or remove?
 B-1 - FE, Store the last 4 stops searched for, show them as defaulst in the autocomplete until the first thre charshavebeen pressed-.
 B0 - FE It the Journeys / Leg pane. In the "Gå till" Add the destination.
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
