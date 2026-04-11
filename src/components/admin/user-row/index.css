@@ -3,7 +3,7 @@
   grid-template-areas:
     "name  role  actions"
     "email date  actions";
-  grid-template-columns: 1fr 140px 72px;
+  grid-template-columns: 1fr 110px 72px;
   column-gap: 8px;
   row-gap: 2px;
   padding: 8px 0;
@@ -16,12 +16,12 @@
   border-bottom: none;
 }
 
-.user-row-name    { grid-area: name; font-weight: 500; }
+.user-row-name    { grid-area: name; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-row-role    { grid-area: role; text-align: right; }
 
 .date-short { display: inline; }
 .date-full  { display: none; }
-.user-row-email   { grid-area: email; color: #6b7280; }
+.user-row-email   { grid-area: email; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-row-date    { grid-area: date; color: #6b7280; text-align: right; }
 .user-row-actions { grid-area: actions; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 
@@ -55,12 +55,12 @@
 
   .user-row {
     grid-template-areas: "name email role date actions";
-    grid-template-columns: 2fr 3fr 80px 140px 72px;
+    grid-template-columns: 150px 220px 80px 130px 48px;
     align-items: center;
     row-gap: 0;
   }
 
-  .user-row-email { color: #1f2937; }
+  .user-row-email { color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .user-row-date  { color: #1f2937; text-align: left; }
 
   .date-short { display: none; }

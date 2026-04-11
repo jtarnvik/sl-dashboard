@@ -199,10 +199,9 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE, In the Journeys / Leg pane, in the "Gå till" section, add the destination. In the first leg of a route (which is usually a walk step)
-the destination is not shown. THe initial thought was that the destination is presented on the next line wo its of no use,
-but it has been pointed out that this is not the case. So I want the destionation to be shown for initial walk legs. Can you investigate the
-code in see if this means is trivial to accomplish or what it would entail to change
+A - FE, The user screen is not aligned correctly in columns. Look in production.
+The allowed user screen is not aligned properly. I assume that the posistion of the date/role column and the operstions icon
+are dependent on the email width? Can you investigate the code and report your findings
 
 B - FE/BE, More work, not broken down yet
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
@@ -213,12 +212,11 @@ B7 - FE, Tooltip on the divaiations modal that shows importance och info/delay/c
 B8 - Add a live scan line preview to the symboler modals, and an orange time and explain it is clickable and indicates a deviation.
 B9 - FE/BE, Add a max walk time setting. Currently hardcoded to 15 min after A4a. Add a user setting (stored in backend alongside
 stopPointId) so users can choose their preferred max walk time. Default 15 min. Exposed in the Settings dialog.
-B10 - The user screen is not align correctly in columns. Look in production
 B11 - Prova att routa til Norrvrå, lite många steg. Kanke byt ut mitten mot ...
 B14 -  Treat time selection as next day of time before now.
-B15 -  There is room for a thin grey line between the Now time and the journeys. Not all the way to the edge.
 B16 - Setting how to handle deviations. Now its specific stops on green and the complete buss line, and some specific places for trains. Do better.
 B17 - Add a "next trips" route to get more.
+B18 - Is there a SL walk speed api setting?
 
 C - Bulletin board
 
