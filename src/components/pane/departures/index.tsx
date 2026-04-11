@@ -1,11 +1,11 @@
 import {useCallback, useContext, useEffect, useRef, useState} from "react";
-import {MdRefresh, MdWarningAmber} from "react-icons/md";
+import {MdInfoOutline, MdRefresh, MdWarningAmber} from "react-icons/md";
 import {DateTime, Duration} from "luxon";
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {interpretDeviations} from "../../../communication/backend.ts";
 import {Card} from "../../common/card";
-import {LineJourney} from "../../common/line";
+import {LineJourney, TransportationIconCommon, TransportationMode} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
 import {SLButton} from "../../common/sl-button";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
@@ -14,7 +14,7 @@ import {BackendInterpretationResult, EnrichedDeviation, isShown, isValidDeviatio
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
-import {Departure, SlDeparturesResponse} from "../../../types/sl-responses.ts";
+import {Departure, SlDeparturesResponse, TransportMode} from "../../../types/sl-responses.ts";
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../../util/sorters.ts";
 import {Destination} from "./destination.tsx";
@@ -22,6 +22,21 @@ import {destinations, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
 import "./index.css";
 import ErrorContext from "../../../contexts/error-context.ts";
+
+const MAX_DEPARTURES_BEFORE_GROUPING = 12;
+
+function transportModeToIconMode(mode: TransportMode): TransportationMode {
+  switch (mode) {
+    case 'BUS':   return TransportationMode.BUS;
+    case 'METRO': return TransportationMode.SUBWAY;
+    case 'TRAIN': return TransportationMode.TRAIN;
+    case 'TRAM':  return TransportationMode.TRAM;
+    case 'FERRY': return TransportationMode.FERRY;
+    case 'SHIP':  return TransportationMode.SHIP;
+    case 'TAXI':  return TransportationMode.TAXI;
+    default:      return TransportationMode.UNKNOWN;
+  }
+}
 
 type Props = {
   stopPoint16Chars: string
@@ -45,6 +60,8 @@ export function Departures({stopPoint16Chars}: Props) {
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
+  const [selectedTransportMode, setSelectedTransportMode] = useState<TransportMode | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
 
   function getUniqueId(dept: Departure): string {
     return `${dept.line.id}-${dept.journey.id}`;
@@ -191,6 +208,22 @@ export function Departures({stopPoint16Chars}: Props) {
     return () => window.removeEventListener('deviationHidden', handleDeviationHidden);
   }, []);
 
+  useEffect(() => {
+    const sorted = sortDeparturesByDestination(departures?.departures);
+    const isNowGrouped = sorted.length > MAX_DEPARTURES_BEFORE_GROUPING;
+    if (!isNowGrouped) {
+      setSelectedTransportMode(null);
+      setCurrentPage(0);
+      return;
+    }
+    const modes: TransportMode[] = [...new Set(sorted.map(d => d.line.transport_mode))];
+    setSelectedTransportMode(prev => {
+      if (prev && modes.includes(prev)) { return prev; }
+      return modes.includes('BUS') ? 'BUS' : (modes[0] ?? null);
+    });
+    setCurrentPage(0);
+  }, [departures]);
+
   function handleLegend() {
     setLegendOpen(true);
   }
@@ -200,6 +233,23 @@ export function Departures({stopPoint16Chars}: Props) {
   }
 
   const departurePres: Departure[] = sortDeparturesByDestination(departures?.departures);
+  const isGrouped = departurePres.length > MAX_DEPARTURES_BEFORE_GROUPING;
+  const transportModes: TransportMode[] = [...new Set(departurePres.map(d => d.line.transport_mode))];
+  const activeTypeDepartures: Departure[] = isGrouped && selectedTransportMode
+    ? departurePres.filter(d => d.line.transport_mode === selectedTransportMode)
+    : departurePres;
+  const pageCount = Math.ceil(activeTypeDepartures.length / MAX_DEPARTURES_BEFORE_GROUPING);
+  const isPaged = isGrouped && pageCount > 1;
+  const displayedDepartures: Departure[] = isPaged
+    ? activeTypeDepartures.slice(currentPage * MAX_DEPARTURES_BEFORE_GROUPING, (currentPage + 1) * MAX_DEPARTURES_BEFORE_GROUPING)
+    : activeTypeDepartures;
+
+  function handleTypeSelect(mode: TransportMode) {
+    if (mode === selectedTransportMode) { return; }
+    setSelectedTransportMode(mode);
+    setCurrentPage(0);
+  }
+
   return (
     <Card>
       <div className="flex justify-between">
@@ -209,7 +259,7 @@ export function Departures({stopPoint16Chars}: Props) {
         </div>
         <div>Avgår</div>
       </div>
-      {departurePres.length === 0 && departures !== undefined && (
+      {displayedDepartures.length === 0 && departures !== undefined && (
         <div className="text-sm text-gray-500 py-1">
           Inga avgångar för tillfället —{" "}
           <span className="text-[#184fc2] hover:text-[#578ff3] cursor-pointer" onClick={updateDepartures}>
@@ -217,8 +267,8 @@ export function Departures({stopPoint16Chars}: Props) {
           </span>
         </div>
       )}
-      {departurePres.length > 0 &&
-        departurePres.map((departure) => {
+      {displayedDepartures.length > 0 &&
+        displayedDepartures.map((departure) => {
             const uniqueId = getUniqueId(departure);
             const showAsDeparting = departing.has(getUniqueId(departure));
 
@@ -255,12 +305,35 @@ export function Departures({stopPoint16Chars}: Props) {
             );
           }
         )}
-      <div className="w-full flex justify-end space-x-1">
-        {inDebugMode &&
-          <SLButton onClick={handleJSON} thin>JSON</SLButton>
-        }
-        <SLButton onClick={updateDepartures} thin><MdRefresh className="size-4" /></SLButton>
-        <SLButton onClick={handleLegend} thin>Symboler</SLButton>
+      <div className="w-full flex items-center mt-1">
+        <div className="flex items-center gap-1">
+          {isGrouped && transportModes.map(mode => (
+            <button
+              key={mode}
+              onClick={() => handleTypeSelect(mode)}
+              className={`p-1 rounded-sm ${selectedTransportMode === mode ? 'bg-[#184fc2] text-white' : 'text-gray-500 hover:bg-gray-200'}`}
+              aria-label={mode}
+            >
+              <TransportationIconCommon mode={transportModeToIconMode(mode)} className="size-4" />
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 flex justify-center items-center gap-1">
+          {isPaged && Array.from({ length: pageCount }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentPage(i)}
+              className={`px-1.5 py-0.5 rounded-sm text-xs ${currentPage === i ? 'bg-[#184fc2] text-white' : 'text-gray-500 hover:bg-gray-200'}`}
+            >
+              {i + 1}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center space-x-1">
+          {inDebugMode && <SLButton onClick={handleJSON} thin>JSON</SLButton>}
+          <SLButton onClick={updateDepartures} thin><MdRefresh className="h-5 w-4" /></SLButton>
+          <SLButton onClick={handleLegend} thin><MdInfoOutline className="h-5 w-4" /></SLButton>
+        </div>
       </div>
       <ModalDialog
         isOpen={legendOpen}
