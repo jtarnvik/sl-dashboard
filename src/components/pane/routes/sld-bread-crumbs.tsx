@@ -39,26 +39,38 @@ function legHasDeviation(leg: Leg, deviationEnrichment: Map<string, BackendInter
   });
 }
 
+function LegItem({ item, deviationEnrichment }: { item: LegWithTransportation; deviationEnrichment: Map<string, BackendInterpretationResult> }) {
+  return (
+    <div className="flex items-center gap-1">
+      <LineTransportation transpo={item.transportation} />
+      {legHasDeviation(item.leg, deviationEnrichment) && (
+        <IoWarningOutline size={20} className="deviation-color mt-0.5" />
+      )}
+    </div>
+  );
+}
+
 export function SldBreadCrumbs({ legs, deviationEnrichment }: Props) {
   const items = convertLegsToProducts(legs);
+  const compact = items.length >= 4;
+  const collapse = items.length >= 5;
+
+  const visibleItems: (LegWithTransportation | 'ellipsis')[] = collapse
+    ? [items[0], items[1], 'ellipsis', items[items.length - 1]]
+    : items;
 
   return (
-    <div className="flex gap-2 items-center">
-      {items.map((item, index) => {
-        return (
-          <React.Fragment key={index}>
-            <div className="flex items-center gap-1">
-              <LineTransportation transpo={item.transportation} />
-              {legHasDeviation(item.leg, deviationEnrichment) && (
-                <IoWarningOutline size={20} className="deviation-color mt-0.5" />
-              )}
-            </div>
-            {index < items.length - 1 && (
-              <BreadCrumbChevron />
-            )}
-          </React.Fragment>
-        );
-      })}
+    <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'}`}>
+      {visibleItems.map((item, index) => (
+        <React.Fragment key={index}>
+          {item === 'ellipsis' ? (
+            <span className="text-gray-400 text-sm leading-none">…</span>
+          ) : (
+            <LegItem item={item} deviationEnrichment={deviationEnrichment} />
+          )}
+          {index < visibleItems.length - 1 && <BreadCrumbChevron />}
+        </React.Fragment>
+      ))}
     </div>
   );
 }
