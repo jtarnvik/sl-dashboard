@@ -199,21 +199,35 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE, The user screen is not aligned correctly in columns. Look in production.
-The allowed user screen is not aligned properly. I assume that the posistion of the date/role column and the operstions icon
-are dependent on the email width? Can you investigate the code and report your findings
+A - FE, Grouped departure board for stops with many departures. When a stop has a large number of departures the flat
+sorted list becomes hard to scan. Grouping by transport type and adding filter buttons solves this.
+
+A1 - FE, Introduce a `MAX_DEPARTURES_BEFORE_GROUPING` constant (start at 8) and group the departure board when the total
+number of departures exceeds it. Grouping and filtering behaviour:
+- When total departures > MAX_DEPARTURES_BEFORE_GROUPING, departures are grouped by transport type (BUS, METRO, TRAIN, TRAM, etc.).
+  Each group is sorted the same way as today (alphabetically by destination). All groups are shown in sequence with no visual
+  dividers between them — the transport icon difference is sufficient visual separation.
+- When at or below the threshold, the current flat sorted list is shown unchanged.
+- A row of filter icon-buttons is added to the bottom toolbar (same row as the existing Refresh and Symboler buttons, on the
+  LEFT side of that row). One button per transport type that has departures in the current result. The icon is the bare
+  `TransportationIconCommon` component with no colour overlay. `convertLineJourneyToTransportionMode()` is already available
+  to convert a `Line` to `TransportationMode`.
+- Filter buttons are only shown when grouping is active (i.e. total > MAX_DEPARTURES_BEFORE_GROUPING).
+- Pressing a filter button switches the board to show only that transport type's departures. The active button has a
+  highlighted/pressed visual state. Pressing the active button again deselects it and returns to the full grouped view.
+
+A2 - FE, Handle the case where a single transport type group itself exceeds MAX_DEPARTURES_BEFORE_GROUPING. Requirements
+to be refined when A1 is complete.
+
 
 B - FE/BE, More work, not broken down yet
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
-B2 - FE how to handle long list of departures- Make a better sorting of large departure boards. Group by type?
 B5 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
 B6 - FE, the deviation modal, make some kind of line between different deviations, the
 B7 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.
 B8 - Add a live scan line preview to the symboler modals, and an orange time and explain it is clickable and indicates a deviation.
 B9 - FE/BE, Add a max walk time setting. Currently hardcoded to 15 min after A4a. Add a user setting (stored in backend alongside
 stopPointId) so users can choose their preferred max walk time. Default 15 min. Exposed in the Settings dialog.
-B11 - Prova att routa til Norrvrå, lite många steg. Kanke byt ut mitten mot ...
-B14 -  Treat time selection as next day of time before now.
 B16 - Setting how to handle deviations. Now its specific stops on green and the complete buss line, and some specific places for trains. Do better.
 B17 - Add a "next trips" route to get more.
 B18 - Is there a SL walk speed api setting?
