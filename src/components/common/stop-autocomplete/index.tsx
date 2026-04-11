@@ -31,6 +31,7 @@ export function StopAutocomplete({ initialQuery = '', onSelect, onClear, compact
 
   const searchAbortRef = useRef<AbortController | undefined>(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -109,6 +110,7 @@ export function StopAutocomplete({ initialQuery = '', onSelect, onClear, compact
     setQuery('');
     setStopResults([]);
     onClear?.();
+    inputRef.current?.focus();
   }
 
   const inputClassName = compact
@@ -121,6 +123,7 @@ export function StopAutocomplete({ initialQuery = '', onSelect, onClear, compact
     <div className="relative flex-1">
       <Combobox onChange={(loc: StopFinderLocation | null) => { if (loc) { handleStopSelect(loc); } }}>
         <ComboboxInput
+          ref={inputRef}
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
           onFocus={() => setInputFocused(true)}
