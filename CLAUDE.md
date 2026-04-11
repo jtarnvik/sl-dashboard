@@ -199,24 +199,14 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE, Extract the autocomplete stop input into a reusable component shared between the Routes pane and the Settings dialog.
-The autocomplete was built as part of the Routes pane and is currently embedded there. The Settings dialog has its own simpler stop search.
-Sharing one component avoids duplicating debounce logic, abort handling, recent stops display, and styling.
-
-A1 - FE, Extract the stop autocomplete input from the Routes pane into a standalone component. It should encapsulate the query state,
-debounced SL API calls, abort-on-new-input, the recent stops dropdown, and the clear button. The Routes pane and the Settings dialog
-both use it, passing an `onSelect` callback. Recent stops are only shown when the user is logged in.
-The setting dialog also would loose the table to show the current search result. The save button logic would be simpler I think.
-The setting search button would also dissapear. The settings dialog edit boxx should be prefilled with the current selection and 
-the defualt  button could be located in thesame place as the search today. When pressedn it would fille the selection box. 
-
+A - FE, In the Journeys / Leg pane, in the "Gå till" section, add the destination. In the first leg of a route (which is usually a walk step)
+the destination is not shown. THe initial thought was that the destination is presented on the next line wo its of no use,
+but it has been pointed out that this is not the case. So I want the destionation to be shown for initial walk legs. Can you investigate the
+code in see if this means is trivial to accomplish or what it would entail to change
 
 B - FE/BE, More work, not broken down yet
-B-2 - F2, Handle the message "No routes, are you already there?" Remove the text field. Maybe a popup? Or remove?
-B0 - FE It the Journeys / Leg pane. In the "Gå till" Add the destination.
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
 B2 - FE how to handle long list of departures- Make a better sorting of large departure boards. Group by type?
-B4 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
 B5 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
 B6 - FE, the deviation modal, make some kind of line between different deviations, the
 B7 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.

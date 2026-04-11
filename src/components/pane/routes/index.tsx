@@ -1,4 +1,4 @@
-import {useContext, useEffect, useRef, useState} from "react";
+import {ReactNode, useContext, useEffect, useRef, useState} from "react";
 import classNames from "classnames";
 import {MdSearch} from "react-icons/md";
 import {URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
@@ -10,19 +10,16 @@ import {SldJourney} from "./sld-journey.tsx";
 import {convertInfoMessages} from "../../common/deviation-modal";
 import {BackendInterpretationResult, isValidDeviationText} from "../../../types/deviations-common.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
-import {Journey, StopFinderLocation, SystemMessage} from "../../../types/sl-journeyplaner-responses";
+import {Journey, StopFinderLocation, SystemMessage} from "../../../types/sl-journeyplaner-responses.ts";
 import ErrorContext from "../../../contexts/error-context.ts";
 
-type Location = {
-  latitude: number,
-  longitude: number,
-  accuracy: number, // in meters
-  altitude: number | null,
-  altitudeAccuracy: number | null,
-  heading: number | null,
-  speed: number | null,
-  timestamp: number | null
-};
+function ResultsPanel({ children }: { children: ReactNode }) {
+  return (
+    <div className="col-span-full row-start-2 px-4 pt-2 pb-1 bg-[#F1F2F3] border border-t-0 border-gray-200 rounded-b-lg rounded-tr-lg text-gray-800">
+      {children}
+    </div>
+  );
+}
 
 type Props = {
   settingsData: SettingsData
@@ -34,14 +31,8 @@ export function Routes({settingsData}: Props) {
   const route1Ref = useRef<HTMLDivElement>(null);
 
   const [journeys, setJourneys] = useState<Journey[] | undefined>(undefined);
-  const [, setSystemMessages] = useState<SystemMessage[] | undefined>(undefined);
   const [deviationEnrichment, setDeviationEnrichment] = useState<Map<string, BackendInterpretationResult>>(new Map());
   const [interpretationPending, setInterpretationPending] = useState(false);
-
-  const [, setLocation] = useState<Location | undefined>(undefined);
-  const [geoInfo, setGeoInfo] = useState<string | undefined>(undefined);
-  const [, setRoutePlanningInProgress] = useState<boolean>(false);
-  const [state, setState] = useState<string>("");
 
   const [timeMode, setTimeMode] = useState<'now' | 'dep' | 'arr'>('now');
   const [departureTime, setDepartureTime] = useState('');
@@ -119,48 +110,30 @@ export function Routes({settingsData}: Props) {
     function generateRoute(lat: number, long: number, maxInitialWalkTime: number) {
       const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, destination, maxInitialWalkTime, timeParam, timeType, dateParam);
       fetchAbortable<{journeys: Journey[], systemMessages: SystemMessage[]}>(url, latestRequest, (data) => {
-        setJourneys(data.journeys);
-        setSystemMessages(data.systemMessages);
-        if (data.journeys) {
-          processDeviationEnrichment(data.journeys);
-        } else {
-          setState("No routes, are you already there?")
+        const journeys = data.journeys ?? [];
+        setJourneys(journeys);
+        if (journeys.length > 0) {
+          processDeviationEnrichment(journeys);
         }
       }, setError);
     }
 
-    setRoutePlanningInProgress(true);
-    setLocation(undefined);
-    setGeoInfo(undefined);
     setJourneys(undefined);
-    setSystemMessages(undefined);
     setDeviationEnrichment(new Map());
 
     if (!navigator.geolocation) {
-      setGeoInfo('Geolocation is not supported by your browser');
-      setRoutePlanningInProgress(false);
+      setError('Geolocation is not supported by your browser');
       return;
     }
 
+    // position.coords also provides: accuracy (meters), altitude, altitudeAccuracy, heading, speed
+    // and position.timestamp — available for future use (e.g. map display, E - map support)
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLocation({
-          latitude: position.coords.latitude,    // 59,....
-          longitude: position.coords.longitude,  // 17,....
-          accuracy: position.coords.accuracy,    // in meters
-          altitude: position.coords.altitude,
-          altitudeAccuracy: position.coords.altitudeAccuracy,
-          heading: position.coords.heading,
-          speed: position.coords.speed,
-          timestamp: position.timestamp
-        });
-        setRoutePlanningInProgress(false);
         generateRoute(position.coords.latitude, position.coords.longitude, maxWalk);
       },
       (err) => {
-        setState("Error: " + err.message);
-        setRoutePlanningInProgress(false);
-        setGeoInfo(err.message);
+        setError(err.message);
       },
       {
         enableHighAccuracy: true,
@@ -174,10 +147,7 @@ export function Routes({settingsData}: Props) {
     setTimeMode(newMode);
     setDepartureTime('');
     setJourneys(undefined);
-    setSystemMessages(undefined);
     setDeviationEnrichment(new Map());
-    setState('');
-    setGeoInfo(undefined);
     if (newMode === 'now') {
       updateDepartures(15, selectedStopId ?? undefined, 'now', '');
     }
@@ -191,13 +161,11 @@ export function Routes({settingsData}: Props) {
   function handleClear() {
     setSelectedStopId(null);
     setJourneys(undefined);
-    setSystemMessages(undefined);
     setDeviationEnrichment(new Map());
-    setState('');
-    setGeoInfo(undefined);
   }
 
   const hasJourneys = !!journeys && journeys.length > 0;
+  const hasResultsPanel = journeys !== undefined;
 
   useEffect(() => {
     if (hasJourneys && route1Ref.current) {
@@ -213,7 +181,7 @@ export function Routes({settingsData}: Props) {
     <>
       <div ref={route1Ref} className={classNames(
         'col-start-1 row-start-1 px-4 py-1 bg-[#F1F2F3] border border-gray-200 shadow-sm text-gray-800',
-        hasJourneys ? 'rounded-t-lg border-b-0 relative z-10' : 'rounded-lg'
+        hasResultsPanel ? 'rounded-t-lg border-b-0 relative z-10' : 'rounded-lg'
       )}>
         <div className="text-gray-800 pt-1">Ta mig till</div>
         <div className="flex items-center gap-2 pb-1">
@@ -271,20 +239,23 @@ export function Routes({settingsData}: Props) {
             <MdSearch className="h-5 w-4" />
           </SLButton>
         </div>
-        {state && <div className="text-sm pb-1">{state}</div>}
-        {geoInfo && <div className="text-sm pb-1">{geoInfo}</div>}
-        {hasJourneys && (
+        {hasResultsPanel && (
           <div className="absolute -bottom-2 left-[-1px] right-[-1px] h-2 bg-[#F1F2F3] border-x border-gray-200" />
         )}
       </div>
+      {hasResultsPanel && !hasJourneys && (
+        <ResultsPanel>
+          <p className="text-sm text-gray-500 py-1">Inga reseförslag hittades — är du redan framme?</p>
+        </ResultsPanel>
+      )}
       {hasJourneys && (
-        <div className="col-span-full row-start-2 px-4 pt-2 pb-1 bg-[#F1F2F3] border border-t-0 border-gray-200 rounded-b-lg rounded-tr-lg text-gray-800">
+        <ResultsPanel>
           {journeys.map((journey, index) => (
             <div key={index}>
               <SldJourney journey={journey} deviationEnrichment={deviationEnrichment} interpretationPending={interpretationPending} />
             </div>
           ))}
-        </div>
+        </ResultsPanel>
       )}
     </>
   );
