@@ -199,13 +199,17 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE, Handle backend being unreachable gracefully.
-When the backend is down the not-logged-in departures view still works fine (SL APIs called directly from browser). The goal is to make
-this degraded state clear and unobtrusive: show a banner, hide the login button (which would fail anyway), and silently retry.
+A - FE, Extract the autocomplete stop input into a reusable component shared between the Routes pane and the Settings dialog.
+The autocomplete was built as part of the Routes pane and is currently embedded there. The Settings dialog has its own simpler stop search.
+Sharing one component avoids duplicating debounce logic, abort handling, recent stops display, and styling.
 
-A1 - FE, Add a yellow "offline" banner when the backend is unreachable. Hide the login button in this state.
-Retry the connection once per 30 secs and restore normal state if the backend comes back. THe red error banner should be
-hidden and not used in this state. Investigate how the code handles a unreachable backend and if this approach would work,
+A1 - FE, Extract the stop autocomplete input from the Routes pane into a standalone component. It should encapsulate the query state,
+debounced SL API calls, abort-on-new-input, the recent stops dropdown, and the clear button. The Routes pane and the Settings dialog
+both use it, passing an `onSelect` callback. Recent stops are only shown when the user is logged in.
+The setting dialog also would loose the table to show the current search result. The save button logic would be simpler I think.
+The setting search button would also dissapear. The settings dialog edit boxx should be prefilled with the current selection and 
+the defualt  button could be located in thesame place as the search today. When pressedn it would fille the selection box. 
+
 
 B - FE/BE, More work, not broken down yet
 B-2 - F2, Handle the message "No routes, are you already there?" Remove the text field. Maybe a popup? Or remove?
@@ -221,7 +225,6 @@ B9 - FE/BE, Add a max walk time setting. Currently hardcoded to 15 min after A4a
 stopPointId) so users can choose their preferred max walk time. Default 15 min. Exposed in the Settings dialog.
 B10 - The user screen is not align correctly in columns. Look in production
 B11 - Prova att routa til Norrvrå, lite många steg. Kanke byt ut mitten mot ...
-B12 - Use the Autocomplete stop selection box in the settings dialog as well. Create separate component to reuse.
 B14 -  Treat time selection as next day of time before now.
 B15 -  There is room for a thin grey line between the Now time and the journeys. Not all the way to the edge.
 B16 - Setting how to handle deviations. Now its specific stops on green and the complete buss line, and some specific places for trains. Do better.

@@ -17,7 +17,7 @@ export function SLButton({onClick, thin, children, disabled = false}: Props) {
 
   return (
     <Button
-      className={"rounded-sm bg-[#184fc2] text-sm text-white data-hover:bg-[#578ff3] data-active:bg-[#578ff3] focus:outline-hidden " + buttonSizing}
+      className={"rounded-sm bg-[#184fc2] text-sm text-white data-hover:bg-[#578ff3] data-active:bg-[#578ff3] data-disabled:opacity-40 data-disabled:cursor-not-allowed focus:outline-hidden " + buttonSizing}
       onClick={onClick}
       disabled={disabled}
     >
