@@ -165,6 +165,7 @@ Custom events dispatched on `window` are used for cross-tree communication betwe
 | `"openSettings"` | `NavMenu` (Inställningar menu item) | `Layout` | Opens the settings modal |
 | `"deviationHidden"` | `deviation-modal/index.tsx` (after successful hide) | `Departures`, `Deviations`, `Routes` panes | Removes the hidden deviation (by `detail.id`) from each pane's local state |
 | `"hiddenDeviationsReset"` | `MyAccount` (after successful clear-all) | `Main` | Increments `departuresGen` and `deviationsGen` to force remount and re-fetch of both panes |
+| `"backendOffline"` | `backend.ts` (Axios response interceptor) | `App.tsx` | Sets `backendOffline = true` and clears `user` when any API call gets no response (network failure). Triggers the yellow offline banner and reverts UI to the not-logged-in view. A 30s retry loop restores state when the backend comes back. |
 
 ### Component conventions
 
@@ -198,94 +199,19 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE/BE, Improve GUI for trips and deviations.
-The current layout stacks Routes and Deviations vertically, which wastes horizontal space on wider screens and buries deviations below the
-(potentially long) routes pane. The goal is a side-by-side layout with the Routes pane forming an L-shape when expanded, keeping routes
-and deviations simultaneously visible. The Routes controls section will also be redesigned: a simple one-click "Ta mig hem" (15 min walk),
-plus a more flexible form for specifying a custom destination and departure time (default "now"). The expanded journey cards remain
-largely unchanged initially.
+A - FE, Handle backend being unreachable gracefully.
+When the backend is down the not-logged-in departures view still works fine (SL APIs called directly from browser). The goal is to make
+this degraded state clear and unobtrusive: show a banner, hide the login button (which would fail anyway), and silently retry.
 
-Side-by-side layout for Routes and Deviations with L-shape expansion and redesigned Routes controls.
-
-Layout: on mobile, stacked layout unchanged. On md+ (≥ 768px), Routes and Deviations appear side-by-side (Routes ~70% left, Deviations ~30%
-right). When journeys are fetched, the Routes area expands downward to full width forming an L-shape — header left + full-width journey cards
-below — styled as ONE continuous pane (single card background throughout the L). Deviations stays in the upper-right as its own distinct card.
-
-Controls redesign (general intent, to be detailed in sub-steps):
-- A simple "Ta mig hem" button (15 min walk time) — one click, no configuration.
-- A more flexible form for specifying a custom destination stop and departure time (default "now").
-  These replace the current "Ta mig hem / 15 min / 60 min" control layout.
-
-Journey cards: no changes initially.
-
-A1 - DONE - FE, replace the Symbols button in the Deviaions pane with a icon button. Select the circle icon with an 'i' centered
-from the same icon package we use the warning icon from.
-
-A2 - DONE - FE, Reorganize the deviations pane as a horisontal stack with 3 icons the the re-made info button from A1.
-
-A3 - DONE - FE, L-shaped layout. Routes controls (Route 1) and Deviations side by side. When journeys load, Route 2 expands below at
-full width, visually connected to Route 1 via shared background and bridged borders. Implemented using CSS Grid with an absolutely
-positioned bridge element.
-
-A4 - FE, Redesign the Route 1 controls area. Two-line layout: line 1 has a "Hem" button and an autocomplete stop input;
-line 2 has a time selector (NOW default vs specific future time). Origin is always geolocation. Max walk time is fixed at 15 min
-(the 60 min button is dropped; a future setting B9 will make it configurable). The 60 min button is removed in A4a.
-
-A4a - DONE - FE, Replace current Route 1 controls with the two-line shell layout. Line 1: "Hem" button (triggers route with geolocation +
-15 min walk to the settings stop) + a disabled placeholder input for the autocomplete stop. Line 2: two radio buttons — "Nu" (default,
-selected) and a time input (disabled for now). Wire "Hem" to the existing `updateDepartures(15)` call. Drop the 60 min button.
-No autocomplete or time logic yet — those come in A4b and A4c.
-
-A4b - DONE - FE, Implement autocomplete for the stop input in Route 1. Use the `Combobox` component from `@headlessui/react` (already
-installed) — it handles keyboard navigation, ARIA roles, and open/close state; styled with Tailwind to match the rest of the UI.
-After 3+ characters are typed, query `URL_GET_STOP_POINT` with debouncing (300 ms) and abort-on-new-input. Show a dropdown of
-matching stop names. Selecting a stop immediately triggers `updateDepartures(15)` toward that stop instead of
-`settingsData.stopPointId` — no extra button needed, selection is the intent signal. A clear button resets the input and
-restores the default "Hem" state (so the next "Hem" click goes back to the settings stop).
-   
-A4c - DONE - FE - Adjust the route  selection logic.
-- The time selection and start of the search are slightly unintuitive. Lets make a specific search button to the right of the time selector.
-The button should be just an icon  to fit. We should now have only three ways to start a route search
-  x The "Hem" button
-  x The new search button (only enabled when arrive/departure time is selected)
-  x When a station is searched for in the dropdown
-- Switchingtime mode clears the time selector and clears the routes if there has been a previous search.
-- If a time before now is selected in the time selector that time is assumed to be tomorrow and tomorrows date shall be passed to the API
-- The calc_in_direction parameter shal only be false (ie include on tripe before time) when the time selector is set to departure, nor wor arrival.
-
-
-A4d - DONE - FE, Implement the time selector in Route 1 line 2. "Nu" radio is default and passes no time param to the API (current behaviour).
-The second radio reveals a native `<input type="time">` (HH:MM) — no library needed, works well on mobile. When a future time is
-selected, pass it to `URL_GET_TRAVEL_COORD_TO_v2` via the `itd_time` / `itd_trip_date_time_dep_arr` params (already in constant.ts
-as commented-out placeholders). Only future times on today's date are supported for now.
-   
-A5 - DONE - FE/BE, Store and display the last 5 autocomplete stop selections per user as recent stops ("favourites").
-Allows quick re-use of frequently searched stops without retyping.
-
-Storage: add a nullable `recent_stops` TEXT/JSON column to the existing `user_settings` table (Liquibase changeset 022).
-Stored as a JSON array of `{stopPointId, stopPointName}` objects, max 5 entries, always read and written as a whole unit.
-
-BE changes:
-- Include `recentStops` array in the existing `GET /api/auth/me` settings response (already the source of truth for settings on load).
-- New `POST /api/protected/settings/recent-stops` — body `{stopPointId, stopPointName}`. Service prepends the entry,
-  removes any existing duplicate with the same stopPointId, then trims to max 5. Returns the updated list.
-- New `DELETE /api/protected/settings/recent-stops` — clears the list. Returns 204.
-
-FE changes:
-- When the autocomplete input is focused with fewer than 3 characters typed AND the user has recent stops: show a dropdown
-  with the recent stops as selectable options, followed by a `<hr>` divider, followed by a "Rensa" item.
-- Selecting a recent stop triggers a route search immediately (same as a normal autocomplete selection) and calls
-  `POST /api/protected/settings/recent-stops` to move it to the top of the list.
-- Selecting a stop from the normal autocomplete (≥3 chars) also calls `POST /api/protected/settings/recent-stops`.
-- Clicking "Rensa" calls `DELETE /api/protected/settings/recent-stops` and clears recent stops from local state.
-- Recent stops are loaded from the `recentStops` field already returned by `GET /api/auth/me` on login — no extra fetch needed.
+A1 - FE, Add a yellow "offline" banner when the backend is unreachable. Hide the login button in this state.
+Retry the connection once per 30 secs and restore normal state if the backend comes back. THe red error banner should be
+hidden and not used in this state. Investigate how the code handles a unreachable backend and if this approach would work,
 
 B - FE/BE, More work, not broken down yet
 B-2 - F2, Handle the message "No routes, are you already there?" Remove the text field. Maybe a popup? Or remove?
 B0 - FE It the Journeys / Leg pane. In the "Gå till" Add the destination.
 B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
-B2 - FE how to handle long list of departures
-B3 - Make a better sorting of large departure boards. Group by type?
+B2 - FE how to handle long list of departures- Make a better sorting of large departure boards. Group by type?
 B4 - FE, the installingar dlg is a bit awkward, type sundbyb, select search, click list, clisk spara.
 B5 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
 B6 - FE, the deviation modal, make some kind of line between different deviations, the

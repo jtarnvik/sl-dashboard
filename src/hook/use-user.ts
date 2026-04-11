@@ -6,10 +6,14 @@ export enum UserLoginState {
   Loading = 'loading',
   NotLoggedIn = 'not_logged_in',
   LoggedIn = 'logged_in',
+  BackendOffline = 'backend_offline',
 }
 
 export function useUserLoginState(): UserLoginState {
-  const { user } = useContext(UserContext);
+  const { user, backendOffline } = useContext(UserContext);
+  if (backendOffline) {
+    return UserLoginState.BackendOffline;
+  }
   if (user === undefined) {
     return UserLoginState.Loading;
   }

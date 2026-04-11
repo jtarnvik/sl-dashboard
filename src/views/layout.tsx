@@ -4,6 +4,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 import { ErrorBoundryFallback } from '../components/error-boundry-fallback';
 import { Navbar } from '../components/navbar';
+import { OfflineBanner } from '../components/offline-banner';
 import { Settings } from '../components/settings';
 import { saveSettings } from '../communication/backend.ts';
 import ErrorContext from '../contexts/error-context.ts';
@@ -20,6 +21,7 @@ export function Layout() {
   const [inDebugMode, setInDebugMode] = useState(false);
 
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
+  const isOffline = loginState === UserLoginState.BackendOffline;
 
   const settingsData: SettingsData = isLoggedIn && user?.settings
     ? {
@@ -46,6 +48,11 @@ export function Layout() {
     <InDebugModeContext.Provider value={{ inDebugMode, setInDebugMode }}>
       <Navbar />
       <div className="h-14" />
+      {isOffline && (
+        <div className="px-2 pt-2 mb-2">
+          <OfflineBanner />
+        </div>
+      )}
       <ErrorBoundary FallbackComponent={ErrorBoundryFallback}>
         <Outlet />
       </ErrorBoundary>

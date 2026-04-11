@@ -34,8 +34,11 @@ const router = createHashRouter([
   { path: '/denied', element: <Denied /> },
 ]);
 
+const BACKEND_RETRY_INTERVAL_MS = 30000;
+
 function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [backendOffline, setBackendOffline] = useState(false);
   const [error, setErrorMsg] = useState<string>("");
   const [retry, setRetry] = useState<(() => void) | null>(null);
   const [heading, setHeading] = useState('');
@@ -57,21 +60,52 @@ function App() {
 
   useEffect(() => {
     const handleUnauthorized = () => setUser(null);
-    window.addEventListener("unauthorized", handleUnauthorized);
+    const handleBackendOffline = () => {
+      setBackendOffline(true);
+      setUser(null);
+    };
 
-    checkLoginStatus(setError).then(user => {
-      if (user?.settings) {
-        saveStopHint(user.settings);
+    window.addEventListener("unauthorized", handleUnauthorized);
+    window.addEventListener("backendOffline", handleBackendOffline);
+
+    checkLoginStatus().then(({ user, offline }) => {
+      if (offline) {
+        setBackendOffline(true);
+        setUser(null);
+      } else {
+        if (user?.settings) {
+          saveStopHint(user.settings);
+        }
+        setUser(user);
       }
-      setUser(user);
     });
 
-    return () => window.removeEventListener("unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("unauthorized", handleUnauthorized);
+      window.removeEventListener("backendOffline", handleBackendOffline);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!backendOffline) {
+      return;
+    }
+    const interval = setInterval(async () => {
+      const { user, offline } = await checkLoginStatus();
+      if (!offline) {
+        setBackendOffline(false);
+        if (user?.settings) {
+          saveStopHint(user.settings);
+        }
+        setUser(user);
+      }
+    }, BACKEND_RETRY_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [backendOffline]);
 
   return (
     <ErrorContext.Provider value={{ error, retry, setError }}>
-      <UserContext.Provider value={{ user, login, logout: handleLogout, updateSettings }}>
+      <UserContext.Provider value={{ user, backendOffline, login, logout: handleLogout, updateSettings }}>
         <PageTitleContext.Provider value={{ heading, setHeading }}>
           <RouterProvider router={router} />
         </PageTitleContext.Provider>

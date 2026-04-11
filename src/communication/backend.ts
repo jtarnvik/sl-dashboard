@@ -35,6 +35,8 @@ backend.interceptors.response.use(
   error => {
     if (error.response?.status === 401) {
       window.dispatchEvent(new Event("unauthorized"));
+    } else if (!error.response) {
+      window.dispatchEvent(new Event("backendOffline"));
     }
     return Promise.reject(error);
   }
@@ -44,16 +46,15 @@ export default backend;
 
 type SetError = (message: string, retry?: () => void) => void;
 
-export async function checkLoginStatus(setError: SetError): Promise<User | null> {
+export async function checkLoginStatus(): Promise<{ user: User | null; offline: boolean }> {
   try {
     const response = await backend.get<User>(URL_BACKEND_GET_CHECK_AUTH);
-    return response.data;
+    return { user: response.data, offline: false };
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      return null;
+      return { user: null, offline: false };
     }
-    setError("Kunde inte kontrollera inloggningsstatus.");
-    return null;
+    return { user: null, offline: true };
   }
 }
 

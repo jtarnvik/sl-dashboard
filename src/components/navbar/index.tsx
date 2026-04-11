@@ -15,6 +15,7 @@ export function Navbar() {
 
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
   const isLoading = loginState === UserLoginState.Loading;
+  const isOffline = loginState === UserLoginState.BackendOffline;
   const isAdmin = user?.role === 'ADMIN';
 
   return (
@@ -33,7 +34,7 @@ export function Navbar() {
           <NavMenu logout={logout} isAdmin={isAdmin} />
         ) : isLoading ? (
           <div className="w-6 h-6 rounded-full border-2 border-white border-t-transparent animate-spin" />
-        ) : (
+        ) : isOffline ? null : (
           <SLButton onClick={login}>
             Logga in
           </SLButton>
