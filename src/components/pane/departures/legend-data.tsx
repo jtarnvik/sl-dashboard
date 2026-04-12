@@ -1,5 +1,6 @@
 import {LineJourney} from "../../common/line";
 import {Destination} from "./destination.tsx";
+import {ScanningUnderline} from "../../common/scanning-underline";
 
 export const symbols: { symbol: React.ReactNode; legend: React.ReactNode; }[] = [
   {
@@ -28,6 +29,21 @@ export const symbols: { symbol: React.ReactNode; legend: React.ReactNode; }[] = 
     legend: <div>Vid avgångsstation</div>
   },
 ];
+export const scanLegend: { symbol: React.ReactNode; legend: React.ReactNode }[] = [
+  {
+    symbol: (
+      <ScanningUnderline active={true}>
+        <span>08:12</span>
+      </ScanningUnderline>
+    ),
+    legend: <div>Möjliga avvikelser finns, tolkning pågår</div>,
+  },
+  {
+    symbol: <span className="deviation-info">08:12</span>,
+    legend: <div>Klicka för att se avvikelser</div>,
+  },
+];
+
 export const destinations: { symbol: React.ReactNode; legend: React.ReactNode; }[] = [
   {
     symbol: <Destination journey={{id: 177, state: "EXPECTED"}} destination="Brommaplan" />,

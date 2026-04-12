@@ -1,4 +1,5 @@
 import {TransportationIconCommon, TransportationMode} from "../../common/line";
+import {ScanningUnderline} from "../../common/scanning-underline";
 
 const iconClass = "w-[24px] h-[24px] p-[3px] rounded-sm text-white";
 const ORANGE = "#F97316";
@@ -15,6 +16,17 @@ export const normalIcons: { symbol: React.ReactNode; legend: React.ReactNode }[]
   {
     symbol: <TransportationIconCommon mode={TransportationMode.BUS} className={iconClass} inlineStyle={{backgroundColor: "#000000"}} />,
     legend: <div>Buss, hanterar linje 117</div>,
+  },
+];
+
+export const scanLegend: { symbol: React.ReactNode; legend: React.ReactNode }[] = [
+  {
+    symbol: (
+      <ScanningUnderline active={true} lineOffset={3}>
+        <TransportationIconCommon mode={TransportationMode.BUS} className="w-[24px] h-[24px] p-[3px] rounded-sm text-white" inlineStyle={{backgroundColor: "#000000"}} />
+      </ScanningUnderline>
+    ),
+    legend: <div>Möjliga avvikelser finns, tolkning pågår</div>,
   },
 ];
 

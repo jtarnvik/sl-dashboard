@@ -22,7 +22,7 @@ import { Legend } from '../departures/legend.tsx';
 import { AbortControllerState } from '../../../types/communication.ts';
 import { Deviation } from '../../../types/deviations.ts';
 import { EnrichedDeviation, enrichDeviations, isShown, isValidDeviationText } from '../../../types/deviations-common.ts';
-import { deviationIcons, normalIcons } from './legend-data.tsx';
+import { deviationIcons, normalIcons, scanLegend } from './legend-data.tsx';
 import ErrorContext from '../../../contexts/error-context.ts';
 
 /**
@@ -158,6 +158,7 @@ export function Deviations() {
       </div>
       <ModalDialog isOpen={legendOpen} onClose={() => setLegendOpen(false)} title="Symboler" scrollable={false}>
         <Legend legendData={normalIcons} title="Normalt läge" />
+        <Legend legendData={scanLegend} title="AI-tolkning" />
         <Legend legendData={deviationIcons} title="Avvikelser finns" />
       </ModalDialog>
       <DeviationModal

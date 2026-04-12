@@ -199,43 +199,10 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A - FE, Grouped departure board for stops with many departures. When a stop has a large number of departures the flat
-sorted list becomes hard to scan. Grouping by transport type and adding filter buttons solves this.
-
-A1 - FE, Introduce a `MAX_DEPARTURES_BEFORE_GROUPING` constant (start at 8) and group the departure board when the total
-number of departures exceeds it. Grouping and filtering behaviour:
-- When total departures > MAX_DEPARTURES_BEFORE_GROUPING, departures are grouped by transport type (BUS, METRO, TRAIN, TRAM, etc.).
-  Each group is sorted the same way as today (alphabetically by destination). All groups are shown in sequence with no visual
-  dividers between them — the transport icon difference is sufficient visual separation.
-- When at or below the threshold, the current flat sorted list is shown unchanged.
-- A row of filter icon-buttons is added to the bottom toolbar (same row as the existing Refresh and Symboler buttons, on the
-  LEFT side of that row). One button per transport type that has departures in the current result. The icon is the bare
-  `TransportationIconCommon` component with no colour overlay. `convertLineJourneyToTransportionMode()` is already available
-  to convert a `Line` to `TransportationMode`.
-- Filter buttons are only shown when grouping is active (i.e. total > MAX_DEPARTURES_BEFORE_GROUPING).
-- Pressing a filter button switches the board to show only that transport type's departures. The active button has a
-  highlighted/pressed visual state. Pressing the active button again deselects it and returns to the full grouped view.
-
-A2 - FE, Handle the case where a single transport type group itself exceeds MAX_DEPARTURES_BEFORE_GROUPING. Requirements
-to be refined when A1 is complete.
-
+A
 
 B - FE/BE, More work, not broken down yet
-B1 - FE Examine how deviations work for buses, Do I handle lines correctly?
-B5 - FE, How to handle filter by routes and stops. Should this be moved to backend, especialy if w have some kind of schedule based be handling
-B6 - FE, the deviation modal, make some kind of line between different deviations, the
-B7 - FE, Tooltip on the divaiations modal that shows importance och info/delay/cancel info.
 B8 - Add a live scan line preview to the symboler modals, and an orange time and explain it is clickable and indicates a deviation.
-B9 - FE/BE, Add a max walk time setting. Currently hardcoded to 15 min after A4a. Add a user setting (stored in backend alongside
-stopPointId) so users can choose their preferred max walk time. Default 15 min. Exposed in the Settings dialog.
-B16 - Setting how to handle deviations. Now its specific stops on green and the complete buss line, and some specific places for trains. Do better.
-B17 - Add a "next trips" route to get more.
-B18 - Is there a SL walk speed api setting?
-
-C - Bulletin board
-
-D - Preload deviations
-D1 - Add a periodical check for new deviations to BE to speed up future use
 
 E - FE/BE, Map support for trips and online maps for moving buses.
 
@@ -247,6 +214,17 @@ Ideas that are not currently needed but should be remembered if the need arises.
 Cache backend interpretation results in a `Map<string, BackendInterpretationResult>` keyed by deviation text for the lifetime of the page session. On each SL refresh cycle, check the cache before sending texts to the backend — only send uncached texts, then merge cached and fresh results before enrichment.
 
 Deferred because the backend already caches by SHA-256 hash, so repeated calls skip the Claude API and are just a fast DB lookup. Add only if round-trip latency to the backend becomes noticeable.
+
+### Show more routes
+The SL Journey Planner API caps `calc_number_of_trips` at 3 — passing a higher value is silently ignored. A "Visa fler" button
+cannot simply request more results in one call.
+
+Proposed workaround: when the user clicks "Visa fler", take the departure time of the last shown journey, add one minute, and
+issue a second request using that time as the `itd_time` departure anchor. Merge the new results with the existing list,
+deduplicating by journey ID. This would fetch trips starting just after the last known departure, effectively extending the list.
+
+Not implemented because the user experience would be imperfect (slight overlap risk, no guarantee of continuity) and the gain
+over the 3-trip default is modest for the typical use case.
 
 ### Deviation context in AI prompt
 Short departure-level deviation texts (e.g. "Inställd", "Försenad") are handled by the hardcoded map in the backend.
@@ -262,6 +240,17 @@ entry. The context is extra prompt enrichment only, not a cache discriminator.
 Implementation sketch: pass a nullable context string alongside each deviation text to the backend; the service
 appends it to the Claude prompt but excludes it from sha256(). The FE would derive context from the source
 (departure line/stop info for the departures pane, journey leg info for the routes pane).
+
+### Improve how deviations are handled
+Currently trains use a specific list of focus stops, buses use no stop
+filtering, and metro uses a specific list. Evaluate whether this is correct and improve the approach.
+Should we have a line selection in the settings dialog which are used when fetching info for the deviations pane?
+
+### Minor improvments
+- Max walk time - Add a "max walk time" setting in the settings dialog.
+- Bulltin board - With news?
+- Should we preload deviations and pre parse them with AI. If this is done every 60 min most of the deviations will be cached?
+  But if the APIs are quick enough, its proably not worth it.
 
 ## Issues
 

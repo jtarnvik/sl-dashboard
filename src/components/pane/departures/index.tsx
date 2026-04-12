@@ -18,7 +18,7 @@ import {Departure, SlDeparturesResponse, TransportMode} from "../../../types/sl-
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
 import {sortDeparturesByDestination} from "../../../util/sorters.ts";
 import {Destination} from "./destination.tsx";
-import {destinations, symbols} from "./legend-data.tsx";
+import {destinations, scanLegend, symbols} from "./legend-data.tsx";
 import {Legend} from "./legend.tsx";
 import "./index.css";
 import ErrorContext from "../../../contexts/error-context.ts";
@@ -340,8 +340,9 @@ export function Departures({stopPoint16Chars}: Props) {
         onClose={() => setLegendOpen(false)}
         title={"Symboler"}
       >
-        <Legend legendData={symbols} title="Linjesymbol"  />
+        <Legend legendData={symbols} title="Linjesymbol" />
         <Legend legendData={destinations} title="Destination" />
+        <Legend legendData={scanLegend} title="Avvikelser" />
       </ModalDialog>
       <ModalDialog
         isOpen={jsonOpen}
