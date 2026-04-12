@@ -112,17 +112,19 @@ function getDeviationIcon(deviation: EnrichedDeviation) {
 type DeviationRowProps = {
   enriched: EnrichedDeviation;
   onHide?: (id: number) => void;
+  showDivider?: boolean;
 };
 
-function DeviationRow({ enriched, onHide }: DeviationRowProps) {
+function DeviationRow({ enriched, onHide, showDivider }: DeviationRowProps) {
   const [expanded, setExpanded] = useState(false);
   const hasExpandable = Boolean(enriched.shortMessage && enriched.message);
   const canHide = onHide !== undefined && enriched.id !== null;
+  const dividerClass = showDivider ? 'border-t border-gray-200 pt-2' : '';
 
   return (
     <tr>
-      <td className="align-top">{getDeviationIcon(enriched)}</td>
-      <td className="align-top">
+      <td className={`align-top ${dividerClass}`}>{getDeviationIcon(enriched)}</td>
+      <td className={`align-top ${dividerClass}`}>
         {enriched.heading && <div className="font-semibold">{enriched.heading}</div>}
         {hasExpandable ? (
           <>
@@ -208,7 +210,7 @@ export function DeviationModal({ onClose, open, deviations }: Props) {
       <table className="border-separate border-spacing-y-2">
         <tbody>
         {sortedDeviations.map((deviationInfo, index) => (
-          <DeviationRow key={index} enriched={deviationInfo} onHide={onHide} />
+          <DeviationRow key={index} enriched={deviationInfo} onHide={onHide} showDivider={index > 0} />
         ))}
         </tbody>
       </table>

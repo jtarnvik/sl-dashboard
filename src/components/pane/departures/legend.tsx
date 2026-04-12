@@ -21,8 +21,8 @@ export function Legend({legendData, title, useColumns}: PropsLegend) {
       <p className="font-semibold">{title}</p>
       <div className={columnStyling}>
         {legendData.map((itm, index) =>
-          <div className="flex items-center space-x-2 mt-1" key={index}>
-            {itm.symbol}
+          <div className="flex items-start space-x-2 mt-1" key={index}>
+            <div className="shrink-0">{itm.symbol}</div>
             {itm.legend}
           </div>
         )}
