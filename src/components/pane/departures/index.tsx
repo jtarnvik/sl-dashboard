@@ -23,7 +23,7 @@ import {Legend} from "./legend.tsx";
 import "./index.css";
 import ErrorContext from "../../../contexts/error-context.ts";
 
-const MAX_DEPARTURES_BEFORE_GROUPING = 12;
+const MAX_DEPARTURES_BEFORE_GROUPING = 16;
 
 function transportModeToIconMode(mode: TransportMode): TransportationMode {
   switch (mode) {
