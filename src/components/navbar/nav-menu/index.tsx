@@ -91,6 +91,12 @@ export function NavMenu({ logout, isAdmin }: Props) {
               >
                 Statistik
               </button>
+              <button
+                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
+                onClick={() => { navigate('/admin/gtfs-poc'); setMenuOpen(false); }}
+              >
+                GTFS POC
+              </button>
               <hr className="border-gray-200" />
             </>
           )}

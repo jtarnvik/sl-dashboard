@@ -199,12 +199,167 @@ that are not obvious from the code. Capture this at the block level (the `X - ..
 two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
 "why" notes when rewriting step details.
 
-A
+A - FE/BE, Live vehicle map. Three distinct map views, each serving a different use case. All share the same
+backend GTFS data pipeline but differ in what they display and how. Steps are intentionally small — get the
+data pipeline working first (A1–A2), then implement the views one at a time.
 
-B - FE/BE, More work, not broken down yet
-B8 - Add a live scan line preview to the symboler modals, and an orange time and explain it is clickable and indicates a deviation.
+### Goals
 
-E - FE/BE, Map support for trips and online maps for moving buses.
+**A-Goal-1: Route map for journey planner**
+Show the suggested routes from the route planner pane on a map — both the complete suggested route and each
+individual leg. The data is already in the journey planner API response (coordinates per leg), so no GTFS
+realtime data is needed. No map library exists yet in the frontend — choosing and integrating one is part of
+this goal.
+
+**A-Goal-2: Schematic train map**
+A schematic (not geographically accurate) map of the monitored commuter train lines (43, 44) showing
+approximately where each train is, which station it is at or between, and its probable arrival time at the
+next station. Scale and exact position are not important — the station sequence and relative position between
+stations is what matters. Metro lines (17, 18, 19) are excluded — they run frequently enough that tracking
+individual vehicles is not useful. Data sources: GTFS-RT vehicle positions + static stops/trips for station
+names and sequence.
+
+**A-Goal-3: Bus tracking with push notification**
+A schematic map of bus line 117 showing each stop in sequence and the current position of the bus. The primary
+use case is knowing when to leave for the bus stop (6 minutes walk). The user can mark a specific bus as the
+one they intend to catch, and the backend sends a push notification when that bus passes a designated trigger
+stop. All the required data appears to be available (GTFS-RT positions, static stop sequences, Pushover for
+notifications — already integrated). This is the most complex goal but the most personally useful.
+
+### Architecture decisions captured so far
+
+**Data sources (Samtrafiken API, key-based)**
+- Static GTFS: `https://opendata.samtrafiken.se/gtfs/sl/sl.zip` — published daily 03:00–07:00, contains routes,
+  trips, stops, shapes. Bronze: 50 calls/month — DB cache is essential. Silver upgrade requested.
+- Realtime GTFS-RT: `https://opendata.samtrafiken.se/gtfs-rt/sl/VehiclePositions.pb` — live vehicle positions.
+  Bronze: 50 calls/minute, 30,000 calls/month. Requires `Accept-Encoding: gzip` header or the API returns 406.
+
+**Realtime rate limit analysis (Bronze: 50/min, 30,000/month)**
+30,000/month ≈ 1,000/day ≈ one upstream call every 86 seconds if spread evenly around the clock. This is enough
+for normal use but not for aggressive continuous polling by multiple clients.
+
+The backend caches the vehicle position response for ~15 seconds. With this cache, 10 simultaneous clients all
+polling every 15 seconds generate only 4 upstream calls/minute — well within the 50/minute rate limit and
+conservative on monthly budget.
+
+Main risk: a client leaving the map view open overnight. Mitigation: pause polling when the browser tab is
+hidden. The `useVisibility` hook already exists in the codebase (`src/hook/use-visibility.ts`) and is used by
+the departures pane for exactly this purpose — reuse it in the map view.
+
+**Static GTFS loading strategy**
+- DB is the durable cache; `/tmp` is the working area for parsing. See A1 for full detail.
+- Relevant files: `routes.txt` (line names/types), `trips.txt` (trip→route join), `stops.txt` (stop names/coords),
+  `shapes.txt` (route polylines for map). Skip `stop_times.txt` (143 MB, not needed for vehicle tracking).
+- Key lookup chain from realtime feed: `trip_id` → `trips.txt` → `route_id` → `routes.txt` → `route_long_name`.
+- `trip_id` values are stable across days. What varies daily is which trips are active, controlled by
+  `calendar_dates.txt` (actual service dates — `calendar.txt` is validity periods only).
+
+**Vehicle position polling strategy**
+- Backend does NOT poll continuously. Instead, it fetches and caches positions with a short TTL (~15 seconds)
+  and only on client request. If no clients are active, nothing polls. This avoids burning API quota overnight
+  and fits within the Render free tier's 0.1 CPU allocation.
+- Frontend requests positions only when the map view is active.
+
+**Render free tier constraints**
+- 512 MB RAM, 0.1 CPU (shared), no persistent disk, one server running 24/7 within monthly free hours.
+- UptimeRobot pings `/ping` every 5 min to prevent the 15-minute inactivity sleep.
+- In-memory static GTFS for 6 lines is a small fraction of the raw file sizes and fits comfortably in 512 MB.
+
+**Backup hosting: home server (Mac Mini or Raspberry Pi 5)**
+If Render's constraints (CPU, API quota, cold starts) become too limiting, self-hosting at home is a planned
+alternative. A Mac Mini is the pragmatic choice — more capable hardware, straightforward Java/Spring Boot
+deployment, and Time Machine backups. A Raspberry Pi 5 is the more fun tinkering option. Either way the
+architecture is identical: same Spring Boot app, local PostgreSQL replaces Supabase, persistent disk makes
+the GTFS zip cacheable indefinitely. Tradeoffs vs Render: depends on home network reliability and requires
+a DDNS service for a stable external address.
+
+A0 - ME, Draw a GTFS entity relationship diagram before implementing A1. Key entities and relationships:
+`routes` → `trips` → `trip_id` (the bridge to the realtime feed) → `vehicle positions`. Hanging off the side:
+`stops` (referenced by stop_times and vehicle current stop), `calendar_dates` (which service_ids run today).
+This diagram will clarify the join chain needed for all three map goals before writing any code.
+
+A1 - BE, Parse and cache static GTFS data on startup. Download `sl.zip` from Samtrafiken and parse it using
+`ZipInputStream` to avoid holding the full file in memory — stream CSV rows one at a time, keep only what
+matches the monitored lines, discard the rest.
+
+The zip entry order (verified) is: `trips.txt`, `calendar_dates.txt`, `stop_times.txt`, `calendar.txt`,
+`attributions.txt`, `transfers.txt`, `routes.txt`, `stops.txt`, `feed_info.txt`, `agency.txt`, `shapes.txt`.
+`trips.txt` comes before `routes.txt`, so a single forward pass cannot filter trips by route — the route ID
+set isn't known yet when trips.txt is encountered.
+
+**Download and parse strategy**
+When a fresh download is needed, download `sl.zip` to `/tmp` and unzip it there. Reading individual unzipped
+files means they can be opened in any order — the two-pass ZipInputStream problem disappears entirely. Parse
+order: `routes.txt` first to build the `route_id` set, then `trips.txt`, `stops.txt`, `shapes.txt`. Once
+parsed, serialize the filtered in-memory maps to JSON and store in the DB. The `/tmp` files are then
+disposable — they are just a working area for the one-time parse, not a durable cache.
+
+**Caching strategy — DB is the durable cache, /tmp is the working area**
+Do NOT store the raw zip in the database — at 51 MB it would consume 10% of Supabase's free 500 MB quota
+and risk hitting Supavisor transaction size limits. Store only the parsed/filtered JSON (a few MB for 6 lines).
+
+Samtrafiken publishes a new static zip **daily**, typically between 03:00–07:00 (confirmed from API docs).
+The Bronze API key (50 calls/month) allows barely 1.6 downloads/day with no margin for restarts — the DB
+cache is therefore essential, not optional. A Silver/Gold key upgrade has been requested.
+
+Use a configurable TTL (application property, default 23 hours) leaving ~19 calls/month as buffer for restarts.
+Store `feed_version` (the publish date from `feed_info.txt`) in the DB row for observability.
+
+Startup sequence:
+1. Check the DB for a cached GTFS payload. If present and within TTL, deserialize directly into the in-memory
+   maps — no download needed. Log the loaded `feed_version`. Restarts and redeploys are free.
+2. If missing or stale, download `sl.zip` to `/tmp`, unzip, parse the relevant files, build the in-memory
+   maps, serialize to JSON, upsert the DB row (including `feed_version` and `downloaded_at`), then serve
+   from memory. The `/tmp` files can be left for the OS to clean up.
+
+The same sequence works identically in local development — the local MySQL DB acts as the cache, so quota
+is only consumed once per day locally as well.
+
+Additional notes from API documentation:
+- `calendar.txt` defines validity periods only — actual service dates are exclusively in `calendar_dates.txt`.
+- When both `route_long_name` and `route_short_name` are present, `route_long_name` is the correct display name.
+- `route_type` uses extended GTFS types — metro is `401`, not `1`. Filter by type range 400–499 for rail/metro,
+  or by `agency_id`, to avoid collisions with other operators using the same `route_short_name` (e.g.
+  Waxholmsbolaget also has a line "17").
+
+Expose a simple internal service that resolves `trip_id` → route short name and `stop_id` → stop name.
+
+A2 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
+filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
+speed, route short name, current status). Cache the result for ~15 seconds so concurrent client requests
+don't each trigger a new upstream fetch.
+
+A3 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
+MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
+icons colour-coded by transport mode, oriented by bearing. Show route line shapes from static GTFS data.
+            
+AH is used for A (block) H (Hypothesis) verification
+AH1 - FE/BE - POC: prove that the backend can download `sl.zip`, unzip it to `/tmp`, and read the results.
+Most of this code will be discarded afterwards, though the download logic may survive into A1. Keep all new
+code isolated: a dedicated BE controller and a dedicated FE view/route.
+
+**Backend**
+- Add `samtrafiken.api-key` and `samtrafiken.gtfs-url` to application properties, following the same pattern
+  as `anthropic.api-key`. The actual key value goes in `application-local.properties` (never committed) and
+  as a Render environment variable. Inject via constructor parameter in the new controller.
+- Remove `ExperimentController` — it has served its purpose and the API key is now in properties.
+- New controller `GtfsPocController` at `/api/admin/gtfs-poc` (admin-only, `@PreAuthorize("hasRole('ADMIN')")`).
+  Three endpoints:
+  - `POST /download` — check if `/tmp/sl.zip` already exists; if so return immediately with file size and
+    a note that it was skipped. If not, download from Samtrafiken, save to `/tmp/sl.zip`, return file size
+    and download duration in milliseconds.
+  - `POST /unzip` — unzip `/tmp/sl.zip` to `/tmp/sl/`. Return a list of all extracted files with their sizes
+    and total unzip duration in milliseconds.
+  - `GET /files` — list files in `/tmp/sl/` (GTFS files only, not all of `/tmp`). Return file names and sizes.
+
+**Frontend**
+- New admin-only view at `/gtfs-poc` (`GtfsPoc` component in `src/components/admin/gtfs-poc/`).
+- Add an admin-only menu item "GTFS POC" to `NavMenu` alongside the existing admin items.
+- The view shows three buttons: "Ladda ner", "Packa upp", "Lista filer". Each button calls its respective
+  backend endpoint and displays the returned status info below it. Buttons are independent — no forced
+  sequencing in the UI, but the backend will naturally fail gracefully if called out of order (e.g. unzip
+  before download returns an appropriate error).
+- Keep the component simple — no shared state management, just local `useState` per button result.
 
 ## Future Enhancements
 

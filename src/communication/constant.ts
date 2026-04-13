@@ -25,6 +25,9 @@ export const URL_BACKEND_ADMIN_REJECT_ACCESS_REQUEST = (id: number) => `/api/adm
 export const URL_BACKEND_ADMIN_USERS = "/api/admin/users";
 export const URL_BACKEND_ADMIN_DELETE_USER = (id: number) => `/api/admin/users/${id}`;
 export const URL_BACKEND_ADMIN_STATISTICS = "/api/admin/statistics";
+export const URL_BACKEND_GTFS_POC_DOWNLOAD = "/api/admin/gtfs-poc/download";
+export const URL_BACKEND_GTFS_POC_UNZIP = "/api/admin/gtfs-poc/unzip";
+export const URL_BACKEND_GTFS_POC_FILES = "/api/admin/gtfs-poc/files";
 
 export const URL_BACKEND_SHARED_ROUTE_CREATE = "/api/protected/routes";
 export const URL_BACKEND_SHARED_ROUTE_GET = (id: string) => `/api/public/routes/${id}`;

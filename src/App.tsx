@@ -15,6 +15,7 @@ import { MyAccount } from './views/my-account.tsx';
 import { PendingUsers } from './views/admin/pending-users.tsx';
 import { ExistingUsers } from './views/admin/existing-users.tsx';
 import { Statistics } from './views/admin/statistics.tsx';
+import { GtfsPocView } from './views/admin/gtfs-poc.tsx';
 import { SharedRouteView } from './views/shared-route.tsx';
 import './App.css';
 
@@ -27,6 +28,7 @@ const router = createHashRouter([
       { path: '/admin/pending', element: <PendingUsers /> },
       { path: '/admin/users', element: <ExistingUsers /> },
       { path: '/admin/statistics', element: <Statistics /> },
+      { path: '/admin/gtfs-poc', element: <GtfsPocView /> },
       { path: '/gdpr', element: <Gdpr /> },
       { path: '/route/:id', element: <SharedRouteView /> },
     ],

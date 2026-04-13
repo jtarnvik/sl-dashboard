@@ -18,6 +18,9 @@ import {
   URL_BACKEND_SETTINGS,
   URL_BACKEND_RECENT_STOPS,
   URL_BACKEND_ADMIN_STATISTICS,
+  URL_BACKEND_GTFS_POC_DOWNLOAD,
+  URL_BACKEND_GTFS_POC_UNZIP,
+  URL_BACKEND_GTFS_POC_FILES,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
@@ -225,6 +228,41 @@ export async function fetchSharedRoute(id: string): Promise<Journey | null> {
     const response = await backend.get<{ routeData: string }>(URL_BACKEND_SHARED_ROUTE_GET(id));
     return JSON.parse(response.data.routeData) as Journey;
   } catch {
+    return null;
+  }
+}
+
+export type GtfsFileInfo = { name: string; sizeBytes: number };
+export type GtfsDownloadResponse = { skipped: boolean; fileSizeBytes: number; downloadDurationMs: number | null };
+export type GtfsUnzipResponse = { files: GtfsFileInfo[]; unzipDurationMs: number };
+export type GtfsFilesResponse = { files: GtfsFileInfo[] };
+
+export async function gtfsPocDownload(setError: SetError): Promise<GtfsDownloadResponse | null> {
+  try {
+    const response = await backend.post<GtfsDownloadResponse>(URL_BACKEND_GTFS_POC_DOWNLOAD);
+    return response.data;
+  } catch {
+    setError("Kunde inte ladda ner GTFS-fil.");
+    return null;
+  }
+}
+
+export async function gtfsPocUnzip(setError: SetError): Promise<GtfsUnzipResponse | null> {
+  try {
+    const response = await backend.post<GtfsUnzipResponse>(URL_BACKEND_GTFS_POC_UNZIP);
+    return response.data;
+  } catch {
+    setError("Kunde inte packa upp GTFS-fil.");
+    return null;
+  }
+}
+
+export async function gtfsPocListFiles(setError: SetError): Promise<GtfsFilesResponse | null> {
+  try {
+    const response = await backend.get<GtfsFilesResponse>(URL_BACKEND_GTFS_POC_FILES);
+    return response.data;
+  } catch {
+    setError("Kunde inte lista GTFS-filer.");
     return null;
   }
 }
