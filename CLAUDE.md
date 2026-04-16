@@ -249,10 +249,11 @@ the departures pane for exactly this purpose — reuse it in the map view.
 **Static GTFS loading strategy**
 - DB is the durable cache; `/tmp` is the working area for parsing. See A1 for full detail.
 - Relevant files: `routes.txt` (line names/types), `trips.txt` (trip→route join), `stops.txt` (stop names/coords),
-  `shapes.txt` (route polylines for map). Skip `stop_times.txt` (143 MB, not needed for vehicle tracking).
+  `shapes.txt` (route polylines for map), `stop_times.txt` (stop sequences per trip — needed for geometric vehicle placement
+  since `current_stop_sequence` is never populated in the RT feed).
 - Key lookup chain from realtime feed: `trip_id` → `trips.txt` → `route_id` → `routes.txt` → `route_long_name`.
-- `trip_id` values are stable across days. What varies daily is which trips are active, controlled by
-  `calendar_dates.txt` (actual service dates — `calendar.txt` is validity periods only).
+- What varies daily is which trips are active, controlled by `calendar_dates.txt` (actual service dates — `calendar.txt`
+  is validity periods only).
 
 **Vehicle position polling strategy**
 - Backend does NOT poll continuously. Instead, it fetches and caches positions with a short TTL (~15 seconds)
@@ -273,12 +274,45 @@ architecture is identical: same Spring Boot app, local PostgreSQL replaces Supab
 the GTFS zip cacheable indefinitely. Tradeoffs vs Render: depends on home network reliability and requires
 a DDNS service for a stable external address.
 
-A0 - ME, Draw a GTFS entity relationship diagram before implementing A1. Key entities and relationships:
-`routes` → `trips` → `trip_id` (the bridge to the realtime feed) → `vehicle positions`. Hanging off the side:
-`stops` (referenced by stop_times and vehicle current stop), `calendar_dates` (which service_ids run today).
-This diagram will clarify the join chain needed for all three map goals before writing any code.
+A1 - BE, Set up download of static GTFS data. Scheduled at 05:00 daily so the file is ready before the family
+starts using the app. The Samtrafiken feed is published daily between 03:00–07:00, so 05:00 is within that window.
+Downloads are strictly limited (50/month on Bronze), so the tracking table is the primary guard against wasted calls.
 
-A1 - BE, Parse and cache static GTFS data on startup. Download `sl.zip` from Samtrafiken and parse it using
+**Database tracking table** (`gtfs_download_log`), one row per calendar date (upserted, not appended):
+- `date` — the calendar date this row covers (primary key / unique)
+- `status` — enum: `DOWNLOAD_START`, `DOWNLOAD_DONE`, `UNZIP_START`, `UNZIP_DONE`, `PARSE_START`, `PARSE_DONE`,
+  `FAILED` — tracks the last reached phase; useful for diagnosing where a failure occurred
+- `error_message` — populated on `FAILED`, null otherwise
+- `download_start_time`, `unzip_start_time`, `parse_start_time` — one timestamp per phase start, to measure
+  how long each phase takes (important for evaluating whether the Render free tier can handle the workload)
+- `end_time` — single timestamp written when the full pipeline completes successfully
+
+The table retains the last 30 days. A nightly cleanup job (separate `@Scheduled` bean) deletes rows older than 30 days.
+
+**Working directory:** `/tmp/sl-gtfs-cache`. Deleted and recreated at the start of each download to ensure a clean state.
+
+**Download guard logic** (checked on both startup and scheduled trigger):
+1. If a row exists for today in `gtfs_download_log` (any status, including `FAILED`), skip — one download attempt
+   per day maximum. Later-phase errors (unzip, parse) are retryable via manual initiation (a future step), but
+   the download itself is not retried automatically.
+2. If running in the `local` profile and the count of rows in the last 30 days exceeds 15, skip — protects the
+   monthly quota during local development.
+3. Otherwise, proceed with download.
+
+**Scope of this step:** implement the download only (status transitions: `DOWNLOAD_START` → `DOWNLOAD_DONE` or
+`FAILED`). Unzip and parse phases are added in later steps — the status enum and timestamp columns are created now
+so the schema does not need to change.
+
+Mark the scheduled download bean with `@Profile("!test")` so it does not run during integration tests.
+  
+A2 - BE send pushover notificaton on error
+
+A3 - FE/BE - Create front end view for downaload state.
+
+A4 - FE/BE - In the local profile, at least during development, we need to be able to some kind of retry,
+of parsing the GTFS data, I assume it will be a few attempts before we get it right to 100%. How to handle.
+
+A10 - BE, Parse and cache static GTFS data on startup. Download `sl.zip` from Samtrafiken and parse it using
 `ZipInputStream` to avoid holding the full file in memory — stream CSV rows one at a time, keep only what
 matches the monitored lines, discard the rest.
 
@@ -300,15 +334,14 @@ and risk hitting Supavisor transaction size limits. Store only the parsed/filter
 
 Samtrafiken publishes a new static zip **daily**, typically between 03:00–07:00 (confirmed from API docs).
 The Bronze API key (50 calls/month) allows barely 1.6 downloads/day with no margin for restarts — the DB
-cache is therefore essential, not optional. A Silver/Gold key upgrade has been requested.
+cache is therefore essential, not optional. A Silver/Gold key upgrade could be requested, but it looks like it wont  be needed
 
-Use a configurable TTL (application property, default 23 hours) leaving ~19 calls/month as buffer for restarts.
 Store `feed_version` (the publish date from `feed_info.txt`) in the DB row for observability.
 
 Startup sequence:
-1. Check the DB for a cached GTFS payload. If present and within TTL, deserialize directly into the in-memory
+1. Check the DB for a cached GTFS payload for today's date. If present, deserialize directly into the in-memory
    maps — no download needed. Log the loaded `feed_version`. Restarts and redeploys are free.
-2. If missing or stale, download `sl.zip` to `/tmp`, unzip, parse the relevant files, build the in-memory
+2. If missing, download `sl.zip` to `/tmp`, unzip, parse the relevant files, build the in-memory
    maps, serialize to JSON, upsert the DB row (including `feed_version` and `downloaded_at`), then serve
    from memory. The `/tmp` files can be left for the OS to clean up.
 
@@ -318,18 +351,19 @@ is only consumed once per day locally as well.
 Additional notes from API documentation:
 - `calendar.txt` defines validity periods only — actual service dates are exclusively in `calendar_dates.txt`.
 - When both `route_long_name` and `route_short_name` are present, `route_long_name` is the correct display name.
-- `route_type` uses extended GTFS types — metro is `401`, not `1`. Filter by type range 400–499 for rail/metro,
-  or by `agency_id`, to avoid collisions with other operators using the same `route_short_name` (e.g.
-  Waxholmsbolaget also has a line "17").
+- `route_type` uses extended GTFS types (confirmed: `100` = Railway, `700` = Bus, `900` = Tram). Metro type code
+  has not been verified — do not assume `401`. Verify against `routes.txt` before filtering. Also filter by
+  `agency_id` to avoid collisions with other operators using the same `route_short_name` (e.g. Waxholmsbolaget
+  also has a line "17").
 
 Expose a simple internal service that resolves `trip_id` → route short name and `stop_id` → stop name.
 
-A2 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
+A11 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
 filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
 speed, route short name, current status). Cache the result for ~15 seconds so concurrent client requests
 don't each trigger a new upstream fetch.
 
-A3 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
+A12 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
 icons colour-coded by transport mode, oriented by bearing. Show route line shapes from static GTFS data.
             
