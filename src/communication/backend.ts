@@ -21,6 +21,8 @@ import {
   URL_BACKEND_GTFS_POC_DOWNLOAD,
   URL_BACKEND_GTFS_POC_UNZIP,
   URL_BACKEND_GTFS_POC_FILES,
+  URL_BACKEND_GTFS_STATUS,
+  URL_BACKEND_GTFS_RESET,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
@@ -264,6 +266,45 @@ export async function gtfsPocListFiles(setError: SetError): Promise<GtfsFilesRes
   } catch {
     setError("Kunde inte lista GTFS-filer.");
     return null;
+  }
+}
+
+export type GtfsStatusData = {
+  date: string;
+  status: string;
+  errorMessage: string | null;
+  downloadStartTime: string | null;
+  downloadEndTime: string | null;
+  unzipStartTime: string | null;
+  unzipEndTime: string | null;
+  parseStartTime: string | null;
+  parseEndTime: string | null;
+};
+
+export async function fetchGtfsStatus(setError: SetError): Promise<GtfsStatusData | null> {
+  try {
+    const response = await backend.get<GtfsStatusData>(URL_BACKEND_GTFS_STATUS);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
+    setError("Kunde inte hämta GTFS-status.");
+    return null;
+  }
+}
+
+export async function resetGtfsPipeline(setError: SetError): Promise<boolean> {
+  try {
+    await backend.post(URL_BACKEND_GTFS_RESET);
+    return true;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 409) {
+      setError("Återställning inte möjlig för aktuell status.");
+    } else {
+      setError("Kunde inte återställa GTFS-pipeline.");
+    }
+    return false;
   }
 }
 

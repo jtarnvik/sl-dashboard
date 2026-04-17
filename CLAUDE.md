@@ -274,7 +274,7 @@ architecture is identical: same Spring Boot app, local PostgreSQL replaces Supab
 the GTFS zip cacheable indefinitely. Tradeoffs vs Render: depends on home network reliability and requires
 a DDNS service for a stable external address.
 
-A1 - BE, Set up download of static GTFS data. Scheduled at 05:00 daily so the file is ready before the family
+A1 - DONE - BE, Set up download of static GTFS data. Scheduled at 05:00 daily so the file is ready before the family
 starts using the app. The Samtrafiken feed is published daily between 03:00–07:00, so 05:00 is within that window.
 Downloads are strictly limited (50/month on Bronze), so the tracking table is the primary guard against wasted calls.
 
@@ -304,51 +304,94 @@ The table retains the last 30 days. A nightly cleanup job (separate `@Scheduled`
 so the schema does not need to change.
 
 Mark the scheduled download bean with `@Profile("!test")` so it does not run during integration tests.
-  
-A2 - BE send pushover notificaton on error
 
-A3 - FE/BE - Create front end view for downaload state.
+A2 - DONE - BE, Unzip the downloaded GTFS zip and introduce the pipeline structure used by all later phases.
 
-A4 - FE/BE - In the local profile, at least during development, we need to be able to some kind of retry,
-of parsing the GTFS data, I assume it will be a few attempts before we get it right to 100%. How to handle.
+**Service method structure:**
+- `downloadIfNeeded()` — existing, handles download phase. After logging the failure and updating the DB to `FAILED`,
+  rethrow wrapped in a `GtfsDownloadException` (unchecked). This stops `runPipeline` from continuing to later phases
+  without needing any explicit success-check logic in the pipeline method.
+- `unzipIfReady()` — new, checks today's status is `DOWNLOAD_DONE` before proceeding. Same error pattern: update DB
+  to `FAILED` then throw `GtfsDownloadException`.
+- `runPipeline()` — new, the happy-flow orchestrator called by both the scheduler and the startup trigger. Calls
+  `downloadIfNeeded()`, then `unzipIfReady()` in sequence. Does not catch exceptions — a `GtfsDownloadException`
+  from either phase propagates up naturally and stops the pipeline. No automatic restart logic here; that is a
+  future step.
 
-A10 - BE, Parse and cache static GTFS data on startup. Download `sl.zip` from Samtrafiken and parse it using
-`ZipInputStream` to avoid holding the full file in memory — stream CSV rows one at a time, keep only what
-matches the monitored lines, discard the rest.
+**`GtfsDownloadJob` changes:**
+- `onApplicationReady()` and `scheduledDownload()` both switch from calling `downloadIfNeeded()` to `runPipeline()`.
+- Catch `GtfsDownloadException` in the job methods and log it — the scheduler must not let an exception propagate
+  or Spring will log it as an unhandled scheduler error.
 
-The zip entry order (verified) is: `trips.txt`, `calendar_dates.txt`, `stop_times.txt`, `calendar.txt`,
-`attributions.txt`, `transfers.txt`, `routes.txt`, `stops.txt`, `feed_info.txt`, `agency.txt`, `shapes.txt`.
-`trips.txt` comes before `routes.txt`, so a single forward pass cannot filter trips by route — the route ID
-set isn't known yet when trips.txt is encountered.
+**Unzip behaviour:**
+- Unzip `/tmp/sl-gtfs-cache/sl.zip` into `/tmp/sl-gtfs-cache/` (same working directory).
+- Status transitions: `UNZIP_START` → `UNZIP_DONE` or `FAILED`.
+- Update `unzip_start_time` in the DB row when starting. Reuse the unzip logic from `GtfsPocController` as reference.
 
-**Download and parse strategy**
-When a fresh download is needed, download `sl.zip` to `/tmp` and unzip it there. Reading individual unzipped
-files means they can be opened in any order — the two-pass ZipInputStream problem disappears entirely. Parse
-order: `routes.txt` first to build the `route_id` set, then `trips.txt`, `stops.txt`, `shapes.txt`. Once
-parsed, serialize the filtered in-memory maps to JSON and store in the DB. The `/tmp` files are then
-disposable — they are just a working area for the one-time parse, not a durable cache.
+**Controller error handling:**
+- Create a `GtfsDownloadException` (unchecked, in the `service` package) wrapping the original cause.
+- Create a `@RestControllerAdvice` class (`RestExceptionHandler` in `port.incoming.rest`) that catches
+  `GtfsDownloadException` and returns HTTP 500 with a JSON body `{ "message": "..." }` containing the exception
+  message. This keeps error handling out of individual controllers and gives a consistent response shape.
+- Add the unzip method to `GtfsDownloadDao` for the `UNZIP_START` timestamp update.
 
-**Caching strategy — DB is the durable cache, /tmp is the working area**
+A4 - DONE - FE/BE - GTFS Status view. A development aid showing the current state of the GTFS pipeline. Will eventually
+become a fuller status page with history, but scope is limited for now.
+
+**Backend — new `GtfsAdminController`** at `/api/admin/gtfs` (admin-only, `@PreAuthorize("hasRole('ADMIN')")`):
+- `GET /api/admin/gtfs/status` — returns the most recent row in `gtfs_download_log` regardless of date, or 404
+  if the table is empty. Response includes: `date`, `status`, `errorMessage`, `downloadStartTime`,
+  `unzipStartTime`, `parseStartTime`, `endTime`. Phase durations are derived on the frontend from these
+  timestamps — no explicit end-time columns needed.
+- `POST /api/admin/gtfs/reset` — resets the pipeline back to `DOWNLOAD_DONE` so the unzip (and later parse)
+  can be re-run without a new download. The backend enforces that the current status must be further along than
+  `DOWNLOAD_DONE` (i.e. `UNZIP_START`, `UNZIP_DONE`, `PARSE_START`, `PARSE_DONE`, or `FAILED`) — returns 409
+  if the guard is not met. On success: sets status back to `DOWNLOAD_DONE`, clears `unzip_start_time`,
+  `parse_start_time`, `end_time`, `error_message`, and deletes the `/tmp/sl-gtfs-cache/unzipped/` directory.
+  Note: when parse DB tables exist (A10), this endpoint must also clear them — add that at that point.
+
+Leave `GtfsPocController` in place — it contains GTFS-RT parse code that will be needed later.
+
+**Frontend — replace GTFS POC view with GTFS Status view:**
+- Remove `src/components/admin/gtfs-poc/` and `src/views/admin/gtfs-poc.tsx`.
+- Create `src/components/admin/gtfs-status/` and `src/views/admin/gtfs-status.tsx`.
+- Route changes: `/admin/gtfs-poc` → `/admin/gtfs-status`. Update `App.tsx` and `NavMenu` (rename menu item
+  from "GTFS POC" to "GTFS Status").
+- The view fetches status on mount and displays: current status (as a label), date, and per-phase durations
+  derived from the timestamps where available (e.g. download duration = `unzipStartTime - downloadStartTime`
+  once both are set; show "pågår" for the current in-progress phase).
+- "Återställ till DOWNLOAD_DONE" button: disabled when today's status is `DOWNLOAD_DONE` or earlier (or no
+  row exists). Calls `POST /api/admin/gtfs/reset` and refreshes the status display on success.
+- Error messages shown when status is `FAILED`.
+
+A5 - BE - Parse the GTFS unzipped files into a DB cache. The parseing is also in practical terms a filtering
+operation, where we will only keep the data for train/metro/bus lines we are interested in. 
+
+
+A6 - BE send pushover notificaton on error
+
+A7 - FE/BE - In the local profile, at least during development, we need to be able to some kind of retry,
+of parsing the GTFS data, I assume it will be a few attempts before we get it right to 100%. How to handle. depending on how
+stable this process is, maybe even needed in production.
+
+A10 - BE, Parse unzipped GTFS files and cache filtered data in the database. The files are already unzipped to
+`/tmp/sl-gtfs-cache/unzipped/` by A2. This step reads them, filters to the monitored lines, and stores the
+result in the DB so it survives restarts without re-downloading.
+
+**Parse order** (read individual files, not the zip — order is free since files are already unzipped):
+`routes.txt` first to build the `route_id` set for the monitored lines, then `trips.txt`, `stops.txt`,
+`stop_times.txt`, `shapes.txt`. `calendar_dates.txt` for active service dates.
+
+**Caching strategy — DB is the durable cache, `/tmp` is the working area**
 Do NOT store the raw zip in the database — at 51 MB it would consume 10% of Supabase's free 500 MB quota
-and risk hitting Supavisor transaction size limits. Store only the parsed/filtered JSON (a few MB for 6 lines).
+and risk hitting Supavisor transaction size limits. Store only the parsed/filtered data (a few MB for the
+monitored lines). Store `feed_version` (the publish date from `feed_info.txt`) for observability.
 
-Samtrafiken publishes a new static zip **daily**, typically between 03:00–07:00 (confirmed from API docs).
-The Bronze API key (50 calls/month) allows barely 1.6 downloads/day with no margin for restarts — the DB
-cache is therefore essential, not optional. A Silver/Gold key upgrade could be requested, but it looks like it wont  be needed
+**Pipeline integration:** `parseIfReady()` is a new method on `GtfsDownloadService`, following the same
+pattern as `unzipIfReady()` — checks today's status is `UNZIP_DONE` before proceeding, transitions to
+`PARSE_START` → `PARSE_DONE` or `FAILED`, writes `end_time` on success. Add it to `runPipeline()`.
 
-Store `feed_version` (the publish date from `feed_info.txt`) in the DB row for observability.
-
-Startup sequence:
-1. Check the DB for a cached GTFS payload for today's date. If present, deserialize directly into the in-memory
-   maps — no download needed. Log the loaded `feed_version`. Restarts and redeploys are free.
-2. If missing, download `sl.zip` to `/tmp`, unzip, parse the relevant files, build the in-memory
-   maps, serialize to JSON, upsert the DB row (including `feed_version` and `downloaded_at`), then serve
-   from memory. The `/tmp` files can be left for the OS to clean up.
-
-The same sequence works identically in local development — the local MySQL DB acts as the cache, so quota
-is only consumed once per day locally as well.
-
-Additional notes from API documentation:
+**GTFS field notes:**
 - `calendar.txt` defines validity periods only — actual service dates are exclusively in `calendar_dates.txt`.
 - When both `route_long_name` and `route_short_name` are present, `route_long_name` is the correct display name.
 - `route_type` uses extended GTFS types (confirmed: `100` = Railway, `700` = Bus, `900` = Tram). Metro type code
