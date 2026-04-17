@@ -289,7 +289,7 @@ export async function fetchGtfsStatus(setError: SetError): Promise<GtfsStatusDat
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       return null;
     }
-    setError("Kunde inte hämta GTFS-status.");
+    setError("Could not fetch GTFS status.");
     return null;
   }
 }
@@ -300,9 +300,9 @@ export async function resetGtfsPipeline(setError: SetError): Promise<boolean> {
     return true;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 409) {
-      setError("Återställning inte möjlig för aktuell status.");
+      setError("Reset not allowed for current status.");
     } else {
-      setError("Kunde inte återställa GTFS-pipeline.");
+      setError("Could not reset GTFS pipeline.");
     }
     return false;
   }

@@ -14,7 +14,7 @@ export function GtfsStatusView() {
   const { setHeading } = useContext(PageTitleContext);
 
   useEffect(() => {
-    setHeading('GTFS Status');
+    setHeading('GTFS status');
   }, [setHeading]);
 
   useEffect(() => {

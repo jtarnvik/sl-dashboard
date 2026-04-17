@@ -8,13 +8,13 @@ const RESET_ALLOWED_STATUSES = ['UNZIP_START', 'UNZIP_DONE', 'PARSE_START', 'PAR
 
 function statusLabel(status: string): string {
   switch (status) {
-    case 'DOWNLOAD_START': return 'Laddar ner';
-    case 'DOWNLOAD_DONE': return 'Nedladdad';
-    case 'UNZIP_START': return 'Packar upp';
-    case 'UNZIP_DONE': return 'Uppackad';
-    case 'PARSE_START': return 'Tolkar';
-    case 'PARSE_DONE': return 'Klar';
-    case 'FAILED': return 'Misslyckades';
+    case 'DOWNLOAD_START': return 'Downloading';
+    case 'DOWNLOAD_DONE': return 'Download done';
+    case 'UNZIP_START': return 'Unzipping';
+    case 'UNZIP_DONE': return 'Unzip done';
+    case 'PARSE_START': return 'Parsing';
+    case 'PARSE_DONE': return 'Done';
+    case 'FAILED': return 'Failed';
     default: return status;
   }
 }
@@ -80,12 +80,12 @@ export function GtfsStatus() {
   return (
     <div className="flex flex-col space-y-4">
       <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4">
-        <h2 className="text-sm font-semibold text-gray-800 mb-2">Pipelinestatus</h2>
-        {status === undefined && <p className="text-sm text-gray-500">Hämtar...</p>}
-        {status === null && <p className="text-sm text-gray-500">Ingen data ännu.</p>}
+        <h2 className="text-sm font-semibold text-gray-800 mb-2">Pipeline status</h2>
+        {status === undefined && <p className="text-sm text-gray-500">Loading...</p>}
+        {status === null && <p className="text-sm text-gray-500">No data yet.</p>}
         {status && (
           <div className="space-y-1">
-            <StatusRow label="Datum" value={status.date} />
+            <StatusRow label="Date" value={status.date} />
             <StatusRow label="Status" value={statusLabel(status.status)} />
             {status.errorMessage && (
               <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
@@ -98,18 +98,18 @@ export function GtfsStatus() {
 
       {status && (
         <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4">
-          <h2 className="text-sm font-semibold text-gray-800 mb-2">Fasvaraktigheter</h2>
+          <h2 className="text-sm font-semibold text-gray-800 mb-2">Phase durations</h2>
           <div className="space-y-1">
             <StatusRow
-              label="Nedladdning"
+              label="Download"
               value={duration(status.downloadStartTime, status.downloadEndTime, status.status === 'DOWNLOAD_START')}
             />
             <StatusRow
-              label="Uppackning"
+              label="Unzip"
               value={duration(status.unzipStartTime, status.unzipEndTime, status.status === 'UNZIP_START')}
             />
             <StatusRow
-              label="Tolkning"
+              label="Parse"
               value={duration(status.parseStartTime, status.parseEndTime, status.status === 'PARSE_START')}
             />
           </div>
@@ -117,13 +117,13 @@ export function GtfsStatus() {
       )}
 
       <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4">
-        <h2 className="text-sm font-semibold text-gray-800 mb-2">Åtgärder</h2>
+        <h2 className="text-sm font-semibold text-gray-800 mb-2">Actions</h2>
         <SLButton onClick={handleReset} thin disabled={!resetAllowed || resetting}>
-          {resetting ? 'Återställer...' : 'Återställ till DOWNLOAD_DONE'}
+          {resetting ? 'Resetting...' : 'Reset to DOWNLOAD_DONE'}
         </SLButton>
         {!resetAllowed && status !== undefined && (
           <p className="mt-2 text-xs text-gray-500">
-            Återställning är inte möjlig för aktuell status.
+            Reset not available for current status.
           </p>
         )}
       </div>
