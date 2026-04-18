@@ -319,7 +319,9 @@ a per-row flag.
 112 is included as a second bus line to exercise the route presentation logic; it is not added to the deviation
 pane at this point.
 
-A9 - BE send pushover notificaton on error
+A6 - DONE - BE, Pushover notification on GTFS pipeline failure. Sent from `GtfsDownloadService` at each
+`updateFailed()` site (download and unzip phases). `parseIfReady()` (A10) should follow the same pattern.
+`sendGtfsPipelineErrorNotification(phase, message)` added to `PushoverProvider`.
 
 A10 - BE, Parse unzipped GTFS files and cache filtered data in the database. The files are already unzipped to
 `/tmp/sl-gtfs-cache/unzipped/` by A2. This step reads them, filters to the monitored lines, and stores the
