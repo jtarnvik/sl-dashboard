@@ -285,93 +285,111 @@ run to avoid stale files). Introduced `runPipeline()` as the happy-flow orchestr
 as the unchecked error type that stops the pipeline and is caught at the job level. `RestExceptionHandler`
 (`@RestControllerAdvice`) returns HTTP 500 `{ "message": "..." }` for any `GtfsDownloadException` reaching a
 controller. Each phase writes explicit start and end timestamps (`download_start_time` / `download_end_time`,
-`unzip_start_time` / `unzip_end_time`); `parse_end_time` is reserved for A10.
+`unzip_start_time` / `unzip_end_time`); `parse_end_time` is reserved for B.
 
 A4 - DONE - FE/BE, GTFS Status admin view at `/admin/gtfs-status`. Shows the most recent `gtfs_download_log` row:
 date, status, per-phase durations derived from start/end timestamps, and error message on failure. "Reset to
 DOWNLOAD_DONE" button calls `POST /api/admin/gtfs/reset` (guarded 409 if status ≤ `DOWNLOAD_DONE`; also deletes
-the unzipped directory). When parse tables exist (A10), the reset endpoint must also clear them.
+the unzipped directory). When parse tables exist (B), the reset endpoint must also clear them.
 
-A5 - DONE - BE - Create the monitored-lines configuration table. This table is the source of truth for which lines
-the GTFS parse step (A10) should retain. It is seeded via Liquibase (bootstrap only — rows may later be managed
-via GUI, but that is future work). Hard delete is acceptable; no soft-delete/active flag needed.
-
-**Table: `gtfs_monitored_line`**
-- `id` (BIGINT, id_gen)
-- `route_short_name` (VARCHAR(20)) — the base line number, e.g. "43", "117"
-- `transport_mode` (VARCHAR(20)) — TRAIN, BUS, or METRO
-- `create_date` / `latest_update` — standard timestamps
-
-No `match_variants` column — variant matching (e.g. 43X) is a uniform rule applied at parse time in A10, not
-a per-row flag.
-
-**Seed data (via Liquibase):**
-| route_short_name | transport_mode |
-|---|---|
-| 43 | TRAIN |
-| 44 | TRAIN |
-| 117 | BUS |
-| 112 | BUS |
-| 17 | METRO |
-| 18 | METRO |
-| 19 | METRO |
-
-112 is included as a second bus line to exercise the route presentation logic; it is not added to the deviation
-pane at this point.
+A5 - DONE - BE, Monitored-lines config table `gtfs_monitored_line` (`route_short_name`, `transport_mode`).
+Source of truth for B filtering. Seeded via Liquibase with 43/44 (TRAIN), 117/112 (BUS), 17/18/19 (METRO).
+No `match_variants` flag — variant matching (e.g. 43X) is a uniform rule in B, not a per-row concern.
+112 is not added to the deviation pane; it exists to exercise the route presentation logic.
 
 A6 - DONE - BE, Pushover notification on GTFS pipeline failure. Sent from `GtfsDownloadService` at each
-`updateFailed()` site (download and unzip phases). `parseIfReady()` (A10) should follow the same pattern.
+`updateFailed()` site (download and unzip phases). `parseIfReady()` (B) should follow the same pattern.
 `sendGtfsPipelineErrorNotification(phase, message)` added to `PushoverProvider`.
 
-A10 - BE, Parse unzipped GTFS files and cache filtered data in the database. The files are already unzipped to
-`/tmp/sl-gtfs-cache/unzipped/` by A2. This step reads them, filters to the monitored lines, and stores the
-result in the DB so it survives restarts without re-downloading.
+B - BE, Parse unzipped GTFS files into the database and serve from an in-memory cache. The files are already
+unzipped to `/tmp/sl-gtfs-cache/unzipped/` by A2. This block reads them, filters to the monitored lines,
+persists the filtered data to the DB, loads it into an `AtomicReference<GtfsDataset>` in-memory cache, and
+integrates into the existing pipeline status flow. Steps to be defined.
 
-**Parse order** (read individual files, not the zip — order is free since files are already unzipped):
-`routes.txt` first to build the `route_id` set for the monitored lines, then `trips.txt`, `stops.txt`,
-`stop_times.txt`, `shapes.txt`. `calendar_dates.txt` for active service dates.
+**Tables (one per source file, column-filtered, `gtfs_` prefix for consistency):**
+- `gtfs_route` ← `routes.txt` (route_id PK, route_short_name, route_long_name, route_type)
+- `gtfs_trip` ← `trips.txt` (trip_id PK, route_id, service_id, direction_id)
+- `gtfs_stop` ← `stops.txt` (stop_id PK, stop_name, stop_lat, stop_lon, location_type, parent_station)
+- `gtfs_stop_time` ← `stop_times.txt` (composite PK: trip_id + stop_sequence; stop_id, arrival_time, departure_time, shape_dist_traveled, stop_headsign)
+- `gtfs_calendar_date` ← `calendar_dates.txt` (composite PK: service_id + date; exception_type)
 
-**Caching strategy — DB is the durable cache, `/tmp` is the working area**
-Do NOT store the raw zip in the database — at 51 MB it would consume 10% of Supabase's free 500 MB quota
-and risk hitting Supavisor transaction size limits. Store only the parsed/filtered data (a few MB for the
-monitored lines). Store `feed_version` (the publish date from `feed_info.txt`) for observability.
+`shapes.txt` is excluded — shape data for map rendering comes from the journey planner API. `calendar.txt`
+is unused (Samtrafiken uses `calendar_dates.txt` exclusively). `agency.txt`, `transfers.txt`,
+`attributions.txt`, `booking_rules.txt` — not stored.
 
-**Pipeline integration:** `parseIfReady()` is a new method on `GtfsDownloadService`, following the same
-pattern as `unzipIfReady()` — checks today's status is `UNZIP_DONE` before proceeding, transitions to
-`PARSE_START` → `PARSE_DONE` or `FAILED`, writes `parse_end_time` on success. Add it to `runPipeline()`.
+**Entity IDs:** Use natural GTFS keys as `@Id` (string for single-key tables, `@EmbeddedId` for composites).
+These are bulk-replaced lookup tables, not domain entities — synthetic `@TableGenerator` IDs add no value and
+would require 80,000 id_gen round-trips for `gtfs_stop_time` alone. No `id_gen` rows needed for these tables.
+Standard `create_date` / `latest_update` timestamp columns are also omitted — the entire table set is replaced
+atomically; individual row lifecycle tracking is not meaningful.
 
-**Filtering strategy — how routes.txt is filtered to monitored lines**
+**`feed_version` in `gtfs_download_log`:** Add a `feed_version` VARCHAR column to `gtfs_download_log` via a
+new Liquibase changeset. Populate from `feed_info.txt` (`feed_version` field) during parsing. Shown in the
+GTFS status view for observability. This requires a new Liquibase changeset before the parse step.
 
-Three conditions must all be met for a route to be retained:
+**In-memory cache with DB as persistence layer:**
+The DB is the durable store (survives restarts). On startup and after each successful parse, the service loads
+all tables for monitored lines into a `GtfsDataset` object held in an `AtomicReference`. Requests are served
+from the in-memory reference. During a re-parse, the old in-memory data keeps serving without interference.
+When the new parse transaction commits, `AtomicReference.set()` swaps the reference atomically; old data is
+garbage collected. No version column needed in any table — the DB always reflects the latest completed parse.
+The filtered dataset for 7 lines fits comfortably in memory (512 MB Render limit — "small fraction of the raw
+file sizes").
 
-1. **Agency match** — resolve SL's `agency_id` at parse time by reading `agency.txt` and finding the row whose
-   `agency_name` contains "Storstockholms Lokaltrafik" (verify exact name from the file). Do not hardcode the
-   agency_id value — it is an internal feed ID that could change.
+**Parse order** (driven by filtering dependencies — each set of IDs must be known before the next file is filtered):
+1. `agency.txt` — resolve the SL agency_id from `agency_name`
+2. `routes.txt` — filter by agency + route_type + route_short_name pattern → retained route_ids
+3. `trips.txt` — filter by route_ids → retained trip_ids and service_ids
+4. `stop_times.txt` — filter by trip_ids → retained stop_ids (and write to DB)
+5. `stops.txt` — filter by stop_ids → write to DB
+6. `calendar_dates.txt` — filter by service_ids → write to DB
 
-2. **Transport mode match** — map `transport_mode` from `gtfs_monitored_line` to `route_type` in `routes.txt`:
-   - TRAIN → `100` (confirmed from research, but re-verify)
-   - BUS → `700` (confirmed from research, but re-verify)
-   - METRO → **TBD, must be verified before implementing this step.**
-   - **Pre-condition:** before implementing A10, grep `routes.txt` for all monitored lines (43, 44, 117, 112,
-     17, 18, 19) and confirm the actual `route_type` values. Update this mapping table with the verified values
-     before writing any filter code. Do not rely solely on prior research notes.
+**Filtering strategy — three conditions, all must match:**
+1. `agency_name` contains "Storstockholms Lokaltrafik" (resolved from `agency.txt` — do not hardcode the
+   agency_id `14010000000001001` as it may change). Agency name in feed: "AB Storstockholms Lokaltrafik".
+2. `route_type` matches transport_mode: TRAIN=100, BUS=700, METRO=401 (verified from actual `routes.txt`)
+3. `route_short_name` matches `^{base}[A-Za-z]?$` — captures variants (43X) within the same transport mode
 
-3. **Line name match** — `route_short_name` in `routes.txt` matches the pattern `^{base}[A-Za-z]?$` where
-   `{base}` is the `route_short_name` from `gtfs_monitored_line`. This uniform rule captures variants like 43X
-   without a per-row flag, and avoids false matches between e.g. line "17" and "177".
+**Atomic table replacement — use DELETE inside @Transactional, not TRUNCATE:**
+The entire delete-old + insert-new must run in a single `@Transactional` method. On failure the transaction
+rolls back and existing data is preserved intact. On success all new data becomes atomically visible.
+`DELETE` uses row-level locks; PostgreSQL and MySQL MVCC ensures concurrent reads still see the old committed
+snapshot while the transaction is in progress. `TRUNCATE` acquires ACCESS EXCLUSIVE locks that block reads —
+do not use it. Delete in reverse dependency order: `gtfs_stop_time` first (largest — fail fast), then
+`gtfs_calendar_date`, `gtfs_trip`, `gtfs_stop`, `gtfs_route`. Insert in forward dependency order.
+
+The `gtfs_download_log` status updates use `REQUIRES_NEW` and commit independently — status remains visible
+during parsing regardless of the parse transaction state. Load the in-memory `GtfsDataset`
+(`AtomicReference.set()`) only after the transaction has committed successfully.
+
+**Batch inserts:** ~80,000 rows for `gtfs_stop_time` (~8 MB) — well within normal transaction size. Use
+`entityManager.flush()` + `entityManager.clear()` every few hundred rows to keep the JVM heap constant;
+without it Hibernate accumulates all managed entities in the persistence context, which is wasteful but not
+a hard limit.
+
+**Pipeline integration:** `parseIfReady()` follows the same pattern as `unzipIfReady()` — checks today's
+status is `UNZIP_DONE`, transitions `PARSE_START` → `PARSE_DONE` or `FAILED`, writes `parse_end_time` on
+success, sends Pushover notification on failure (see A6 pattern). Add to `runPipeline()`. The reset endpoint
+(`POST /api/admin/gtfs/reset`) must also clear the GTFS tables and the in-memory cache when this block exists.
 
 **GTFS field notes:**
-- `calendar.txt` defines validity periods only — actual service dates are exclusively in `calendar_dates.txt`.
-- When both `route_long_name` and `route_short_name` are present, `route_long_name` is the correct display name.
+- `calendar.txt` is unused — all scheduling is in `calendar_dates.txt` (`exception_type=1` means runs that day)
+- `route_long_name` is the display name when present; fall back to `route_short_name`
+- `stop_headsign` in `stop_times.txt` is the destination name — reliable for display as "Train to X"
+- Line 43/43X/44: 43 is the main line (Bålsta–Nynäshamn). 43X is an express variant (rush hour, skips minor
+  stops). 44 boosts frequency on part of the 43 route; it is periodically suspended — its absence from the
+  feed is expected and normal, not a data error. 43B/43M are rail-replacement buses (route_type=700), excluded
+  naturally by the TRAIN→100 filter. The parser must handle absent monitored lines gracefully.
 
-Expose a simple internal service that resolves `trip_id` → route short name and `stop_id` → stop name.
+Expose a `GtfsStaticService` that resolves `trip_id` → route short name and `stop_id` → stop name from the
+in-memory cache.
 
-A11 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
+C1 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
 filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
 speed, route short name, current status). Cache the result for ~15 seconds so concurrent client requests
 don't each trigger a new upstream fetch.
 
-A12 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
+D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
 icons colour-coded by transport mode, oriented by bearing. Show route line shapes from static GTFS data.
             
