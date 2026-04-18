@@ -384,6 +384,22 @@ success, sends Pushover notification on failure (see A6 pattern). Add to `runPip
 Expose a `GtfsStaticService` that resolves `trip_id` → route short name and `stop_id` → stop name from the
 in-memory cache.
 
+B1 - BE - Set up code flow for parse logic.
+- Create `GtfsDataset` (empty shell, no real API yet) in `model/gtfs` package — it is a plain data holder,
+  not a JPA entity, not a service.
+- Create `GtfsAccessService` (in the `service` package) with two methods: `rebuildDataset()` and `getDataset()`.
+  The `AtomicReference<GtfsDataset>` lives here. `getDataset()` returns the current reference atomically —
+  thread-safe by definition. `rebuildDataset()` sets the reference atomically after building the new dataset.
+- `GtfsAccessService` listens for `ApplicationReadyEvent` and calls `rebuildDataset()` on startup. This ensures
+  that data already in the DB from a prior run (status=`PARSE_DONE`) is loaded into memory without requiring a
+  new parse cycle. If no data exists yet the dataset remains empty.
+- `GtfsDownloadService` depends on `GtfsAccessService`. After the parse transaction commits successfully,
+  `parseIfReady()` calls `gtfsAccessService.rebuildDataset()`. This is the correct dependency direction —
+  the download service notifies the access service when new data is available.
+- Add `parseIfReady()` stub to `GtfsDownloadService` with no logic yet, and add a call to it in `runPipeline()`.
+- Any code consuming `GtfsDataset` must call `getDataset()` each time — never cache the returned reference
+  locally, as it may be replaced atomically at any time.
+
 C1 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
 filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
 speed, route short name, current status). Cache the result for ~15 seconds so concurrent client requests
