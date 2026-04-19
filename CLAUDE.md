@@ -384,7 +384,7 @@ success, sends Pushover notification on failure (see A6 pattern). Add to `runPip
 Expose a `GtfsStaticService` that resolves `trip_id` → route short name and `stop_id` → stop name from the
 in-memory cache.
 
-B1 - BE - Set up code flow for parse logic.
+B1 - DONE - BE - Set up code flow for parse logic.
 - Create `GtfsDataset` (empty shell, no real API yet) in `model/gtfs` package — it is a plain data holder,
   not a JPA entity, not a service.
 - Create `GtfsAccessService` (in the `service` package) with two methods: `rebuildDataset()` and `getDataset()`.
@@ -399,6 +399,46 @@ B1 - BE - Set up code flow for parse logic.
 - Add `parseIfReady()` stub to `GtfsDownloadService` with no logic yet, and add a call to it in `runPipeline()`.
 - Any code consuming `GtfsDataset` must call `getDataset()` each time — never cache the returned reference
   locally, as it may be replaced atomically at any time.
+
+B2 - DONE - BE - Create `GtfsParseService` and parse `agency.txt` + `routes.txt`.
+
+**Service structure:**
+- Create `GtfsParseService` in the `service` package. It owns all file parsing logic — `GtfsDownloadService`
+  is a pipeline orchestrator only and must not contain parse logic.
+- Move `parseIfReady()` from the stub in `GtfsDownloadService` to `GtfsParseService`. Update `runPipeline()`
+  in `GtfsDownloadService` to call `gtfsParseService.parseIfReady()` and remove the stub.
+- `parseIfReady()` in `GtfsParseService` is public and `@Transactional` — the transaction starts here since
+  it is called from `GtfsDownloadService` (a different bean), so the Spring proxy is in play. It checks
+  today's status is `UNZIP_DONE` (skip otherwise), marks `PARSE_START`, runs all file phases in sequence,
+  then marks `PARSE_DONE`. On failure: `handlePipelineFailure()` following the A6 pattern. Status updates
+  go through `GtfsDownloadDao` with `REQUIRES_NEW`, which suspends the outer transaction and commits
+  independently — so status is always visible regardless of whether the parse transaction rolls back.
+- `rebuildDataset()` is called from `GtfsDownloadService.runPipeline()` after `parseIfReady()` returns —
+  it is not part of the parse step. This ensures the in-memory cache is only updated after the transaction
+  has fully committed.
+- Intermediate state (retained `route_ids`, resolved SL `agency_id`, `trip_ids`, `stop_ids`, `service_ids`)
+  flows as local variables within the single `@Transactional` method — no shared instance state.
+
+**`GtfsRoute` entity and table (`gtfs_route`):**
+- Entity in `model/gtfs` package (alongside `GtfsDataset`). Fields: `routeId` (String `@Id`), `routeShortName`,
+  `routeLongName`, `routeType` (int). No standard timestamp columns — this is a bulk-replaced data table.
+- Liquibase changeset: create `gtfs_route` table with RLS enabled (PostgreSQL). No `id_gen` row needed.
+- Repository: `GtfsRouteRepository` extending `JpaRepository<GtfsRoute, String>` in `model/domain/repository`.
+
+**Parsing `agency.txt`:**
+- Read the file, find the row where `agency_name` contains "Storstockholms Lokaltrafik", extract and retain
+  the `agency_id`. Fail fast if no matching agency is found — throw `GtfsDownloadException` with a clear
+  message.
+
+**Parsing `routes.txt`:**
+- Load all monitored lines from `GtfsMonitoredLineRepository` (source of truth from A5).
+- Filter `routes.txt` rows by all three conditions: `agency_id` matches the resolved SL agency, `route_type`
+  matches the transport mode (TRAIN=100, BUS=700, METRO=401), and `route_short_name` matches
+  `^{base}[A-Za-z]?$` against each monitored line's `routeShortName`.
+- Delete all existing `gtfs_route` rows and insert the filtered set (within the `@Transactional` method).
+- Retain the set of matched `route_ids` as a local variable for the next parse phase.
+
+B3 - BE - Filter the trips.tx file. 
 
 C1 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
 filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,

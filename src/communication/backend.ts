@@ -23,6 +23,7 @@ import {
   URL_BACKEND_GTFS_POC_FILES,
   URL_BACKEND_GTFS_STATUS,
   URL_BACKEND_GTFS_RESET,
+  URL_BACKEND_GTFS_RUN_PIPELINE,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
@@ -304,6 +305,16 @@ export async function resetGtfsPipeline(setError: SetError): Promise<boolean> {
     } else {
       setError("Could not reset GTFS pipeline.");
     }
+    return false;
+  }
+}
+
+export async function runGtfsPipeline(setError: SetError): Promise<boolean> {
+  try {
+    await backend.post(URL_BACKEND_GTFS_RUN_PIPELINE);
+    return true;
+  } catch (error) {
+    setError("Could not run GTFS pipeline.");
     return false;
   }
 }

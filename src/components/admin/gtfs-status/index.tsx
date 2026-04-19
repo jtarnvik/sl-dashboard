@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 
-import { fetchGtfsStatus, GtfsStatusData, resetGtfsPipeline } from '../../../communication/backend';
+import { fetchGtfsStatus, GtfsStatusData, resetGtfsPipeline, runGtfsPipeline } from '../../../communication/backend';
 import { SLButton } from '../../common/sl-button';
 import ErrorContext from '../../../contexts/error-context';
 
@@ -56,6 +56,7 @@ export function GtfsStatus() {
   const { setError } = useContext(ErrorContext);
   const [status, setStatus] = useState<GtfsStatusData | null | undefined>(undefined);
   const [resetting, setResetting] = useState(false);
+  const [running, setRunning] = useState(false);
 
   async function loadStatus() {
     const data = await fetchGtfsStatus(setError);
@@ -75,7 +76,17 @@ export function GtfsStatus() {
     setResetting(false);
   }
 
+  async function handleRunPipeline() {
+    setRunning(true);
+    const ok = await runGtfsPipeline(setError);
+    if (ok) {
+      await loadStatus();
+    }
+    setRunning(false);
+  }
+
   const resetAllowed = status !== null && status !== undefined && RESET_ALLOWED_STATUSES.includes(status.status);
+  const runPipelineAllowed = status !== null && status !== undefined && status.status === 'DOWNLOAD_DONE';
 
   return (
     <div className="flex flex-col space-y-4">
@@ -118,12 +129,17 @@ export function GtfsStatus() {
 
       <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4">
         <h2 className="text-sm font-semibold text-gray-800 mb-2">Actions</h2>
-        <SLButton onClick={handleReset} thin disabled={!resetAllowed || resetting}>
-          {resetting ? 'Resetting...' : 'Reset to DOWNLOAD_DONE'}
-        </SLButton>
-        {!resetAllowed && status !== undefined && (
+        <div className="flex flex-col space-y-2">
+          <SLButton onClick={handleRunPipeline} thin disabled={!runPipelineAllowed || running}>
+            {running ? 'Running...' : 'Run pipeline'}
+          </SLButton>
+          <SLButton onClick={handleReset} thin disabled={!resetAllowed || resetting}>
+            {resetting ? 'Resetting...' : 'Reset to DOWNLOAD_DONE'}
+          </SLButton>
+        </div>
+        {!resetAllowed && !runPipelineAllowed && status !== undefined && (
           <p className="mt-2 text-xs text-gray-500">
-            Reset not available for current status.
+            No actions available for current status.
           </p>
         )}
       </div>

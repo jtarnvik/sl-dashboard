@@ -30,6 +30,7 @@ export const URL_BACKEND_GTFS_POC_UNZIP = "/api/admin/gtfs-poc/unzip";
 export const URL_BACKEND_GTFS_POC_FILES = "/api/admin/gtfs-poc/files";
 export const URL_BACKEND_GTFS_STATUS = "/api/admin/gtfs/status";
 export const URL_BACKEND_GTFS_RESET = "/api/admin/gtfs/reset";
+export const URL_BACKEND_GTFS_RUN_PIPELINE = "/api/admin/gtfs/run-pipeline";
 
 export const URL_BACKEND_SHARED_ROUTE_CREATE = "/api/protected/routes";
 export const URL_BACKEND_SHARED_ROUTE_GET = (id: string) => `/api/public/routes/${id}`;
