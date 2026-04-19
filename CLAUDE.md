@@ -438,7 +438,110 @@ B2 - DONE - BE - Create `GtfsParseService` and parse `agency.txt` + `routes.txt`
 - Delete all existing `gtfs_route` rows and insert the filtered set (within the `@Transactional` method).
 - Retain the set of matched `route_ids` as a local variable for the next parse phase.
 
-B3 - BE - Filter the trips.tx file. 
+B3 - DONE - BE - Parse `trips.txt` and persist `gtfs_trip`.
+
+**`GtfsTrip` entity and table (`gtfs_trip`):**
+- Entity in `model/gtfs` package. Fields: `tripId` (String `@Id`), `routeId`, `serviceId`, `directionId`
+  (int). No standard timestamp columns.
+- Liquibase changeset 028: create `gtfs_trip` table with RLS enabled (PostgreSQL). No `id_gen` row needed.
+- Repository: `GtfsTripRepository` extending `JpaRepository<GtfsTrip, String>` in `model/domain/repository`.
+
+**Parsing `trips.txt`:**
+- Filter rows where `route_id` is in the retained `routeIds` set from B2 (passed as a local variable
+  through `parseIfReady()`).
+- Delete all existing `gtfs_trip` rows and insert the filtered set within the same `@Transactional` method.
+- Retain two sets from the filtered rows for downstream phases: `tripIds` (needed by B4 for stop_times
+  filtering) and `serviceIds` (needed by B6 for calendar_dates filtering).
+- Log the count of retained trips at INFO level.
+
+**Reset:**
+- `GtfsPipelineService.resetToDownloadDone()` must also delete all `gtfs_trip` rows (alongside `gtfs_route`).
+
+**Transaction note:**
+- `GtfsDownloadLog entry` must be detached from the outer EntityManager immediately after `markParseStart()`
+  via `entityManager.detach(entry)`. Without this, any `entityManager.flush()` call during the parse flushes
+  the dirty entry, acquiring a row lock that blocks the REQUIRES_NEW `markParseDone()` call after ~50 seconds
+  (MySQL `innodb_lock_wait_timeout` default). Detaching prevents the outer session from ever touching the
+  download log row. Once detached, REQUIRES_NEW DAO methods that call `save(entry)` will merge it cleanly
+  in their own inner transaction.
+
+B4 - DONE - BE - Parse `stop_times.txt` and persist `gtfs_stop_time`.
+
+`stop_times.txt` is the largest file (~140 MB, actual filtered count: 90,720 rows). It must be filtered by
+`trip_ids` retained from B3 and written to DB in batches to keep the JVM heap constant. It also produces the
+set of retained `stop_ids` needed by B5 to filter `stops.txt`.
+
+**`GtfsStopTime` entity and table (`gtfs_stop_time`):**
+- Entity in `model/gtfs` package. Composite PK (`trip_id` + `stop_sequence`) using `@EmbeddedId` with a
+  `GtfsStopTimeId` embeddable. Fields: `stopId`, `arrivalTime` (String), `departureTime` (String),
+  `shapeDistTraveled` (Double, nullable), `stopHeadsign` (String, nullable). No standard timestamp columns.
+- GTFS times may exceed 24:00:00 for overnight trips (e.g. "25:30:00") — store as String, not LocalTime.
+- Liquibase changeset 029: create `gtfs_stop_time` table with composite PK, RLS enabled (PostgreSQL). No
+  `id_gen` row needed.
+- Repository: `GtfsStopTimeRepository` extending `JpaRepository<GtfsStopTime, GtfsStopTimeId>` in
+  `model/domain/repository`.
+
+**Parsing `stop_times.txt`:**
+- Filter rows where `trip_id` is in the retained `tripIds` set from B3.
+- Collect retained `stop_id` values into a set as rows are processed (needed for B5).
+- Delete all existing `gtfs_stop_time` rows first with `deleteAllInBatch()`, then insert in batches of 500
+  using `saveAll(batch)` + `entityManager.flush()` + `entityManager.clear()` per batch. This is safe because
+  `entry` is already detached (see B3 transaction note) — flush only touches GTFS entities.
+- Log progress every 10,000 rows. Log total count at INFO level.
+- Return the retained `stop_id` set to `parseIfReady()` for B5.
+
+**GTFS field notes:**
+- `stop_sequence` is the ordering field — primary key component alongside `trip_id`.
+- `stop_headsign` is the destination name for the trip (e.g. "Nynäshamn"), consistent across all rows for a
+  given trip — reliable for display as "Train to X".
+- `shape_dist_traveled` is in meters along the route — used for proportional vehicle placement between stops
+  on the schematic map, since `current_stop_sequence` is never populated in the RT feed.
+- `pickup_type` / `drop_off_type` can be ignored (terminus behaviour, not needed for current use cases).
+
+**Performance notes:**
+- `deleteAllInBatch()` issues a single `DELETE FROM` without loading entities first.
+- `hibernate.jdbc.batch_size=500` + `rewriteBatchedStatements=true` (MySQL only, in
+  `application-local.properties`) enables true multi-row batch inserts. Without `rewriteBatchedStatements`,
+  the MySQL JDBC driver ignores the batch hint. PostgreSQL batches correctly without an equivalent flag.
+
+**Reset:**
+- `GtfsPipelineService.resetToDownloadDone()` must also delete all `gtfs_stop_time` rows. Delete before
+  `gtfs_stop` and `gtfs_trip` (largest table — fail fast on reset).
+
+B5 - BE - Parse `stops.txt` and persist `gtfs_stop`.
+
+`stops.txt` contains all stops for all operators (~1.5 MB). Filter to only the 250 unique stop IDs collected
+during B4 — these are the platform-level stops used by the monitored lines. At 250 rows no batching is needed.
+
+**`GtfsStop` entity and table (`gtfs_stop`):**
+- Entity in `model/gtfs` package. Fields: `stopId` (String `@Id`), `stopName`, `stopLat` (Double),
+  `stopLon` (Double), `locationType` (Integer, nullable), `parentStation` (String, nullable). No standard
+  timestamp columns.
+- Liquibase changeset 030: create `gtfs_stop` table with RLS enabled (PostgreSQL). No `id_gen` row needed.
+- Repository: `GtfsStopRepository` extending `JpaRepository<GtfsStop, String>` in `model/domain/repository`.
+
+**Parsing `stops.txt`:**
+- Filter rows where `stop_id` is in the retained `stopIds` set from B4.
+- Delete all existing `gtfs_stop` rows with `deleteAllInBatch()`, then insert with `saveAll()`.
+- Log the count of retained stops at INFO level.
+
+**GTFS field notes:**
+- Stop IDs use Samtrafiken format `9022001xxxxxxxxx` (platform level). Parent stations use `9021001xxxxxxxxx`
+  — they are not in the stop_ids set from B4 and must not be included.
+- `stop_lat` / `stop_lon` are reliable real-world coordinates.
+- `location_type`: 0 = individual stop/platform. Nullable — some rows omit it.
+- `parent_station` is the station grouping ID — store it for potential future use (grouping platforms under
+  a station name on the map) but do not follow it to fetch additional rows.
+- `platform_code` exists in the file but is not needed — omit it.
+
+**Reset:**
+- `GtfsPipelineService.resetToDownloadDone()` must also delete all `gtfs_stop` rows. Delete after
+  `gtfs_stop_time` and before `gtfs_trip` (stop_times references stop_id logically, though no FK constraint
+  exists in the schema).
+
+B98 - BE - How to handle tests, cant have full test data.
+
+B99 - BE - Write a short description in the GtfsParse service with the parse logic and what wach step does and why.
 
 C1 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
 filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
