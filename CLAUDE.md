@@ -342,7 +342,40 @@ B6 - DONE - BE - Parse `calendar_dates.txt`, persist `gtfs_calendar_date`. Sole 
 day); type-2 cancellations are irrelevant with no base schedule. Dates parsed from `YYYYMMDD` to `LocalDate`
 via `DateTimeFormatter.BASIC_ISO_DATE`; column named `service_date` (not `date` — SQL reserved word).
 
-B98 - BE - How to handle tests, cant have full test data.
+B98 - DONE - BE - Integration test for `GtfsParseService` using synthetic GTFS files. The real feed files are too
+large (~140 MB for `stop_times.txt`) to ship as test resources. Instead, hand-crafted minimal CSV files in
+`src/test/resources/gtfs/` cover the same filtering logic at negligible size.
+
+**Making `UNZIP_DIR` configurable:**
+Change the hardcoded `private static final Path UNZIP_DIR` constant in `GtfsParseService` to an injected
+`@Value("${gtfs.unzip-dir:/tmp/sl-gtfs-cache/unzipped}") private Path unzipDir` (non-final, so
+`@RequiredArgsConstructor` skips it and Spring injects it via field injection). The default preserves
+production behaviour. The test overrides it via `@DynamicPropertySource`.
+
+**Synthetic test files (`src/test/resources/gtfs/`):**
+Six CSV files, a few KB total, designed to exercise every filter condition:
+
+| File | Retained | Excluded |
+|---|---|---|
+| `agency.txt` | SL agency | one foreign agency |
+| `routes.txt` | train 43, 43X (variant), bus 117 | non-monitored bus 999, foreign-agency train |
+| `trips.txt` | 4 trips across retained routes (service IDs svc-A/B/C) | trips for excluded routes |
+| `stop_times.txt` | 9 rows; one with `25:30:00` (>24h, must survive as String) | rows for excluded trips |
+| `stops.txt` | 5 platform stops; one with blank `shape_dist_traveled` | excluded bus stop; a parent station (not referenced by stop_times) |
+| `calendar_dates.txt` | 4 rows (svc-A/B/C, exception_type=1) | exception_type=2 row; rows for non-monitored service IDs |
+
+**Test class (`GtfsParseServiceTest`):**
+- `@SpringBootTest @ActiveProfiles("test")`; `@MockitoBean PushoverProvider` to suppress notifications
+- `@DynamicPropertySource` resolves `gtfs/` from classpath and sets `gtfs.unzip-dir`
+- `@BeforeEach` inserts a `GtfsDownloadLog` row with status `UNZIP_DONE` for today
+- `@AfterEach` deletes all GTFS table rows and the log row (do NOT touch `gtfs_monitored_line` — seeded by Liquibase)
+- One `@Test` calls `gtfsParseService.parseIfReady()` and asserts:
+  - `gtfsRouteRepository.count()` = 3; short names are {43, 43X, 117}; route-999 absent
+  - `gtfsTripRepository.count()` = 4; trip-43x-1 present; trip-999-1 absent
+  - `gtfsStopTimeRepository.count()` = 9; the `25:30:00` arrival time stored intact as String
+  - `gtfsStopRepository.count()` = 5; excluded stop and parent station absent
+  - `gtfsCalendarDateRepository.count()` = 4; exception_type=2 row absent; non-monitored service ID absent
+  - Log status for today = `PARSE_DONE`
 
 B99 - DONE - BE - Comprehensive class-level Javadoc written for `GtfsParseService` covering parse order,
 transaction architecture, delete strategy, batch insert design, and the `detach(entry)` lock-avoidance
