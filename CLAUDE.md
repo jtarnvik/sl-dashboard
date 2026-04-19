@@ -301,247 +301,52 @@ A6 - DONE - BE, Pushover notification on GTFS pipeline failure. Sent from `GtfsD
 `updateFailed()` site (download and unzip phases). `parseIfReady()` (B) should follow the same pattern.
 `sendGtfsPipelineErrorNotification(phase, message)` added to `PushoverProvider`.
 
-B - BE, Parse unzipped GTFS files into the database and serve from an in-memory cache. The files are already
-unzipped to `/tmp/sl-gtfs-cache/unzipped/` by A2. This block reads them, filters to the monitored lines,
-persists the filtered data to the DB, loads it into an `AtomicReference<GtfsDataset>` in-memory cache, and
-integrates into the existing pipeline status flow. Steps to be defined.
+B - BE, Parse unzipped GTFS files into the database and serve from an in-memory cache. `GtfsParseService`
+owns all parse logic and runs as a single `@Transactional` boundary; `GtfsPipelineService` orchestrates;
+`GtfsAccessService` holds the `AtomicReference<GtfsDataset>`. Five DB tables store the filtered subset of the
+regional feed: `gtfs_route`, `gtfs_trip`, `gtfs_stop_time`, `gtfs_stop`, `gtfs_calendar_date`. All use natural
+GTFS keys (`@Id` / `@EmbeddedId`) — no synthetic IDs, no timestamp columns. Parse order is dependency-driven:
+agency → routes → trips → stop_times → stops → calendar_dates. Status updates use `REQUIRES_NEW`; the DB is
+the durable store and the `AtomicReference` is swapped only after each full parse commit. Full architecture,
+transaction design, and the critical `detach(entry)` lock-avoidance pattern are documented in the
+`GtfsParseService` class-level Javadoc.
 
-**Tables (one per source file, column-filtered, `gtfs_` prefix for consistency):**
-- `gtfs_route` ← `routes.txt` (route_id PK, route_short_name, route_long_name, route_type)
-- `gtfs_trip` ← `trips.txt` (trip_id PK, route_id, service_id, direction_id)
-- `gtfs_stop` ← `stops.txt` (stop_id PK, stop_name, stop_lat, stop_lon, location_type, parent_station)
-- `gtfs_stop_time` ← `stop_times.txt` (composite PK: trip_id + stop_sequence; stop_id, arrival_time, departure_time, shape_dist_traveled, stop_headsign)
-- `gtfs_calendar_date` ← `calendar_dates.txt` (composite PK: service_id + date; exception_type)
+**Pending:** `feed_version` column on `gtfs_download_log` (populate from `feed_info.txt` during parse, show
+in the GTFS status view) — not yet implemented.
 
-`shapes.txt` is excluded — shape data for map rendering comes from the journey planner API. `calendar.txt`
-is unused (Samtrafiken uses `calendar_dates.txt` exclusively). `agency.txt`, `transfers.txt`,
-`attributions.txt`, `booking_rules.txt` — not stored.
+B1 - DONE - BE - Set up code flow for parse logic. `GtfsDataset` plain data holder in `model/gtfs`;
+`GtfsAccessService` with `AtomicReference<GtfsDataset>`, `getDataset()` / `rebuildDataset()`. Loads from DB
+on `ApplicationReadyEvent` so data survives restarts without a re-parse.
 
-**Entity IDs:** Use natural GTFS keys as `@Id` (string for single-key tables, `@EmbeddedId` for composites).
-These are bulk-replaced lookup tables, not domain entities — synthetic `@TableGenerator` IDs add no value and
-would require 80,000 id_gen round-trips for `gtfs_stop_time` alone. No `id_gen` rows needed for these tables.
-Standard `create_date` / `latest_update` timestamp columns are also omitted — the entire table set is replaced
-atomically; individual row lifecycle tracking is not meaningful.
+B2 - DONE - BE - Create `GtfsParseService`, parse `agency.txt` + `routes.txt`. SL `agency_id` resolved by
+name ("AB Storstockholms Lokaltrafik") — not hardcoded, it may change. Three-condition filter: agency + route
+type (TRAIN=100, BUS=700, METRO=401) + name regex `^{base}[A-Za-z]?$` (captures 43X variants).
 
-**`feed_version` in `gtfs_download_log`:** Add a `feed_version` VARCHAR column to `gtfs_download_log` via a
-new Liquibase changeset. Populate from `feed_info.txt` (`feed_version` field) during parsing. Shown in the
-GTFS status view for observability. This requires a new Liquibase changeset before the parse step.
+B3 - DONE - BE - Parse `trips.txt`, persist `gtfs_trip`. `TripParseResult` record carries both `tripIds` and
+`serviceIds` for downstream steps. `entityManager.detach(entry)` immediately after `markParseStart()` is
+critical — without it, subsequent `flush()` calls lock the `gtfs_download_log` row and block the
+`REQUIRES_NEW` `markParseDone()` after ~50 s (MySQL lock timeout).
 
-**In-memory cache with DB as persistence layer:**
-The DB is the durable store (survives restarts). On startup and after each successful parse, the service loads
-all tables for monitored lines into a `GtfsDataset` object held in an `AtomicReference`. Requests are served
-from the in-memory reference. During a re-parse, the old in-memory data keeps serving without interference.
-When the new parse transaction commits, `AtomicReference.set()` swaps the reference atomically; old data is
-garbage collected. No version column needed in any table — the DB always reflects the latest completed parse.
-The filtered dataset for 7 lines fits comfortably in memory (512 MB Render limit — "small fraction of the raw
-file sizes").
+B4 - DONE - BE - Parse `stop_times.txt` (~140 MB, 90,720 filtered rows), persist `gtfs_stop_time`. Times
+stored as String — GTFS allows values > 24:00:00 for overnight trips. `shapeDistTraveled` (meters along
+route) enables proportional vehicle placement since `current_stop_sequence` is never set in the RT feed.
+Batch insert: 500 rows, `flush()` + `clear()` per batch; `rewriteBatchedStatements=true` needed in MySQL
+JDBC URL for true multi-row inserts.
 
-**Parse order** (driven by filtering dependencies — each set of IDs must be known before the next file is filtered):
-1. `agency.txt` — resolve the SL agency_id from `agency_name`
-2. `routes.txt` — filter by agency + route_type + route_short_name pattern → retained route_ids
-3. `trips.txt` — filter by route_ids → retained trip_ids and service_ids
-4. `stop_times.txt` — filter by trip_ids → retained stop_ids (and write to DB)
-5. `stops.txt` — filter by stop_ids → write to DB
-6. `calendar_dates.txt` — filter by service_ids → write to DB
+B5 - DONE - BE - Parse `stops.txt`, persist `gtfs_stop`. ~250 platform-level stops (`9022001xxxxxxxxx`).
+Parent stations (`9021001xxxxxxxxx`) are excluded — they are not in the `stopIds` set from B4. Two stops with
+the same name and parent but different platform IDs are the two road-sides of a bidirectional bus stop.
 
-**Filtering strategy — three conditions, all must match:**
-1. `agency_name` contains "Storstockholms Lokaltrafik" (resolved from `agency.txt` — do not hardcode the
-   agency_id `14010000000001001` as it may change). Agency name in feed: "AB Storstockholms Lokaltrafik".
-2. `route_type` matches transport_mode: TRAIN=100, BUS=700, METRO=401 (verified from actual `routes.txt`)
-3. `route_short_name` matches `^{base}[A-Za-z]?$` — captures variants (43X) within the same transport mode
-
-**Atomic table replacement — use DELETE inside @Transactional, not TRUNCATE:**
-The entire delete-old + insert-new must run in a single `@Transactional` method. On failure the transaction
-rolls back and existing data is preserved intact. On success all new data becomes atomically visible.
-`DELETE` uses row-level locks; PostgreSQL and MySQL MVCC ensures concurrent reads still see the old committed
-snapshot while the transaction is in progress. `TRUNCATE` acquires ACCESS EXCLUSIVE locks that block reads —
-do not use it. Delete in reverse dependency order: `gtfs_stop_time` first (largest — fail fast), then
-`gtfs_calendar_date`, `gtfs_trip`, `gtfs_stop`, `gtfs_route`. Insert in forward dependency order.
-
-The `gtfs_download_log` status updates use `REQUIRES_NEW` and commit independently — status remains visible
-during parsing regardless of the parse transaction state. Load the in-memory `GtfsDataset`
-(`AtomicReference.set()`) only after the transaction has committed successfully.
-
-**Batch inserts:** ~80,000 rows for `gtfs_stop_time` (~8 MB) — well within normal transaction size. Use
-`entityManager.flush()` + `entityManager.clear()` every few hundred rows to keep the JVM heap constant;
-without it Hibernate accumulates all managed entities in the persistence context, which is wasteful but not
-a hard limit.
-
-**Pipeline integration:** `parseIfReady()` follows the same pattern as `unzipIfReady()` — checks today's
-status is `UNZIP_DONE`, transitions `PARSE_START` → `PARSE_DONE` or `FAILED`, writes `parse_end_time` on
-success, sends Pushover notification on failure (see A6 pattern). Add to `runPipeline()`. The reset endpoint
-(`POST /api/admin/gtfs/reset`) must also clear the GTFS tables and the in-memory cache when this block exists.
-
-**GTFS field notes:**
-- `calendar.txt` is unused — all scheduling is in `calendar_dates.txt` (`exception_type=1` means runs that day)
-- `route_long_name` is the display name when present; fall back to `route_short_name`
-- `stop_headsign` in `stop_times.txt` is the destination name — reliable for display as "Train to X"
-- Line 43/43X/44: 43 is the main line (Bålsta–Nynäshamn). 43X is an express variant (rush hour, skips minor
-  stops). 44 boosts frequency on part of the 43 route; it is periodically suspended — its absence from the
-  feed is expected and normal, not a data error. 43B/43M are rail-replacement buses (route_type=700), excluded
-  naturally by the TRAIN→100 filter. The parser must handle absent monitored lines gracefully.
-
-Expose a `GtfsStaticService` that resolves `trip_id` → route short name and `stop_id` → stop name from the
-in-memory cache.
-
-B1 - DONE - BE - Set up code flow for parse logic.
-- Create `GtfsDataset` (empty shell, no real API yet) in `model/gtfs` package — it is a plain data holder,
-  not a JPA entity, not a service.
-- Create `GtfsAccessService` (in the `service` package) with two methods: `rebuildDataset()` and `getDataset()`.
-  The `AtomicReference<GtfsDataset>` lives here. `getDataset()` returns the current reference atomically —
-  thread-safe by definition. `rebuildDataset()` sets the reference atomically after building the new dataset.
-- `GtfsAccessService` listens for `ApplicationReadyEvent` and calls `rebuildDataset()` on startup. This ensures
-  that data already in the DB from a prior run (status=`PARSE_DONE`) is loaded into memory without requiring a
-  new parse cycle. If no data exists yet the dataset remains empty.
-- `GtfsDownloadService` depends on `GtfsAccessService`. After the parse transaction commits successfully,
-  `parseIfReady()` calls `gtfsAccessService.rebuildDataset()`. This is the correct dependency direction —
-  the download service notifies the access service when new data is available.
-- Add `parseIfReady()` stub to `GtfsDownloadService` with no logic yet, and add a call to it in `runPipeline()`.
-- Any code consuming `GtfsDataset` must call `getDataset()` each time — never cache the returned reference
-  locally, as it may be replaced atomically at any time.
-
-B2 - DONE - BE - Create `GtfsParseService` and parse `agency.txt` + `routes.txt`.
-
-**Service structure:**
-- Create `GtfsParseService` in the `service` package. It owns all file parsing logic — `GtfsDownloadService`
-  is a pipeline orchestrator only and must not contain parse logic.
-- Move `parseIfReady()` from the stub in `GtfsDownloadService` to `GtfsParseService`. Update `runPipeline()`
-  in `GtfsDownloadService` to call `gtfsParseService.parseIfReady()` and remove the stub.
-- `parseIfReady()` in `GtfsParseService` is public and `@Transactional` — the transaction starts here since
-  it is called from `GtfsDownloadService` (a different bean), so the Spring proxy is in play. It checks
-  today's status is `UNZIP_DONE` (skip otherwise), marks `PARSE_START`, runs all file phases in sequence,
-  then marks `PARSE_DONE`. On failure: `handlePipelineFailure()` following the A6 pattern. Status updates
-  go through `GtfsDownloadDao` with `REQUIRES_NEW`, which suspends the outer transaction and commits
-  independently — so status is always visible regardless of whether the parse transaction rolls back.
-- `rebuildDataset()` is called from `GtfsDownloadService.runPipeline()` after `parseIfReady()` returns —
-  it is not part of the parse step. This ensures the in-memory cache is only updated after the transaction
-  has fully committed.
-- Intermediate state (retained `route_ids`, resolved SL `agency_id`, `trip_ids`, `stop_ids`, `service_ids`)
-  flows as local variables within the single `@Transactional` method — no shared instance state.
-
-**`GtfsRoute` entity and table (`gtfs_route`):**
-- Entity in `model/gtfs` package (alongside `GtfsDataset`). Fields: `routeId` (String `@Id`), `routeShortName`,
-  `routeLongName`, `routeType` (int). No standard timestamp columns — this is a bulk-replaced data table.
-- Liquibase changeset: create `gtfs_route` table with RLS enabled (PostgreSQL). No `id_gen` row needed.
-- Repository: `GtfsRouteRepository` extending `JpaRepository<GtfsRoute, String>` in `model/domain/repository`.
-
-**Parsing `agency.txt`:**
-- Read the file, find the row where `agency_name` contains "Storstockholms Lokaltrafik", extract and retain
-  the `agency_id`. Fail fast if no matching agency is found — throw `GtfsDownloadException` with a clear
-  message.
-
-**Parsing `routes.txt`:**
-- Load all monitored lines from `GtfsMonitoredLineRepository` (source of truth from A5).
-- Filter `routes.txt` rows by all three conditions: `agency_id` matches the resolved SL agency, `route_type`
-  matches the transport mode (TRAIN=100, BUS=700, METRO=401), and `route_short_name` matches
-  `^{base}[A-Za-z]?$` against each monitored line's `routeShortName`.
-- Delete all existing `gtfs_route` rows and insert the filtered set (within the `@Transactional` method).
-- Retain the set of matched `route_ids` as a local variable for the next parse phase.
-
-B3 - DONE - BE - Parse `trips.txt` and persist `gtfs_trip`.
-
-**`GtfsTrip` entity and table (`gtfs_trip`):**
-- Entity in `model/gtfs` package. Fields: `tripId` (String `@Id`), `routeId`, `serviceId`, `directionId`
-  (int). No standard timestamp columns.
-- Liquibase changeset 028: create `gtfs_trip` table with RLS enabled (PostgreSQL). No `id_gen` row needed.
-- Repository: `GtfsTripRepository` extending `JpaRepository<GtfsTrip, String>` in `model/domain/repository`.
-
-**Parsing `trips.txt`:**
-- Filter rows where `route_id` is in the retained `routeIds` set from B2 (passed as a local variable
-  through `parseIfReady()`).
-- Delete all existing `gtfs_trip` rows and insert the filtered set within the same `@Transactional` method.
-- Retain two sets from the filtered rows for downstream phases: `tripIds` (needed by B4 for stop_times
-  filtering) and `serviceIds` (needed by B6 for calendar_dates filtering).
-- Log the count of retained trips at INFO level.
-
-**Reset:**
-- `GtfsPipelineService.resetToDownloadDone()` must also delete all `gtfs_trip` rows (alongside `gtfs_route`).
-
-**Transaction note:**
-- `GtfsDownloadLog entry` must be detached from the outer EntityManager immediately after `markParseStart()`
-  via `entityManager.detach(entry)`. Without this, any `entityManager.flush()` call during the parse flushes
-  the dirty entry, acquiring a row lock that blocks the REQUIRES_NEW `markParseDone()` call after ~50 seconds
-  (MySQL `innodb_lock_wait_timeout` default). Detaching prevents the outer session from ever touching the
-  download log row. Once detached, REQUIRES_NEW DAO methods that call `save(entry)` will merge it cleanly
-  in their own inner transaction.
-
-B4 - DONE - BE - Parse `stop_times.txt` and persist `gtfs_stop_time`.
-
-`stop_times.txt` is the largest file (~140 MB, actual filtered count: 90,720 rows). It must be filtered by
-`trip_ids` retained from B3 and written to DB in batches to keep the JVM heap constant. It also produces the
-set of retained `stop_ids` needed by B5 to filter `stops.txt`.
-
-**`GtfsStopTime` entity and table (`gtfs_stop_time`):**
-- Entity in `model/gtfs` package. Composite PK (`trip_id` + `stop_sequence`) using `@EmbeddedId` with a
-  `GtfsStopTimeId` embeddable. Fields: `stopId`, `arrivalTime` (String), `departureTime` (String),
-  `shapeDistTraveled` (Double, nullable), `stopHeadsign` (String, nullable). No standard timestamp columns.
-- GTFS times may exceed 24:00:00 for overnight trips (e.g. "25:30:00") — store as String, not LocalTime.
-- Liquibase changeset 029: create `gtfs_stop_time` table with composite PK, RLS enabled (PostgreSQL). No
-  `id_gen` row needed.
-- Repository: `GtfsStopTimeRepository` extending `JpaRepository<GtfsStopTime, GtfsStopTimeId>` in
-  `model/domain/repository`.
-
-**Parsing `stop_times.txt`:**
-- Filter rows where `trip_id` is in the retained `tripIds` set from B3.
-- Collect retained `stop_id` values into a set as rows are processed (needed for B5).
-- Delete all existing `gtfs_stop_time` rows first with `deleteAllInBatch()`, then insert in batches of 500
-  using `saveAll(batch)` + `entityManager.flush()` + `entityManager.clear()` per batch. This is safe because
-  `entry` is already detached (see B3 transaction note) — flush only touches GTFS entities.
-- Log progress every 10,000 rows. Log total count at INFO level.
-- Return the retained `stop_id` set to `parseIfReady()` for B5.
-
-**GTFS field notes:**
-- `stop_sequence` is the ordering field — primary key component alongside `trip_id`.
-- `stop_headsign` is the destination name for the trip (e.g. "Nynäshamn"), consistent across all rows for a
-  given trip — reliable for display as "Train to X".
-- `shape_dist_traveled` is in meters along the route — used for proportional vehicle placement between stops
-  on the schematic map, since `current_stop_sequence` is never populated in the RT feed.
-- `pickup_type` / `drop_off_type` can be ignored (terminus behaviour, not needed for current use cases).
-
-**Performance notes:**
-- `deleteAllInBatch()` issues a single `DELETE FROM` without loading entities first.
-- `hibernate.jdbc.batch_size=500` + `rewriteBatchedStatements=true` (MySQL only, in
-  `application-local.properties`) enables true multi-row batch inserts. Without `rewriteBatchedStatements`,
-  the MySQL JDBC driver ignores the batch hint. PostgreSQL batches correctly without an equivalent flag.
-
-**Reset:**
-- `GtfsPipelineService.resetToDownloadDone()` must also delete all `gtfs_stop_time` rows. Delete before
-  `gtfs_stop` and `gtfs_trip` (largest table — fail fast on reset).
-
-B5 - BE - Parse `stops.txt` and persist `gtfs_stop`.
-
-`stops.txt` contains all stops for all operators (~1.5 MB). Filter to only the 250 unique stop IDs collected
-during B4 — these are the platform-level stops used by the monitored lines. At 250 rows no batching is needed.
-
-**`GtfsStop` entity and table (`gtfs_stop`):**
-- Entity in `model/gtfs` package. Fields: `stopId` (String `@Id`), `stopName`, `stopLat` (Double),
-  `stopLon` (Double), `locationType` (Integer, nullable), `parentStation` (String, nullable). No standard
-  timestamp columns.
-- Liquibase changeset 030: create `gtfs_stop` table with RLS enabled (PostgreSQL). No `id_gen` row needed.
-- Repository: `GtfsStopRepository` extending `JpaRepository<GtfsStop, String>` in `model/domain/repository`.
-
-**Parsing `stops.txt`:**
-- Filter rows where `stop_id` is in the retained `stopIds` set from B4.
-- Delete all existing `gtfs_stop` rows with `deleteAllInBatch()`, then insert with `saveAll()`.
-- Log the count of retained stops at INFO level.
-
-**GTFS field notes:**
-- Stop IDs use Samtrafiken format `9022001xxxxxxxxx` (platform level). Parent stations use `9021001xxxxxxxxx`
-  — they are not in the stop_ids set from B4 and must not be included.
-- `stop_lat` / `stop_lon` are reliable real-world coordinates.
-- `location_type`: 0 = individual stop/platform. Nullable — some rows omit it.
-- `parent_station` is the station grouping ID — store it for potential future use (grouping platforms under
-  a station name on the map) but do not follow it to fetch additional rows.
-- `platform_code` exists in the file but is not needed — omit it.
-
-**Reset:**
-- `GtfsPipelineService.resetToDownloadDone()` must also delete all `gtfs_stop` rows. Delete after
-  `gtfs_stop_time` and before `gtfs_trip` (stop_times references stop_id logically, though no FK constraint
-  exists in the schema).
+B6 - DONE - BE - Parse `calendar_dates.txt`, persist `gtfs_calendar_date`. Sole scheduling source —
+`calendar.txt` is all-zeros in the Samtrafiken feed. Only `exception_type=1` rows stored (service runs that
+day); type-2 cancellations are irrelevant with no base schedule. Dates parsed from `YYYYMMDD` to `LocalDate`
+via `DateTimeFormatter.BASIC_ISO_DATE`; column named `service_date` (not `date` — SQL reserved word).
 
 B98 - BE - How to handle tests, cant have full test data.
 
-B99 - BE - Write a short description in the GtfsParse service with the parse logic and what wach step does and why.
+B99 - DONE - BE - Comprehensive class-level Javadoc written for `GtfsParseService` covering parse order,
+transaction architecture, delete strategy, batch insert design, and the `detach(entry)` lock-avoidance
+pattern.
 
 C1 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
 filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
