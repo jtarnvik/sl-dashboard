@@ -388,68 +388,29 @@ Holds `List<GtfsMonitoredLine>` + five maps: `routesById`, `tripsById`, `stopsBy
 to C1. `rebuildDataset()` loads all six repositories, assembles the maps, and atomically swaps the
 `AtomicReference`. Empty repositories yield an empty dataset; callers guard with `isEmpty()`.
 
-B10 - DONE - BE - Realtime GTFS-RT provider. Create `SamtrafikenProvider` in
-`port.outgoing.rest.samtrafiken` (provider convention: hides implementation, exposes logical API only).
-Single public method: `List<GtfsVehiclePosition> fetchVehiclePositions()`. Streams the protobuf feed
-in-memory — no temp file. Pass the API key as a query parameter `?key=...` the same way as static
-download. Return only entities that have a `VehiclePosition` (`entity.hasVehicle()`). No caching or
-TTL in the provider — that is the service layer's responsibility (C1).
-
-**`GtfsVehiclePosition` class** (in `model/gtfs` package — a plain data holder, not a JPA entity).
-Use `@Data @Builder` from Lombok. Fields:
-
-```java
-// Always present — primary join key to static data
-private String tripId;
-
-// Always present
-private float latitude;
-private float longitude;
-
-// Always present — IN_TRANSIT_TO, STOPPED_AT, INCOMING_AT
-private VehicleStopStatus currentStatus;
-
-// Always present — Unix timestamp of the position report
-private long timestamp;
-
-// Sometimes present — 0.0f means absent
-private float bearing;
-
-// Sometimes present — 0.0f means absent
-private float speed;
-
-// Not reliably present in RT feed — derive direction from static data instead
-private int directionId;
-
-// Never populated by Samtrafiken — always 0, do not use
-private int currentStopSequence;
-
-// Never populated by Samtrafiken — always empty, do not use
-private String stopId;
-
-// Never populated by Samtrafiken — route_id is always empty in the RT feed
-private String routeId;
-
-// Reliability unknown — included for completeness, may be cleaned up later
-private String vehicleId;    // vehicle.id
-private String vehicleLabel; // vehicle.label
-```
-
-`VehicleStopStatus` is the enum from `com.google.transit.realtime.GtfsRealtime.VehiclePosition` — import
-it directly or define a local mirror. Use the protobuf enum value directly.
-
-**Implementation notes:**
-- Open an `HttpURLConnection` to `${samtrafiken.gtfs-realtime-url}?key=${samtrafiken.gtfs-realtime-api-key}`
-- Set `Accept-Encoding: gzip` header; wrap the response stream in `GZIPInputStream` if the response is gzip-encoded
-- Parse with `FeedMessage.parseFrom(inputStream)` directly from the (possibly decompressed) stream
-- Inject the URL and key via `@Value` constructor parameters (same pattern as `GtfsDownloadService`)
-- Log the entity count and how many had vehicle positions at INFO level
+B10 - DONE - BE - Realtime GTFS-RT provider. `SamtrafikenProvider` in `port.outgoing.rest.samtrafiken`
+streams `VehiclePositions.pb` in-memory (no temp file), parses with `FeedMessage.parseFrom()`, and returns
+`List<GtfsVehiclePosition>` for entities where `hasVehicle()` is true. No caching — that is C1's concern.
+`GtfsVehiclePosition` (`@Data @Builder`, in `model/gtfs`) holds `tripId`, `lat`/`lng` (double, implements
+`GeoPosition`), `bearing`, `speed`, `timestamp`, and several fields that Samtrafiken never populates
+(`currentStopSequence`, `stopId`, `routeId` — always empty/0; `currentStatus` — always `IN_TRANSIT_TO`;
+`speed` — populated for buses in m/s, noise value for trains). `GeoPosition` interface (`model/gtfs`)
+defines `getLat()`/`getLng()` and is also implemented by `GtfsStop`.
 
 B11 - BE - Move static GTFS download to SamtrafikenProvider. Currently `GtfsDownloadService` opens
 `HttpURLConnection` directly. This should move into `SamtrafikenProvider` in
 `port.outgoing.rest.samtrafiken` alongside the realtime method. Discuss the method signature before
 implementing.
-
+   
+B12 - DONE - BE - Geometric vehicle placement utility. `GtfsGeometryUtil` static class in `service/util`.
+Public method `locateOnRoute(List<? extends GeoPosition> stops, GeoPosition vehiclePos)` returns
+`VehicleLocation(segIdx, t, dist)` — the closest segment index, fractional position [0,1] along it,
+and perpendicular distance in metres. Uses dot product projection in approximate Cartesian space
+(longitude scaled by `cos(lat)`) then Haversine for distance; Haversine implemented from scratch
+(Earth radius 6,371,000 m). TRACE logging per segment, DEBUG for winner. Private `SegmentProjection`
+record carries the full stop pair for debugger context. Six plain JUnit 5 unit tests with synthetic
+north-south coordinates covering: at first stop, midpoint, at last stop, beyond last, before first,
+and perpendicular offset.
 
 C1 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
 filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
