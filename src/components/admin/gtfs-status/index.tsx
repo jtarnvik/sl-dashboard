@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 
-import { fetchGtfsStatus, GtfsStatusData, resetGtfsPipeline, runGtfsPipeline } from '../../../communication/backend';
+import { fetchGtfsStatus, GtfsStatusData, resetGtfsPipeline, runGtfsPipeline, runRealtimePoc } from '../../../communication/backend';
 import { SLButton } from '../../common/sl-button';
 import ErrorContext from '../../../contexts/error-context';
 
@@ -57,6 +57,7 @@ export function GtfsStatus() {
   const [status, setStatus] = useState<GtfsStatusData | null | undefined>(undefined);
   const [resetting, setResetting] = useState(false);
   const [running, setRunning] = useState(false);
+  const [pocRunning, setPocRunning] = useState(false);
 
   async function loadStatus() {
     const data = await fetchGtfsStatus(setError);
@@ -74,6 +75,12 @@ export function GtfsStatus() {
       await loadStatus();
     }
     setResetting(false);
+  }
+
+  async function handleRealtimePoc() {
+    setPocRunning(true);
+    await runRealtimePoc(setError);
+    setPocRunning(false);
   }
 
   async function handleRunPipeline() {
@@ -136,12 +143,10 @@ export function GtfsStatus() {
           <SLButton onClick={handleReset} thin disabled={!resetAllowed || resetting}>
             {resetting ? 'Resetting...' : 'Reset to DOWNLOAD_DONE'}
           </SLButton>
+          <SLButton onClick={handleRealtimePoc} thin disabled={pocRunning}>
+            {pocRunning ? 'Running...' : 'Realtime POC'}
+          </SLButton>
         </div>
-        {!resetAllowed && !runPipelineAllowed && status !== undefined && (
-          <p className="mt-2 text-xs text-gray-500">
-            No actions available for current status.
-          </p>
-        )}
       </div>
     </div>
   );

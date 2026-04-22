@@ -342,7 +342,7 @@ B6 - DONE - BE - Parse `calendar_dates.txt`, persist `gtfs_calendar_date`. Sole 
 day); type-2 cancellations are irrelevant with no base schedule. Dates parsed from `YYYYMMDD` to `LocalDate`
 via `DateTimeFormatter.BASIC_ISO_DATE`; column named `service_date` (not `date` — SQL reserved word).
 
-B98 - DONE - BE - Integration test for `GtfsParseService` using synthetic GTFS files. The real feed files are too
+B7 - DONE - BE - Integration test for `GtfsParseService` using synthetic GTFS files. The real feed files are too
 large (~140 MB for `stop_times.txt`) to ship as test resources. Instead, hand-crafted minimal CSV files in
 `src/test/resources/gtfs/` cover the same filtering logic at negligible size.
 
@@ -377,9 +377,79 @@ Six CSV files, a few KB total, designed to exercise every filter condition:
   - `gtfsCalendarDateRepository.count()` = 4; exception_type=2 row absent; non-monitored service ID absent
   - Log status for today = `PARSE_DONE`
 
-B99 - DONE - BE - Comprehensive class-level Javadoc written for `GtfsParseService` covering parse order,
+B8 - DONE - BE - Comprehensive class-level Javadoc written for `GtfsParseService` covering parse order,
 transaction architecture, delete strategy, batch insert design, and the `detach(entry)` lock-avoidance
 pattern.
+
+B9 - DONE - BE - Populate `GtfsDataset` and wire `GtfsAccessService.rebuildDataset()`. `GtfsDataset` is
+immutable — all-args constructor, no setters, maps and lists wrapped in `Collections.unmodifiableMap/List`.
+Holds `List<GtfsMonitoredLine>` + five maps: `routesById`, `tripsById`, `stopsById`, `stopTimesByTripId`
+(sorted by `stopSequence`), `activeServiceIdsByDate`. Exposes only `isEmpty()` — public query API deferred
+to C1. `rebuildDataset()` loads all six repositories, assembles the maps, and atomically swaps the
+`AtomicReference`. Empty repositories yield an empty dataset; callers guard with `isEmpty()`.
+
+B10 - DONE - BE - Realtime GTFS-RT provider. Create `SamtrafikenProvider` in
+`port.outgoing.rest.samtrafiken` (provider convention: hides implementation, exposes logical API only).
+Single public method: `List<GtfsVehiclePosition> fetchVehiclePositions()`. Streams the protobuf feed
+in-memory — no temp file. Pass the API key as a query parameter `?key=...` the same way as static
+download. Return only entities that have a `VehiclePosition` (`entity.hasVehicle()`). No caching or
+TTL in the provider — that is the service layer's responsibility (C1).
+
+**`GtfsVehiclePosition` class** (in `model/gtfs` package — a plain data holder, not a JPA entity).
+Use `@Data @Builder` from Lombok. Fields:
+
+```java
+// Always present — primary join key to static data
+private String tripId;
+
+// Always present
+private float latitude;
+private float longitude;
+
+// Always present — IN_TRANSIT_TO, STOPPED_AT, INCOMING_AT
+private VehicleStopStatus currentStatus;
+
+// Always present — Unix timestamp of the position report
+private long timestamp;
+
+// Sometimes present — 0.0f means absent
+private float bearing;
+
+// Sometimes present — 0.0f means absent
+private float speed;
+
+// Not reliably present in RT feed — derive direction from static data instead
+private int directionId;
+
+// Never populated by Samtrafiken — always 0, do not use
+private int currentStopSequence;
+
+// Never populated by Samtrafiken — always empty, do not use
+private String stopId;
+
+// Never populated by Samtrafiken — route_id is always empty in the RT feed
+private String routeId;
+
+// Reliability unknown — included for completeness, may be cleaned up later
+private String vehicleId;    // vehicle.id
+private String vehicleLabel; // vehicle.label
+```
+
+`VehicleStopStatus` is the enum from `com.google.transit.realtime.GtfsRealtime.VehiclePosition` — import
+it directly or define a local mirror. Use the protobuf enum value directly.
+
+**Implementation notes:**
+- Open an `HttpURLConnection` to `${samtrafiken.gtfs-realtime-url}?key=${samtrafiken.gtfs-realtime-api-key}`
+- Set `Accept-Encoding: gzip` header; wrap the response stream in `GZIPInputStream` if the response is gzip-encoded
+- Parse with `FeedMessage.parseFrom(inputStream)` directly from the (possibly decompressed) stream
+- Inject the URL and key via `@Value` constructor parameters (same pattern as `GtfsDownloadService`)
+- Log the entity count and how many had vehicle positions at INFO level
+
+B11 - BE - Move static GTFS download to SamtrafikenProvider. Currently `GtfsDownloadService` opens
+`HttpURLConnection` directly. This should move into `SamtrafikenProvider` in
+`port.outgoing.rest.samtrafiken` alongside the realtime method. Discuss the method signature before
+implementing.
+
 
 C1 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
 filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
