@@ -305,7 +305,7 @@ to the backend to select which group to display. `GET /api/protected/gtfs/route-
 **Pending:** `feed_version` column on `gtfs_download_log` — populate from `feed_info.txt` during parse.
 
 C1 - BE/FE, Vehicle position endpoint and view. Create a view this will show a schematic representation of
-the route and a live view of vehicles on that route.  The view should have selection part where a monitores route/group 
+the route and a live view of vehicles on that route. The view should have selection part where a monitores route/group 
 combo is selected.
 
 D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
