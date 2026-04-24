@@ -22,15 +22,16 @@ type Props = {
 
 type HeaderProps = {
   showRoleLabel?: boolean;
+  dateLabel?: string;
 }
 
-export function UserRowHeader({ showRoleLabel = true }: HeaderProps) {
+export function UserRowHeader({ showRoleLabel = true, dateLabel = 'Senast inloggad' }: HeaderProps) {
   return (
     <div className="user-row user-row-header">
       <div className="user-row-name">Namn</div>
       <div className="user-row-role">{showRoleLabel ? 'Roll' : ''}</div>
       <div className="user-row-email">Email</div>
-      <div className="user-row-date">Datum</div>
+      <div className="user-row-date">{dateLabel}</div>
       <div className="user-row-actions"></div>
     </div>
   );
@@ -57,8 +58,10 @@ export function UserRow({ item, actions, onApprove, onReject, onDelete }: Props)
       </div>
       <div className="user-row-email">{item.email}</div>
       <div className="user-row-date">
-        <span className="date-short">{item.createDate.substring(0, 10)}</span>
-        <span className="date-full">{item.createDate}</span>
+        {item.lastLogin
+          ? <><span className="date-short">{item.lastLogin.substring(0, 10)}</span>
+               <span className="date-full">{item.lastLogin}</span></>
+          : <span>—</span>}
       </div>
       <div className="user-row-actions">
         {actions.includes(UserRowAction.ShowMessage) && item.message && (

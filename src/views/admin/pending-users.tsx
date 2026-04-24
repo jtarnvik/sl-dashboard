@@ -76,7 +76,7 @@ export function PendingUsers() {
             <p className="text-gray-600">Inga väntande förfrågningar.</p>
           ) : (
             <div>
-              <UserRowHeader showRoleLabel={false} />
+              <UserRowHeader showRoleLabel={false} dateLabel="Datum" />
               {requests.map(r => (
                 <UserRow
                   key={r.id}

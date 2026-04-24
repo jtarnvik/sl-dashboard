@@ -26,6 +26,7 @@ export interface UserRowItem {
   createDate: string;
   role?: string | null;
   message?: string | null;
+  lastLogin?: string | null;
 }
 
 export interface AccessRequestItem extends UserRowItem {
@@ -34,6 +35,7 @@ export interface AccessRequestItem extends UserRowItem {
 
 export interface AllowedUserItem extends UserRowItem {
   role: string | null;
+  lastLogin: string | null;
 }
 
 export interface StatisticsData {
