@@ -69,6 +69,7 @@ The hamburger icon shows a red badge when there are pending access requests. The
 | `Statistics` | `/admin/statistics` | Admin | Usage statistics (shared routes, AI queries, user count) |
 | `SharedRouteView` | `/route/:id` | Any | View a shared journey; shows login teaser to non-logged-in users |
 | `Gdpr` | `/gdpr` | Any | GDPR info page |
+| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle; schematic vehicle view (in progress) |
 | `Denied` | `/denied` | — | Shown when access is denied during OAuth2 |
 
 All routes except `/denied` are rendered inside `Layout`, which wraps them with `Navbar` and an `ErrorBoundary`.
@@ -314,51 +315,12 @@ to the backend to select which group to display. `GET /api/protected/gtfs/route-
 C - BE/FE, Vehicle position endpoint and view. Create a view this will show a schematic representation of
 the route and a live view of vehicles on that route. 
 
-C1 - FE/BE, Route group selection view with focus toggle. Establishes the "Aktuell trafik" view shell and
-the backend contract for route group metadata — vehicle positions are not fetched yet.
-
-**BE-1 — Extend `MonitoredRouteGroupResponse`**
-Add three fields to the record: `focusStart` (nullable String), `focusEnd` (nullable String), `onlyFocused`
-(boolean). Populate from the representative `GtfsMonitoredRoute` row for each group — BE-2 guarantees all
-rows in a group agree by the time this runs.
-
-**BE-2 — Startup consistency validation**
-In `GtfsAccessService.onApplicationReady()`, after `rebuildDataset()` completes, validate that within each
-`(transportMode, routeGroup)` pair every `GtfsMonitoredRoute` has identical `onlyFocused`, `focusStart`, and
-`focusEnd` values. If any group is inconsistent: log each difference (group identity + field + conflicting
-values) then throw a fatal exception so the application does not start. This is an operator configuration
-responsibility — the hard failure enforces correctness.
-
-**FE-1 — New type in `types/backend.ts`**
-```ts
-type MonitoredRouteGroup = {
-  transportMode: string;
-  routeGroup: number;
-  displayName: string;
-  focusStart: string | null;
-  focusEnd: string | null;
-  onlyFocused: boolean;
-};
-```
-
-**FE-2 — New constant and fetch function**
-Add `URL_BACKEND_GTFS_ROUTE_GROUPS = "/api/protected/gtfs/route-groups"` to `constant.ts`. Add
-`fetchRouteGroups(setError)` to `backend.ts` returning `MonitoredRouteGroup[]`.
-
-**FE-3 — New view `src/views/live-traffic.tsx`, route `/live-traffic`, auth: all logged-in users**
-Content lives inside a single pane card (`bg-[#F1F2F3] border border-gray-200 rounded-lg shadow`).
-Inside the pane:
-1. **Dropdown** — populated from `GET /api/protected/gtfs/route-groups` on mount; each option shows
-   `displayName`; first item pre-selected.
-2. **Checkbox "Fokuserad vy"** — if the selected group has `onlyFocused = true`: checked and disabled;
-   otherwise user-controlled, defaulting to unchecked.
-3. **Selection display** — plain text showing the currently selected group and focus state, e.g.
-   *"Vald grupp: Pendeltåg 43/44 (transportMode: TRAIN, routeGroup: 1), Fokuserad: ja"*. Placeholder
-   for the future vehicle-positions fetch.
-
-**FE-4 — Router and NavMenu**
-Add `{ path: '/live-traffic', element: <LiveTrafficView /> }` to `App.tsx`. Add "Aktuell trafik" as the
-first NavMenu item, before the admin block, visible to all logged-in users.
+C1 - DONE - FE/BE, Route group selection view. `LiveTrafficView` (`src/views/live-traffic.tsx`) at `/live-traffic`
+shows a Headless UI Listbox (with transport icons) to pick the route group and a Switch toggle for focus mode.
+`MonitoredRouteGroupResponse` extended with `focusStart`, `focusEnd`, `onlyFocused` (converted from record to
+`@Value @Builder`). `GtfsAccessService.validateRouteGroupConsistency()` validates that all routes in a group
+share identical focus config at startup — throws `IllegalStateException` to abort on misconfiguration.
+`GET /api/protected/gtfs/route-groups` serves the list; `fetchRouteGroups()` in `backend.ts` fetches it.
 
 D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
