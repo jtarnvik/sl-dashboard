@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { fetchStatistics } from '../../communication/backend';
 import { SLButton } from '../../components/common/sl-button';
+import { View } from '../../components/common/view';
 import { ErrorHandler } from '../../components/error-handler';
 import ErrorContext from '../../contexts/error-context';
 import PageTitleContext from '../../contexts/page-title-context';
@@ -37,8 +38,7 @@ export function Statistics() {
   }, [loginState, user, navigate, setError]);
 
   return (
-    <main>
-      <div className="flex flex-col space-y-2 px-2 mb-2">
+    <View>
         <ErrorHandler />
         {loading ? (
           <p className="text-gray-600">Laddar...</p>
@@ -65,7 +65,6 @@ export function Statistics() {
         <div className="flex justify-end">
           <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
         </div>
-      </div>
-    </main>
+    </View>
   );
 }

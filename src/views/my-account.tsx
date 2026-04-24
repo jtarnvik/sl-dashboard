@@ -5,6 +5,7 @@ import { clearHiddenDeviations, deleteAccount, fetchHasHiddenDeviations } from '
 import { ErrorHandler } from '../components/error-handler';
 import { ModalDialog } from '../components/common/modal-dialog';
 import { SLButton } from '../components/common/sl-button';
+import { View } from '../components/common/view';
 import ErrorContext from '../contexts/error-context';
 import PageTitleContext from '../contexts/page-title-context';
 import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user';
@@ -55,32 +56,30 @@ export function MyAccount() {
   }
 
   return (
-    <main>
-      <div className="flex flex-col space-y-2 px-2 mb-2">
-        <ErrorHandler />
-        <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col gap-3">
-          <button
-            className="text-sm self-start disabled:text-gray-400 disabled:cursor-not-allowed text-[#184fc2] hover:text-[#578ff3] cursor-pointer"
-            onClick={handleClearHiddenDeviations}
-            disabled={!hasHiddenDeviations}
-          >
-            Återställ dolda avvikelser
-          </button>
-          <hr className="border-gray-200" />
-          <button
-            className="text-sm text-red-600 hover:text-red-800 cursor-pointer self-start"
-            onClick={() => setConfirmDeleteOpen(true)}
-          >
-            Ta bort mitt konto
-          </button>
-          <hr className="border-gray-200" />
-          <Link to="/gdpr" className="text-xs text-gray-400 hover:text-gray-600 self-start">
-            Om din data
-          </Link>
-        </div>
-        <div className="flex justify-end">
-          <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
-        </div>
+    <View>
+      <ErrorHandler />
+      <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col gap-3">
+        <button
+          className="text-sm self-start disabled:text-gray-400 disabled:cursor-not-allowed text-[#184fc2] hover:text-[#578ff3] cursor-pointer"
+          onClick={handleClearHiddenDeviations}
+          disabled={!hasHiddenDeviations}
+        >
+          Återställ dolda avvikelser
+        </button>
+        <hr className="border-gray-200" />
+        <button
+          className="text-sm text-red-600 hover:text-red-800 cursor-pointer self-start"
+          onClick={() => setConfirmDeleteOpen(true)}
+        >
+          Ta bort mitt konto
+        </button>
+        <hr className="border-gray-200" />
+        <Link to="/gdpr" className="text-xs text-gray-400 hover:text-gray-600 self-start">
+          Om din data
+        </Link>
+      </div>
+      <div className="flex justify-end">
+        <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
       </div>
       <ModalDialog
         isOpen={confirmDeleteOpen}
@@ -90,6 +89,6 @@ export function MyAccount() {
       >
         <p>Är du säker på att du vill ta bort ditt konto? All din data raderas permanent och kan inte återställas.</p>
       </ModalDialog>
-    </main>
+    </View>
   );
 }

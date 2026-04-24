@@ -7,6 +7,7 @@ import { Departures } from '../components/pane/departures';
 import { Deviations } from '../components/pane/deviations';
 import { Routes } from '../components/pane/routes';
 import { SLButton } from '../components/common/sl-button';
+import { View } from '../components/common/view';
 import ErrorContext from '../contexts/error-context.ts';
 import InDebugModeContext from '../contexts/debug-context.ts';
 import PageTitleContext from '../contexts/page-title-context.ts';
@@ -65,28 +66,26 @@ export function Main() {
   }, []);
 
   return (
-    <main>
-        <div className="flex flex-col space-y-2 px-2 mb-2">
-          <ErrorHandler></ErrorHandler>
-          <Departures key={`dep-${departuresGen}`} stopPoint16Chars={settingsData.stopPointId} />
-          {isLoggedIn ? (
-            <div className="grid gap-2" style={{ gridTemplateColumns: '1fr auto' }}>
-              <Routes key={`routes-${routesGen}`} settingsData={settingsData} />
-              <div className="col-start-2 row-start-1">
-                <Deviations key={`dev-${deviationsGen}`} />
-              </div>
-            </div>
-          ) : (
-            loginState === UserLoginState.NotLoggedIn && <LoginTeaser />
-          )}
-        </div>
-        {inDebugMode && (
-          <div className="px-2 mb-2 flex gap-2">
-            <SLButton thin onClick={() => setError("Testfel: något gick snett.", () => { /* no-op retry */ })}>
-              Utlös testfel
-            </SLButton>
+    <View>
+      <ErrorHandler />
+      <Departures key={`dep-${departuresGen}`} stopPoint16Chars={settingsData.stopPointId} />
+      {isLoggedIn ? (
+        <div className="grid gap-2" style={{ gridTemplateColumns: '1fr auto' }}>
+          <Routes key={`routes-${routesGen}`} settingsData={settingsData} />
+          <div className="col-start-2 row-start-1">
+            <Deviations key={`dev-${deviationsGen}`} />
           </div>
-        )}
-    </main>
+        </div>
+      ) : (
+        loginState === UserLoginState.NotLoggedIn && <LoginTeaser />
+      )}
+      {inDebugMode && (
+        <div className="flex gap-2">
+          <SLButton thin onClick={() => setError("Testfel: något gick snett.", () => { /* no-op retry */ })}>
+            Utlös testfel
+          </SLButton>
+        </div>
+      )}
+    </View>
   );
 }

@@ -6,6 +6,7 @@ import { UserRow, UserRowAction, UserRowHeader } from '../../components/admin/us
 import { ModalDialog } from '../../components/common/modal-dialog';
 import { SLButton } from '../../components/common/sl-button';
 import { ErrorHandler } from '../../components/error-handler';
+import { View } from '../../components/common/view';
 import ErrorContext from '../../contexts/error-context';
 import PageTitleContext from '../../contexts/page-title-context';
 import { useUser, useUserLoginState, UserLoginState } from '../../hook/use-user';
@@ -65,36 +66,33 @@ export function PendingUsers() {
   }
 
   return (
-    <main>
-      <div className="flex flex-col space-y-2 px-2 mb-2">
-        <ErrorHandler />
-        {loading ? (
-          <p className="text-gray-600">Laddar...</p>
-        ) : (
-          <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-4">
-            {requests.length === 0 ? (
-              <p className="text-gray-600">Inga väntande förfrågningar.</p>
-            ) : (
-              <div>
-                <UserRowHeader showRoleLabel={false} />
-                {requests.map(r => (
-                  <UserRow
-                    key={r.id}
-                    item={r}
-                    actions={[UserRowAction.ShowMessage, UserRowAction.Approve, UserRowAction.Reject]}
-                    onApprove={() => handleApprove(r)}
-                    onReject={() => handleReject(r.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        <div className="flex justify-end">
-          <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
+    <View>
+      <ErrorHandler />
+      {loading ? (
+        <p className="text-gray-600">Laddar...</p>
+      ) : (
+        <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm p-4">
+          {requests.length === 0 ? (
+            <p className="text-gray-600">Inga väntande förfrågningar.</p>
+          ) : (
+            <div>
+              <UserRowHeader showRoleLabel={false} />
+              {requests.map(r => (
+                <UserRow
+                  key={r.id}
+                  item={r}
+                  actions={[UserRowAction.ShowMessage, UserRowAction.Approve, UserRowAction.Reject]}
+                  onApprove={() => handleApprove(r)}
+                  onReject={() => handleReject(r.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
+      )}
+      <div className="flex justify-end">
+        <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
       </div>
-
       {approvedUser && (
         <ModalDialog
           isOpen={true}
@@ -114,6 +112,6 @@ export function PendingUsers() {
           </p>
         </ModalDialog>
       )}
-    </main>
+    </View>
   );
 }

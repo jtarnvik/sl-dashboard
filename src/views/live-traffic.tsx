@@ -5,6 +5,8 @@ import { MdExpandMore } from 'react-icons/md';
 
 import { fetchRouteGroups } from '../communication/backend';
 import { ErrorHandler } from '../components/error-handler';
+import { SLButton } from '../components/common/sl-button';
+import { View } from '../components/common/view';
 import { TransportationIconCommon, TransportationMode } from '../components/common/line';
 import ErrorContext from '../contexts/error-context';
 import PageTitleContext from '../contexts/page-title-context';
@@ -109,39 +111,40 @@ export function LiveTrafficView() {
   }
 
   return (
-    <main>
-      <div className="flex flex-col space-y-2 px-2 mb-2">
-        <ErrorHandler />
-        {loading ? (
-          <p className="text-gray-600">Laddar...</p>
-        ) : (
-          <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4">
-            <div className="flex flex-col space-y-3">
+    <View className="h-[calc(100dvh-3.5rem)] pb-1">
+      <ErrorHandler />
+      {loading ? (
+        <p className="text-gray-600">Laddar...</p>
+      ) : (
+        <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4 flex-1 overflow-hidden">
+          <div className="flex flex-col space-y-3">
 
-              <div className="flex items-center gap-3">
-                <span className="font-medium text-gray-700">Linje</span>
-                <RouteGroupListbox groups={groups} selectedGroup={selectedGroup} onChange={handleListboxChange} />
-                <Switch
-                  checked={focused}
-                  onChange={setFocused}
-                  disabled={focusDisabled}
-                  className="ml-4 group relative inline-flex h-5 w-9 cursor-pointer rounded-full bg-gray-300 p-0.5 transition-colors data-checked:bg-[#184fc2] data-disabled:cursor-not-allowed data-disabled:opacity-50"
-                >
-                  <span className="size-4 rounded-full bg-white shadow-sm transition-transform translate-x-0 group-data-checked:translate-x-4" />
-                </Switch>
-                <span className={focusLabelClass}>Fokus</span>
-              </div>
-
-              {selectedGroup && (
-                <p className="text-sm text-gray-500">
-                  Vald grupp: {selectedGroup.displayName} (transportMode: {selectedGroup.transportMode},
-                  routeGroup: {selectedGroup.routeGroup}), Fokuserad: {focused ? 'ja' : 'nej'}
-                </p>
-              )}
+            <div className="flex items-center gap-3">
+              <span className="font-medium text-gray-700">Linje</span>
+              <RouteGroupListbox groups={groups} selectedGroup={selectedGroup} onChange={handleListboxChange} />
+              <Switch
+                checked={focused}
+                onChange={setFocused}
+                disabled={focusDisabled}
+                className="ml-4 group relative inline-flex h-5 w-9 cursor-pointer rounded-full bg-gray-300 p-0.5 transition-colors data-checked:bg-[#184fc2] data-disabled:cursor-not-allowed data-disabled:opacity-50"
+              >
+                <span className="size-4 rounded-full bg-white shadow-sm transition-transform translate-x-0 group-data-checked:translate-x-4" />
+              </Switch>
+              <span className={focusLabelClass}>Fokus</span>
             </div>
+
+            {selectedGroup && (
+              <p className="text-sm text-gray-500">
+                Vald grupp: {selectedGroup.displayName} (transportMode: {selectedGroup.transportMode},
+                routeGroup: {selectedGroup.routeGroup}), Fokuserad: {focused ? 'ja' : 'nej'}
+              </p>
+            )}
           </div>
-        )}
+        </div>
+      )}
+      <div className="flex justify-end">
+        <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
       </div>
-    </main>
+    </View>
   );
 }
