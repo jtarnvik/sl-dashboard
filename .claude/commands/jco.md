@@ -32,11 +32,7 @@ has nothing to commit.
 
 **3c. Draft a commit message**
 Inspect `git diff --staged` and `git log --oneline -5`. Draft a concise message (1–2 sentences)
-on the *why*, not the *what*. Append the Co-Authored-By trailer:
-
-```
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-```
+on the *why*, not the *what*. 
 
 **3d. Show and confirm**
 Display the file list (`git status --short`) and the proposed message. Ask the user to confirm.
@@ -47,8 +43,6 @@ Revise if requested. Do not commit until explicitly approved.
 ```bash
 git commit -m "$(cat <<'EOF'
 <message here>
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 EOF
 )"
 ```
