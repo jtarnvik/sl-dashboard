@@ -292,7 +292,7 @@ date, status, per-phase durations derived from start/end timestamps, and error m
 DOWNLOAD_DONE" button calls `POST /api/admin/gtfs/reset` (guarded 409 if status ≤ `DOWNLOAD_DONE`; also deletes
 the unzipped directory). When parse tables exist (B), the reset endpoint must also clear them.
 
-A5 - DONE - BE, Monitored-lines config table `gtfs_monitored_line` (`route_short_name`, `transport_mode`).
+A5 - DONE - BE, Monitored-routes config table `gtfs_monitored_route` (`route_short_name`, `transport_mode`).
 Source of truth for B filtering. Seeded via Liquibase with 43/44 (TRAIN), 117/112 (BUS), 17/18/19 (METRO).
 No `match_variants` flag — variant matching (e.g. 43X) is a uniform rule in B, not a per-row concern.
 112 is not added to the deviation pane; it exists to exercise the route presentation logic.
@@ -368,7 +368,7 @@ Six CSV files, a few KB total, designed to exercise every filter condition:
 - `@SpringBootTest @ActiveProfiles("test")`; `@MockitoBean PushoverProvider` to suppress notifications
 - `@DynamicPropertySource` resolves `gtfs/` from classpath and sets `gtfs.unzip-dir`
 - `@BeforeEach` inserts a `GtfsDownloadLog` row with status `UNZIP_DONE` for today
-- `@AfterEach` deletes all GTFS table rows and the log row (do NOT touch `gtfs_monitored_line` — seeded by Liquibase)
+- `@AfterEach` deletes all GTFS table rows and the log row (do NOT touch `gtfs_monitored_route` — seeded by Liquibase)
 - One `@Test` calls `gtfsParseService.parseIfReady()` and asserts:
   - `gtfsRouteRepository.count()` = 3; short names are {43, 43X, 117}; route-999 absent
   - `gtfsTripRepository.count()` = 4; trip-43x-1 present; trip-999-1 absent
@@ -383,7 +383,7 @@ pattern.
 
 B9 - DONE - BE - Populate `GtfsDataset` and wire `GtfsAccessService.rebuildDataset()`. `GtfsDataset` is
 immutable — all-args constructor, no setters, maps and lists wrapped in `Collections.unmodifiableMap/List`.
-Holds `List<GtfsMonitoredLine>` + five maps: `routesById`, `tripsById`, `stopsById`, `stopTimesByTripId`
+Holds `List<GtfsMonitoredRoute>` + five maps: `routesById`, `tripsById`, `stopsById`, `stopTimesByTripId`
 (sorted by `stopSequence`), `activeServiceIdsByDate`. Exposes only `isEmpty()` — public query API deferred
 to C1. `rebuildDataset()` loads all six repositories, assembles the maps, and atomically swaps the
 `AtomicReference`. Empty repositories yield an empty dataset; callers guard with `isEmpty()`.
@@ -397,10 +397,14 @@ streams `VehiclePositions.pb` in-memory (no temp file), parses with `FeedMessage
 `speed` — populated for buses in m/s, noise value for trains). `GeoPosition` interface (`model/gtfs`)
 defines `getLat()`/`getLng()` and is also implemented by `GtfsStop`.
 
-B11 - BE - Move static GTFS download to SamtrafikenProvider. Currently `GtfsDownloadService` opens
-`HttpURLConnection` directly. This should move into `SamtrafikenProvider` in
-`port.outgoing.rest.samtrafiken` alongside the realtime method. Discuss the method signature before
-implementing.
+B11 - DONE - BE, Move static GTFS HTTP download into `SamtrafikenProvider`. New method
+`downloadGtfsZip(Path targetPath)` opens the connection, handles gzip transparently, and writes
+the zip to the given path — mirroring `fetchVehiclePositions()` in hiding all HTTP details.
+`samtrafiken.gtfs-static-url` and `samtrafiken.gtfs-static-api-key` properties move from
+`GtfsDownloadService` to `SamtrafikenProvider`. `GtfsDownloadService.downloadIfNeeded()` shrinks
+to business orchestration only: guard checks, log entry, directory setup, one
+`samtrafikenProvider.downloadGtfsZip(ZIP_PATH)` call, mark done. Unzip logic stays in
+`GtfsDownloadService` — it is file I/O, not a network concern.
    
 B12 - DONE - BE - Geometric vehicle placement utility. `GtfsGeometryUtil` static class in `service/util`.
 Public method `locateOnRoute(List<? extends GeoPosition> stops, GeoPosition vehiclePos)` returns
@@ -412,10 +416,55 @@ record carries the full stop pair for debugger context. Six plain JUnit 5 unit t
 north-south coordinates covering: at first stop, midpoint, at last stop, beyond last, before first,
 and perpendicular offset.
 
-C1 - BE, Vehicle position endpoint. Fetch `VehiclePositions.pb` from Samtrafiken, parse the GTFS-RT feed,
-filter to vehicles on the monitored routes, and return a JSON list of vehicle positions (lat, lon, bearing,
-speed, route short name, current status). Cache the result for ~15 seconds so concurrent client requests
-don't each trigger a new upstream fetch.
+B13 - DONE - BE, Add `route_group INT NOT NULL` column to `gtfs_monitored_route`. Groups lines that share
+the same corridor within a transport_mode — (transport_mode, route_group) is the map view selector in C1/D1.
+Groups are only meaningful within the same transport_mode. Liquibase changeset: ADD COLUMN then UPDATE existing
+rows (trains 43/44 → 1; metro 17/18/19 → 1; bus 112 → 1; bus 117 → 2). Add `routeGroup` int field to
+`GtfsMonitoredRoute` entity. No changes to `GtfsDataset` — query API deferred to C1.
+
+B14 - DONE - BE, Introduce `GtfsRouteInfo` as the in-memory route model, mirroring the `GtfsTrip`/`GtfsTripInfo`
+pattern. `GtfsRouteInfo` is a plain class (not a JPA entity) holding the `GtfsRoute` fields plus a reference
+to the matching `GtfsMonitoredRoute`, enabling access to `transportMode` and `routeGroup` for C1 filtering.
+Built in `GtfsAccessService.rebuildDataset()` — `Map<String, GtfsRoute> routesById` becomes
+`Map<String, GtfsRouteInfo> routeInfoById`. Name matching (`^{base}[A-Za-z]?$`) extracted from
+`GtfsParseService.matchesMonitoredRoute()` to a shared utility so `GtfsAccessService` can reuse it.
+`GtfsTripInfo.route: GtfsRoute` updated to `routeInfo: GtfsRouteInfo`. `monitoredRoutes` list in
+`GtfsDataset` kept as-is. `GtfsDataset.isEmpty()` and query methods updated to use `routeInfoById`.
+
+B15 - DONE - BE, Move GTFS JPA entities (`GtfsRoute`, `GtfsTrip`, `GtfsStop`, `GtfsStopTime`, `GtfsStopTimeId`,
+`GtfsCalendarDate`, `GtfsCalendarDateId`) from `model/gtfs/` to `model/domain/entity/`. In-memory models
+(`GtfsDataset`, `GtfsRouteInfo`, `GtfsTripInfo`, `GtfsVehiclePosition`, `GeoPosition`) remain in `model/gtfs/`.
+
+B16 - DONE - BE, Also retain parent stations in `gtfs_stop`. Parent stations (`9021001xxxxxxxxx`, `location_type = 1`)
+are the direction-neutral reference points needed to build a schematic route combining trips in both directions.
+`parseStops()` in `GtfsParseService` gains a second pass through `stops.txt`: the first pass retains child
+platform stops (as now) and collects all distinct `parentStation` IDs from those rows; the second pass retains
+rows whose `stop_id` is in that parent ID set. No method signature change. No changes to `GtfsDataset` or
+`GtfsAccessService` — parent stations are automatically included in `stopsById` and reachable via
+`getStopByStopId()`. Integration test left unchanged.
+
+B17 - DONE - BE, Add focus window columns to `gtfs_monitored_route`. Long or branching routes need a defined
+sub-corridor for the schematic map view. Three new columns:
+- `focus_start VARCHAR(50) NULL` — parent station `stop_id` of the boundary stop at the conventional
+  "beginning" of the corridor (typically the northern/western terminus, e.g. Spånga station for line 117).
+  Chosen manually per route after investigating the stop sequence; not derived automatically.
+- `focus_end VARCHAR(50) NULL` — parent station `stop_id` of the boundary stop at the other end.
+  Together with `focus_start` these are unordered boundaries — the rendering logic finds both in the
+  ordered stop sequence and slices between them regardless of travel direction.
+- `only_focused BOOLEAN NOT NULL DEFAULT FALSE` — when true, the GUI shows only the focused corridor
+  with no option to zoom out to the full route. Use case: metro lines 17/18/19 share a common trunk
+  but branch into a three-pronged fork at the southern end; `only_focused = true` hides that complexity.
+  When false (default), the user can switch between the focus window and the full route.
+
+`focus_start` and `focus_end` must be either both set or both null — a half-set pair is meaningless.
+Enforced by convention (admin-seeded data) rather than a DB constraint. Liquibase changeset: ADD COLUMN
+for all three, no UPDATE statements — values left null/false initially and populated manually by the
+developer after stop ID investigation. Add the three fields to `GtfsMonitoredRoute` entity.
+
+
+C1 - BE/FE, Vehicle position endpoint and view. Create a view this will show a schematic representation of
+the route and a live view of vehicles on that route.  The view should have selection part where a monitores route/group 
+combo is selected.
 
 D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
