@@ -274,193 +274,35 @@ architecture is identical: same Spring Boot app, local PostgreSQL replaces Supab
 the GTFS zip cacheable indefinitely. Tradeoffs vs Render: depends on home network reliability and requires
 a DDNS service for a stable external address.
 
-A1 - DONE - BE, Daily GTFS zip download. Scheduled at 05:00 via `GtfsDownloadJob`. One download attempt per day
-maximum, guarded by `gtfs_download_log` (one row per date). Local profile is additionally capped at 15 downloads
-per 30 days to protect the Bronze quota. Working directory `/tmp/sl-gtfs-cache` is wiped and recreated on each run.
-Job fires on `ApplicationReadyEvent` at startup and on the 05:00 cron. `@Profile("!test")` prevents it running
-in integration tests.
+B - DONE - BE, Parse unzipped GTFS files into the database and serve from an in-memory `GtfsDataset`.
+`GtfsParseService` owns all parse logic; `GtfsPipelineService` orchestrates; `GtfsAccessService` holds the
+`AtomicReference<GtfsDataset>`, rebuilt from DB on `ApplicationReadyEvent` so data survives restarts.
+Five DB tables (`gtfs_route`, `gtfs_trip`, `gtfs_stop_time`, `gtfs_stop`, `gtfs_calendar_date`) use natural
+GTFS keys — no synthetic IDs, no timestamp columns. Full transaction design and the critical
+`entityManager.detach(entry)` lock-avoidance pattern are documented in `GtfsParseService` class-level Javadoc.
 
-A2 - DONE - BE, Unzip pipeline. Extracts `sl.zip` to `/tmp/sl-gtfs-cache/unzipped/` (subdirectory wiped before each
-run to avoid stale files). Introduced `runPipeline()` as the happy-flow orchestrator and `GtfsDownloadException`
-as the unchecked error type that stops the pipeline and is caught at the job level. `RestExceptionHandler`
-(`@RestControllerAdvice`) returns HTTP 500 `{ "message": "..." }` for any `GtfsDownloadException` reaching a
-controller. Each phase writes explicit start and end timestamps (`download_start_time` / `download_end_time`,
-`unzip_start_time` / `unzip_end_time`); `parse_end_time` is reserved for B.
+**Package layout:** JPA entities live in `model/domain/entity/`; in-memory models (`GtfsDataset`,
+`GtfsRouteInfo`, `GtfsTripInfo`, `GtfsVehiclePosition`, `GeoPosition`) live in `model/gtfs/`. `GtfsRouteInfo`
+wraps `GtfsRoute` + its matching `GtfsMonitoredRoute`, giving C1 access to `transportMode` and `routeGroup`.
+Name-variant matching (e.g. 43X) lives in `GtfsNameUtil` and is shared between parse and access services.
 
-A4 - DONE - FE/BE, GTFS Status admin view at `/admin/gtfs-status`. Shows the most recent `gtfs_download_log` row:
-date, status, per-phase durations derived from start/end timestamps, and error message on failure. "Reset to
-DOWNLOAD_DONE" button calls `POST /api/admin/gtfs/reset` (guarded 409 if status ≤ `DOWNLOAD_DONE`; also deletes
-the unzipped directory). When parse tables exist (B), the reset endpoint must also clear them.
+**`gtfs_stop` includes parent stations** (`9021001xxxxxxxxx`, `location_type=1`) as well as platform stops
+(`9022001xxxxxxxxx`). Two-pass parse: first pass collects platform stops and their `parentStation` IDs; second
+pass retains those parent rows. Parent stations are the direction-neutral reference points for the schematic map.
 
-A5 - DONE - BE, Monitored-routes config table `gtfs_monitored_route` (`route_short_name`, `transport_mode`).
-Source of truth for B filtering. Seeded via Liquibase with 43/44 (TRAIN), 117/112 (BUS), 17/18/19 (METRO).
-No `match_variants` flag — variant matching (e.g. 43X) is a uniform rule in B, not a per-row concern.
-112 is not added to the deviation pane; it exists to exercise the route presentation logic.
+**`gtfs_monitored_route` focus window columns:** `focus_start` / `focus_end` (nullable parent station
+`stop_id`) bound the sub-corridor shown on the schematic; `only_focused BOOLEAN NOT NULL DEFAULT FALSE`
+hides the full route for branching lines (metro 17/18/19). Both or neither must be set — enforced by
+convention. Values populated manually after stop ID investigation.
 
-A6 - DONE - BE, Pushover notification on GTFS pipeline failure. Sent from `GtfsDownloadService` at each
-`updateFailed()` site (download and unzip phases). `parseIfReady()` (B) should follow the same pattern.
-`sendGtfsPipelineErrorNotification(phase, message)` added to `PushoverProvider`.
+**RT provider:** `SamtrafikenProvider.fetchVehiclePositions()` streams `VehiclePositions.pb` in-memory,
+no temp file. `current_stop_sequence`, `stop_id`, and `route_id` are never populated in the Samtrafiken
+feed — vehicle placement uses `GtfsGeometryUtil.locateOnRoute()` (dot-product projection + Haversine).
 
-B - BE, Parse unzipped GTFS files into the database and serve from an in-memory cache. `GtfsParseService`
-owns all parse logic and runs as a single `@Transactional` boundary; `GtfsPipelineService` orchestrates;
-`GtfsAccessService` holds the `AtomicReference<GtfsDataset>`. Five DB tables store the filtered subset of the
-regional feed: `gtfs_route`, `gtfs_trip`, `gtfs_stop_time`, `gtfs_stop`, `gtfs_calendar_date`. All use natural
-GTFS keys (`@Id` / `@EmbeddedId`) — no synthetic IDs, no timestamp columns. Parse order is dependency-driven:
-agency → routes → trips → stop_times → stops → calendar_dates. Status updates use `REQUIRES_NEW`; the DB is
-the durable store and the `AtomicReference` is swapped only after each full parse commit. Full architecture,
-transaction design, and the critical `detach(entry)` lock-avoidance pattern are documented in the
-`GtfsParseService` class-level Javadoc.
+**Route group selector:** `(transportMode, routeGroup)` uniquely identifies a group. C1 sends this pair back
+to the backend to select which group to display. `GET /api/protected/gtfs/route-groups` serves the list.
 
-**Pending:** `feed_version` column on `gtfs_download_log` (populate from `feed_info.txt` during parse, show
-in the GTFS status view) — not yet implemented.
-
-B1 - DONE - BE - Set up code flow for parse logic. `GtfsDataset` plain data holder in `model/gtfs`;
-`GtfsAccessService` with `AtomicReference<GtfsDataset>`, `getDataset()` / `rebuildDataset()`. Loads from DB
-on `ApplicationReadyEvent` so data survives restarts without a re-parse.
-
-B2 - DONE - BE - Create `GtfsParseService`, parse `agency.txt` + `routes.txt`. SL `agency_id` resolved by
-name ("AB Storstockholms Lokaltrafik") — not hardcoded, it may change. Three-condition filter: agency + route
-type (TRAIN=100, BUS=700, METRO=401) + name regex `^{base}[A-Za-z]?$` (captures 43X variants).
-
-B3 - DONE - BE - Parse `trips.txt`, persist `gtfs_trip`. `TripParseResult` record carries both `tripIds` and
-`serviceIds` for downstream steps. `entityManager.detach(entry)` immediately after `markParseStart()` is
-critical — without it, subsequent `flush()` calls lock the `gtfs_download_log` row and block the
-`REQUIRES_NEW` `markParseDone()` after ~50 s (MySQL lock timeout).
-
-B4 - DONE - BE - Parse `stop_times.txt` (~140 MB, 90,720 filtered rows), persist `gtfs_stop_time`. Times
-stored as String — GTFS allows values > 24:00:00 for overnight trips. `shapeDistTraveled` (meters along
-route) enables proportional vehicle placement since `current_stop_sequence` is never set in the RT feed.
-Batch insert: 500 rows, `flush()` + `clear()` per batch; `rewriteBatchedStatements=true` needed in MySQL
-JDBC URL for true multi-row inserts.
-
-B5 - DONE - BE - Parse `stops.txt`, persist `gtfs_stop`. ~250 platform-level stops (`9022001xxxxxxxxx`).
-Parent stations (`9021001xxxxxxxxx`) are excluded — they are not in the `stopIds` set from B4. Two stops with
-the same name and parent but different platform IDs are the two road-sides of a bidirectional bus stop.
-
-B6 - DONE - BE - Parse `calendar_dates.txt`, persist `gtfs_calendar_date`. Sole scheduling source —
-`calendar.txt` is all-zeros in the Samtrafiken feed. Only `exception_type=1` rows stored (service runs that
-day); type-2 cancellations are irrelevant with no base schedule. Dates parsed from `YYYYMMDD` to `LocalDate`
-via `DateTimeFormatter.BASIC_ISO_DATE`; column named `service_date` (not `date` — SQL reserved word).
-
-B7 - DONE - BE - Integration test for `GtfsParseService` using synthetic GTFS files. The real feed files are too
-large (~140 MB for `stop_times.txt`) to ship as test resources. Instead, hand-crafted minimal CSV files in
-`src/test/resources/gtfs/` cover the same filtering logic at negligible size.
-
-**Making `UNZIP_DIR` configurable:**
-Change the hardcoded `private static final Path UNZIP_DIR` constant in `GtfsParseService` to an injected
-`@Value("${gtfs.unzip-dir:/tmp/sl-gtfs-cache/unzipped}") private Path unzipDir` (non-final, so
-`@RequiredArgsConstructor` skips it and Spring injects it via field injection). The default preserves
-production behaviour. The test overrides it via `@DynamicPropertySource`.
-
-**Synthetic test files (`src/test/resources/gtfs/`):**
-Six CSV files, a few KB total, designed to exercise every filter condition:
-
-| File | Retained | Excluded |
-|---|---|---|
-| `agency.txt` | SL agency | one foreign agency |
-| `routes.txt` | train 43, 43X (variant), bus 117 | non-monitored bus 999, foreign-agency train |
-| `trips.txt` | 4 trips across retained routes (service IDs svc-A/B/C) | trips for excluded routes |
-| `stop_times.txt` | 9 rows; one with `25:30:00` (>24h, must survive as String) | rows for excluded trips |
-| `stops.txt` | 5 platform stops; one with blank `shape_dist_traveled` | excluded bus stop; a parent station (not referenced by stop_times) |
-| `calendar_dates.txt` | 4 rows (svc-A/B/C, exception_type=1) | exception_type=2 row; rows for non-monitored service IDs |
-
-**Test class (`GtfsParseServiceTest`):**
-- `@SpringBootTest @ActiveProfiles("test")`; `@MockitoBean PushoverProvider` to suppress notifications
-- `@DynamicPropertySource` resolves `gtfs/` from classpath and sets `gtfs.unzip-dir`
-- `@BeforeEach` inserts a `GtfsDownloadLog` row with status `UNZIP_DONE` for today
-- `@AfterEach` deletes all GTFS table rows and the log row (do NOT touch `gtfs_monitored_route` — seeded by Liquibase)
-- One `@Test` calls `gtfsParseService.parseIfReady()` and asserts:
-  - `gtfsRouteRepository.count()` = 3; short names are {43, 43X, 117}; route-999 absent
-  - `gtfsTripRepository.count()` = 4; trip-43x-1 present; trip-999-1 absent
-  - `gtfsStopTimeRepository.count()` = 9; the `25:30:00` arrival time stored intact as String
-  - `gtfsStopRepository.count()` = 5; excluded stop and parent station absent
-  - `gtfsCalendarDateRepository.count()` = 4; exception_type=2 row absent; non-monitored service ID absent
-  - Log status for today = `PARSE_DONE`
-
-B8 - DONE - BE - Comprehensive class-level Javadoc written for `GtfsParseService` covering parse order,
-transaction architecture, delete strategy, batch insert design, and the `detach(entry)` lock-avoidance
-pattern.
-
-B9 - DONE - BE - Populate `GtfsDataset` and wire `GtfsAccessService.rebuildDataset()`. `GtfsDataset` is
-immutable — all-args constructor, no setters, maps and lists wrapped in `Collections.unmodifiableMap/List`.
-Holds `List<GtfsMonitoredRoute>` + five maps: `routesById`, `tripsById`, `stopsById`, `stopTimesByTripId`
-(sorted by `stopSequence`), `activeServiceIdsByDate`. Exposes only `isEmpty()` — public query API deferred
-to C1. `rebuildDataset()` loads all six repositories, assembles the maps, and atomically swaps the
-`AtomicReference`. Empty repositories yield an empty dataset; callers guard with `isEmpty()`.
-
-B10 - DONE - BE - Realtime GTFS-RT provider. `SamtrafikenProvider` in `port.outgoing.rest.samtrafiken`
-streams `VehiclePositions.pb` in-memory (no temp file), parses with `FeedMessage.parseFrom()`, and returns
-`List<GtfsVehiclePosition>` for entities where `hasVehicle()` is true. No caching — that is C1's concern.
-`GtfsVehiclePosition` (`@Data @Builder`, in `model/gtfs`) holds `tripId`, `lat`/`lng` (double, implements
-`GeoPosition`), `bearing`, `speed`, `timestamp`, and several fields that Samtrafiken never populates
-(`currentStopSequence`, `stopId`, `routeId` — always empty/0; `currentStatus` — always `IN_TRANSIT_TO`;
-`speed` — populated for buses in m/s, noise value for trains). `GeoPosition` interface (`model/gtfs`)
-defines `getLat()`/`getLng()` and is also implemented by `GtfsStop`.
-
-B11 - DONE - BE, Move static GTFS HTTP download into `SamtrafikenProvider`. New method
-`downloadGtfsZip(Path targetPath)` opens the connection, handles gzip transparently, and writes
-the zip to the given path — mirroring `fetchVehiclePositions()` in hiding all HTTP details.
-`samtrafiken.gtfs-static-url` and `samtrafiken.gtfs-static-api-key` properties move from
-`GtfsDownloadService` to `SamtrafikenProvider`. `GtfsDownloadService.downloadIfNeeded()` shrinks
-to business orchestration only: guard checks, log entry, directory setup, one
-`samtrafikenProvider.downloadGtfsZip(ZIP_PATH)` call, mark done. Unzip logic stays in
-`GtfsDownloadService` — it is file I/O, not a network concern.
-   
-B12 - DONE - BE - Geometric vehicle placement utility. `GtfsGeometryUtil` static class in `service/util`.
-Public method `locateOnRoute(List<? extends GeoPosition> stops, GeoPosition vehiclePos)` returns
-`VehicleLocation(segIdx, t, dist)` — the closest segment index, fractional position [0,1] along it,
-and perpendicular distance in metres. Uses dot product projection in approximate Cartesian space
-(longitude scaled by `cos(lat)`) then Haversine for distance; Haversine implemented from scratch
-(Earth radius 6,371,000 m). TRACE logging per segment, DEBUG for winner. Private `SegmentProjection`
-record carries the full stop pair for debugger context. Six plain JUnit 5 unit tests with synthetic
-north-south coordinates covering: at first stop, midpoint, at last stop, beyond last, before first,
-and perpendicular offset.
-
-B13 - DONE - BE, Add `route_group INT NOT NULL` column to `gtfs_monitored_route`. Groups lines that share
-the same corridor within a transport_mode — (transport_mode, route_group) is the map view selector in C1/D1.
-Groups are only meaningful within the same transport_mode. Liquibase changeset: ADD COLUMN then UPDATE existing
-rows (trains 43/44 → 1; metro 17/18/19 → 1; bus 112 → 1; bus 117 → 2). Add `routeGroup` int field to
-`GtfsMonitoredRoute` entity. No changes to `GtfsDataset` — query API deferred to C1.
-
-B14 - DONE - BE, Introduce `GtfsRouteInfo` as the in-memory route model, mirroring the `GtfsTrip`/`GtfsTripInfo`
-pattern. `GtfsRouteInfo` is a plain class (not a JPA entity) holding the `GtfsRoute` fields plus a reference
-to the matching `GtfsMonitoredRoute`, enabling access to `transportMode` and `routeGroup` for C1 filtering.
-Built in `GtfsAccessService.rebuildDataset()` — `Map<String, GtfsRoute> routesById` becomes
-`Map<String, GtfsRouteInfo> routeInfoById`. Name matching (`^{base}[A-Za-z]?$`) extracted from
-`GtfsParseService.matchesMonitoredRoute()` to a shared utility so `GtfsAccessService` can reuse it.
-`GtfsTripInfo.route: GtfsRoute` updated to `routeInfo: GtfsRouteInfo`. `monitoredRoutes` list in
-`GtfsDataset` kept as-is. `GtfsDataset.isEmpty()` and query methods updated to use `routeInfoById`.
-
-B15 - DONE - BE, Move GTFS JPA entities (`GtfsRoute`, `GtfsTrip`, `GtfsStop`, `GtfsStopTime`, `GtfsStopTimeId`,
-`GtfsCalendarDate`, `GtfsCalendarDateId`) from `model/gtfs/` to `model/domain/entity/`. In-memory models
-(`GtfsDataset`, `GtfsRouteInfo`, `GtfsTripInfo`, `GtfsVehiclePosition`, `GeoPosition`) remain in `model/gtfs/`.
-
-B16 - DONE - BE, Also retain parent stations in `gtfs_stop`. Parent stations (`9021001xxxxxxxxx`, `location_type = 1`)
-are the direction-neutral reference points needed to build a schematic route combining trips in both directions.
-`parseStops()` in `GtfsParseService` gains a second pass through `stops.txt`: the first pass retains child
-platform stops (as now) and collects all distinct `parentStation` IDs from those rows; the second pass retains
-rows whose `stop_id` is in that parent ID set. No method signature change. No changes to `GtfsDataset` or
-`GtfsAccessService` — parent stations are automatically included in `stopsById` and reachable via
-`getStopByStopId()`. Integration test left unchanged.
-
-B17 - DONE - BE, Add focus window columns to `gtfs_monitored_route`. Long or branching routes need a defined
-sub-corridor for the schematic map view. Three new columns:
-- `focus_start VARCHAR(50) NULL` — parent station `stop_id` of the boundary stop at the conventional
-  "beginning" of the corridor (typically the northern/western terminus, e.g. Spånga station for line 117).
-  Chosen manually per route after investigating the stop sequence; not derived automatically.
-- `focus_end VARCHAR(50) NULL` — parent station `stop_id` of the boundary stop at the other end.
-  Together with `focus_start` these are unordered boundaries — the rendering logic finds both in the
-  ordered stop sequence and slices between them regardless of travel direction.
-- `only_focused BOOLEAN NOT NULL DEFAULT FALSE` — when true, the GUI shows only the focused corridor
-  with no option to zoom out to the full route. Use case: metro lines 17/18/19 share a common trunk
-  but branch into a three-pronged fork at the southern end; `only_focused = true` hides that complexity.
-  When false (default), the user can switch between the focus window and the full route.
-
-`focus_start` and `focus_end` must be either both set or both null — a half-set pair is meaningless.
-Enforced by convention (admin-seeded data) rather than a DB constraint. Liquibase changeset: ADD COLUMN
-for all three, no UPDATE statements — values left null/false initially and populated manually by the
-developer after stop ID investigation. Add the three fields to `GtfsMonitoredRoute` entity.
-
+**Pending:** `feed_version` column on `gtfs_download_log` — populate from `feed_info.txt` during parse.
 
 C1 - BE/FE, Vehicle position endpoint and view. Create a view this will show a schematic representation of
 the route and a live view of vehicles on that route.  The view should have selection part where a monitores route/group 
@@ -470,34 +312,6 @@ D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a m
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
 icons colour-coded by transport mode, oriented by bearing. Show route line shapes from static GTFS data.
             
-AH is used for A (block) H (Hypothesis) verification
-AH1 - FE/BE - POC: prove that the backend can download `sl.zip`, unzip it to `/tmp`, and read the results.
-Most of this code will be discarded afterwards, though the download logic may survive into A1. Keep all new
-code isolated: a dedicated BE controller and a dedicated FE view/route.
-
-**Backend**
-- Add `samtrafiken.api-key` and `samtrafiken.gtfs-url` to application properties, following the same pattern
-  as `anthropic.api-key`. The actual key value goes in `application-local.properties` (never committed) and
-  as a Render environment variable. Inject via constructor parameter in the new controller.
-- Remove `ExperimentController` — it has served its purpose and the API key is now in properties.
-- New controller `GtfsPocController` at `/api/admin/gtfs-poc` (admin-only, `@PreAuthorize("hasRole('ADMIN')")`).
-  Three endpoints:
-  - `POST /download` — check if `/tmp/sl.zip` already exists; if so return immediately with file size and
-    a note that it was skipped. If not, download from Samtrafiken, save to `/tmp/sl.zip`, return file size
-    and download duration in milliseconds.
-  - `POST /unzip` — unzip `/tmp/sl.zip` to `/tmp/sl/`. Return a list of all extracted files with their sizes
-    and total unzip duration in milliseconds.
-  - `GET /files` — list files in `/tmp/sl/` (GTFS files only, not all of `/tmp`). Return file names and sizes.
-
-**Frontend**
-- New admin-only view at `/gtfs-poc` (`GtfsPoc` component in `src/components/admin/gtfs-poc/`).
-- Add an admin-only menu item "GTFS POC" to `NavMenu` alongside the existing admin items.
-- The view shows three buttons: "Ladda ner", "Packa upp", "Lista filer". Each button calls its respective
-  backend endpoint and displays the returned status info below it. Buttons are independent — no forced
-  sequencing in the UI, but the backend will naturally fail gracefully if called out of order (e.g. unzip
-  before download returns an appropriate error).
-- Keep the component simple — no shared state management, just local `useState` per button result.
-
 ## Future Enhancements
 
 Ideas that are not currently needed but should be remembered if the need arises.
