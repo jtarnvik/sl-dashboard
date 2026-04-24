@@ -16,6 +16,7 @@ import { PendingUsers } from './views/admin/pending-users.tsx';
 import { ExistingUsers } from './views/admin/existing-users.tsx';
 import { Statistics } from './views/admin/statistics.tsx';
 import { GtfsStatusView } from './views/admin/gtfs-status.tsx';
+import { LiveTrafficView } from './views/live-traffic.tsx';
 import { SharedRouteView } from './views/shared-route.tsx';
 import './App.css';
 
@@ -24,6 +25,7 @@ const router = createHashRouter([
     element: <Layout />,
     children: [
       { path: '/', element: <Main /> },
+      { path: '/live-traffic', element: <LiveTrafficView /> },
       { path: '/my-account', element: <MyAccount /> },
       { path: '/admin/pending', element: <PendingUsers /> },
       { path: '/admin/users', element: <ExistingUsers /> },

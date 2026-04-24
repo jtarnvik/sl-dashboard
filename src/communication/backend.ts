@@ -22,10 +22,11 @@ import {
   URL_BACKEND_GTFS_RESET,
   URL_BACKEND_GTFS_RUN_PIPELINE,
   URL_BACKEND_GTFS_REALTIME_POC,
+  URL_BACKEND_GTFS_ROUTE_GROUPS,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, RecentStop, StatisticsData, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, MonitoredRouteGroup, RecentStop, StatisticsData, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -289,6 +290,16 @@ export async function runRealtimePoc(setError: SetError): Promise<boolean> {
   } catch (error) {
     setError("Could not run realtime POC.");
     return false;
+  }
+}
+
+export async function fetchRouteGroups(setError: SetError): Promise<MonitoredRouteGroup[]> {
+  try {
+    const response = await backend.get<MonitoredRouteGroup[]>(URL_BACKEND_GTFS_ROUTE_GROUPS);
+    return response.data;
+  } catch {
+    setError("Kunde inte hämta linjegrupper.");
+    return [];
   }
 }
 

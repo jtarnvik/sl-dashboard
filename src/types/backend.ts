@@ -41,3 +41,12 @@ export interface StatisticsData {
   aiInterpretationQueries: number;
   userCount: number;
 }
+
+export interface MonitoredRouteGroup {
+  transportMode: string;
+  routeGroup: number;
+  displayName: string;
+  focusStart: string | null;
+  focusEnd: string | null;
+  onlyFocused: boolean;
+}

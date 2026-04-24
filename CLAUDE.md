@@ -148,6 +148,13 @@ Two custom font classes are defined in `tailwind.config.js`:
 - `font-signage` — Bitter (serif), used for line number badges to mimic real SL signage
 - `font-sans` — Roboto, the default body font
 
+**Typography conventions** — do not add explicit font-size classes without a reason; let elements inherit the
+body default (Roboto, 16px). Specific patterns:
+- Interactive labels and checkbox labels: `font-medium text-gray-700` (no size class)
+- Card/pane body text: `text-gray-800` (no size class)
+- Supplementary / helper text below a control: `text-sm text-gray-500`
+- Error or status text inside a card: `text-sm text-gray-600`
+
 ### Responsive design
 
 The app is mobile-first. Default styles target mobile (iPhone-sized screens). Use `md:` (≥ 768px) and larger breakpoints to adapt for tablet and desktop. Do not write desktop-only styles without a mobile baseline.
@@ -304,9 +311,54 @@ to the backend to select which group to display. `GET /api/protected/gtfs/route-
 
 **Pending:** `feed_version` column on `gtfs_download_log` — populate from `feed_info.txt` during parse.
 
-C1 - BE/FE, Vehicle position endpoint and view. Create a view this will show a schematic representation of
-the route and a live view of vehicles on that route. The view should have selection part where a monitores route/group 
-combo is selected.
+C - BE/FE, Vehicle position endpoint and view. Create a view this will show a schematic representation of
+the route and a live view of vehicles on that route. 
+
+C1 - FE/BE, Route group selection view with focus toggle. Establishes the "Aktuell trafik" view shell and
+the backend contract for route group metadata — vehicle positions are not fetched yet.
+
+**BE-1 — Extend `MonitoredRouteGroupResponse`**
+Add three fields to the record: `focusStart` (nullable String), `focusEnd` (nullable String), `onlyFocused`
+(boolean). Populate from the representative `GtfsMonitoredRoute` row for each group — BE-2 guarantees all
+rows in a group agree by the time this runs.
+
+**BE-2 — Startup consistency validation**
+In `GtfsAccessService.onApplicationReady()`, after `rebuildDataset()` completes, validate that within each
+`(transportMode, routeGroup)` pair every `GtfsMonitoredRoute` has identical `onlyFocused`, `focusStart`, and
+`focusEnd` values. If any group is inconsistent: log each difference (group identity + field + conflicting
+values) then throw a fatal exception so the application does not start. This is an operator configuration
+responsibility — the hard failure enforces correctness.
+
+**FE-1 — New type in `types/backend.ts`**
+```ts
+type MonitoredRouteGroup = {
+  transportMode: string;
+  routeGroup: number;
+  displayName: string;
+  focusStart: string | null;
+  focusEnd: string | null;
+  onlyFocused: boolean;
+};
+```
+
+**FE-2 — New constant and fetch function**
+Add `URL_BACKEND_GTFS_ROUTE_GROUPS = "/api/protected/gtfs/route-groups"` to `constant.ts`. Add
+`fetchRouteGroups(setError)` to `backend.ts` returning `MonitoredRouteGroup[]`.
+
+**FE-3 — New view `src/views/live-traffic.tsx`, route `/live-traffic`, auth: all logged-in users**
+Content lives inside a single pane card (`bg-[#F1F2F3] border border-gray-200 rounded-lg shadow`).
+Inside the pane:
+1. **Dropdown** — populated from `GET /api/protected/gtfs/route-groups` on mount; each option shows
+   `displayName`; first item pre-selected.
+2. **Checkbox "Fokuserad vy"** — if the selected group has `onlyFocused = true`: checked and disabled;
+   otherwise user-controlled, defaulting to unchecked.
+3. **Selection display** — plain text showing the currently selected group and focus state, e.g.
+   *"Vald grupp: Pendeltåg 43/44 (transportMode: TRAIN, routeGroup: 1), Fokuserad: ja"*. Placeholder
+   for the future vehicle-positions fetch.
+
+**FE-4 — Router and NavMenu**
+Add `{ path: '/live-traffic', element: <LiveTrafficView /> }` to `App.tsx`. Add "Aktuell trafik" as the
+first NavMenu item, before the admin block, visible to all logged-in users.
 
 D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle

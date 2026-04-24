@@ -65,6 +65,13 @@ export function NavMenu({ logout, isAdmin }: Props) {
       </button>
       {menuOpen && (
         <div className="absolute right-0 mt-1 w-52 bg-white rounded-sm shadow-lg z-30">
+          <button
+            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
+            onClick={() => { navigate('/live-traffic'); setMenuOpen(false); }}
+          >
+            Aktuell trafik
+          </button>
+          <hr className="border-gray-200" />
           {isAdmin && (
             <>
               <button
