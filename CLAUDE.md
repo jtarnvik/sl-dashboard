@@ -4,6 +4,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session start
+
+Before generating any TypeScript or React code, read `eslint.config.js` to avoid lint violations.
+
 ## Commands
 
 ```bash
@@ -328,10 +332,39 @@ icons colour-coded by transport mode, oriented by bearing. Show route line shape
 
 E1 - FE/BE wrong timezone for user last login. How to 
 
-F1 - BE/FE - Give and error message in live traffic view when dataset is empty.
+F1 - DONE - BE/FE - Give and error message in live traffic view when dataset is empty. When loading this page
+and initial request to fetch route_groups is performed. Could this call return a HTML status code to indicate thath 
+no live traffic is available today or should a specific rest call be made? The call returns an [] list today
+but thats not really a good indicator, in theory this could be empty. 
 
 G1 - BE -   One minor thing to note: rebuildDataset() is called twice on startup — once via the pipeline in GtfsDownloadJob.onApplicationReady() and once directly from GtfsAccessService.onApplicationReady(). Both
 do the right thing, but it's a redundant DB lookup. Not a problem, just worth being aware of.
+
+H1 - BE - Difference and handling of FAILED/ERROR_IN_PARSE
+--
+FAILED — set by GtfsDownloadService.handlePipelineFailure() (download/unzip phases) or GtfsParseService.handlePipelineFailure() (parse phase) when an exception is caught during the pipeline. An
+errorMessage is saved. Can be set from any of the three phases.
+
+ERROR_IN_PARSE — set by GtfsDownloadService.recoverIfNeeded() after a JVM crash. It fires at startup when the status is stuck at PARSE_START (the parse started but no exception was ever caught — the
+process was killed). No errorMessage is available because nothing caught the crash.
+
+The most significant behavioral difference is in GtfsAccessService.rebuildDataset():
+
+private static boolean isErrorState(GtfsDownloadStatus status) {
+return status == GtfsDownloadStatus.ERROR_IN_PARSE;
+}
+
+FAILED is not in isErrorState(). So:
+- ERROR_IN_PARSE → forces an empty dataset, live traffic unavailable
+- FAILED → rebuildDataset() proceeds normally and loads yesterday's data from the DB tables
+
+That's intentional: a caught exception (FAILED) means the DB tables are definitely from yesterday's intact parse (the transaction rolled back cleanly). A crash (ERROR_IN_PARSE) means the DB state was
+uncertain, hence the forced empty dataset for safety.
+
+One thing worth noting: since OOM is a java.lang.Error and @Transactional does roll back on Error, the DB tables are actually safe after a crash too. The forced-empty-dataset for ERROR_IN_PARSE is
+therefore a conservative safety measure rather than a strictly necessary one.
+--
+Review how this works and maybe better handle the last part.
             
 ## Future Enhancements
 

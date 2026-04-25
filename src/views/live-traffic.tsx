@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Switch } from '@headlessui/react';
 import { MdExpandMore } from 'react-icons/md';
 
-import { fetchRouteGroups } from '../communication/backend';
+import { fetchGtfsDataStatus, fetchRouteGroups } from '../communication/backend';
 import { ErrorHandler } from '../components/error-handler';
 import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
@@ -11,7 +11,7 @@ import { TransportationIconCommon, TransportationMode } from '../components/comm
 import ErrorContext from '../contexts/error-context';
 import PageTitleContext from '../contexts/page-title-context';
 import { useUserLoginState, UserLoginState } from '../hook/use-user';
-import { MonitoredRouteGroup } from '../types/backend';
+import { GtfsDataStatus, MonitoredRouteGroup } from '../types/backend';
 
 function groupKey(group: MonitoredRouteGroup): string {
   return `${group.transportMode}:${group.routeGroup}`;
@@ -79,6 +79,7 @@ export function LiveTrafficView() {
   const [selectedGroup, setSelectedGroup] = useState<MonitoredRouteGroup | null>(null);
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [gtfsStatus, setGtfsStatus] = useState<GtfsDataStatus | null>(null);
 
   const focusDisabled = selectedGroup?.onlyFocused ?? false;
   const focusLabelClass = `font-medium select-none ${focusDisabled ? 'text-gray-400' : 'text-gray-700'}`;
@@ -95,11 +96,14 @@ export function LiveTrafficView() {
       navigate('/');
       return;
     }
-    fetchRouteGroups(setError).then(data => {
-      setGroups(data);
-      if (data.length > 0) {
-        setSelectedGroup(data[0]);
-        setFocused(data[0].onlyFocused);
+    Promise.all([fetchRouteGroups(setError), fetchGtfsDataStatus(setError)]).then(([groups, status]) => {
+      setGtfsStatus(status);
+      if (status?.staticDataAvailable !== false) {
+        setGroups(groups);
+        if (groups.length > 0) {
+          setSelectedGroup(groups[0]);
+          setFocused(groups[0].onlyFocused);
+        }
       }
       setLoading(false);
     });
@@ -115,10 +119,14 @@ export function LiveTrafficView() {
       <ErrorHandler />
       {loading ? (
         <p className="text-gray-600">Laddar...</p>
+      ) : gtfsStatus?.staticDataAvailable === false ? (
+        <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4 flex-1 overflow-hidden">
+          <p className="text-gray-800">Trafikdata är inte tillgänglig idag och aktuell trafik kan inte visas.</p>
+          <p className="text-sm text-gray-500 mt-2">Försök igen imorgon eller kontakta administratören.</p>
+        </div>
       ) : (
         <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4 flex-1 overflow-hidden">
           <div className="flex flex-col space-y-3">
-
             <div className="flex items-center gap-3">
               <span className="font-medium text-gray-700">Linje</span>
               <RouteGroupListbox groups={groups} selectedGroup={selectedGroup} onChange={handleListboxChange} />
@@ -132,7 +140,6 @@ export function LiveTrafficView() {
               </Switch>
               <span className={focusLabelClass}>Fokus</span>
             </div>
-
             {selectedGroup && (
               <p className="text-sm text-gray-500">
                 Vald grupp: {selectedGroup.displayName} (transportMode: {selectedGroup.transportMode},

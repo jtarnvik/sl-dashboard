@@ -34,6 +34,7 @@ export const URL_BACKEND_SHARED_ROUTE_CREATE = "/api/protected/routes";
 export const URL_BACKEND_SHARED_ROUTE_GET = (id: string) => `/api/public/routes/${id}`;
 
 export const URL_BACKEND_GTFS_ROUTE_GROUPS = "/api/protected/gtfs/route-groups";
+export const URL_BACKEND_GTFS_DATA_STATUS = "/api/protected/gtfs/status";
 
 export const URL_BACKEND_SETTINGS = "/api/protected/settings";
 export const URL_BACKEND_RECENT_STOPS = "/api/protected/settings/recent-stops";

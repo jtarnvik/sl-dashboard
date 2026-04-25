@@ -23,10 +23,11 @@ import {
   URL_BACKEND_GTFS_RUN_PIPELINE,
   URL_BACKEND_GTFS_REALTIME_POC,
   URL_BACKEND_GTFS_ROUTE_GROUPS,
+  URL_BACKEND_GTFS_DATA_STATUS,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, MonitoredRouteGroup, RecentStop, StatisticsData, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, MonitoredRouteGroup, RecentStop, StatisticsData, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -290,6 +291,16 @@ export async function runRealtimePoc(setError: SetError): Promise<boolean> {
   } catch (error) {
     setError("Could not run realtime POC.");
     return false;
+  }
+}
+
+export async function fetchGtfsDataStatus(setError: SetError): Promise<GtfsDataStatus | null> {
+  try {
+    const response = await backend.get<GtfsDataStatus>(URL_BACKEND_GTFS_DATA_STATUS);
+    return response.data;
+  } catch {
+    setError("Kunde inte hämta trafikdatastatus.");
+    return null;
   }
 }
 

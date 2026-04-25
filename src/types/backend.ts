@@ -52,3 +52,9 @@ export interface MonitoredRouteGroup {
   focusEnd: string | null;
   onlyFocused: boolean;
 }
+
+export interface GtfsDataStatus {
+  date: string | null;
+  status: string | null;
+  staticDataAvailable: boolean;
+}
