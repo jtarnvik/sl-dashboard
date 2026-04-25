@@ -329,6 +329,9 @@ icons colour-coded by transport mode, oriented by bearing. Show route line shape
 E1 - FE/BE wrong timezone for user last login. How to 
 
 F1 - BE/FE - Give and error message in live traffic view when dataset is empty.
+
+G1 - BE -   One minor thing to note: rebuildDataset() is called twice on startup — once via the pipeline in GtfsDownloadJob.onApplicationReady() and once directly from GtfsAccessService.onApplicationReady(). Both
+do the right thing, but it's a redundant DB lookup. Not a problem, just worth being aware of.
             
 ## Future Enhancements
 
@@ -384,65 +387,3 @@ Should we have a line selection in the settings dialog which are used when fetch
 ## Issues
 
 No current issues.
-
-## ZZ — BE, Render startup and GTFS OOM crash investigation
-
-### Finding 1 — Double-container deploy (2026-04-24)
-
-On deploy, Render starts **two containers simultaneously** (both JVMs show the same wall-clock start time when working
-backwards from the "process running for X seconds" value in the Spring Boot startup log). The faster container (~180s)
-becomes live first; Render immediately sends SIGTERM to the slower one (~189s).
-
-The slower container's `onApplicationReady` fires `GtfsDownloadJob.runPipeline()` at almost exactly the same moment as
-SIGTERM arrives. The shutdown hook closes the `EntityManagerFactory` while the main thread is still inside
-`GtfsDownloadService.downloadIfNeeded()`. The resulting `BadJpqlGrammarException` (wrapping
-`IllegalStateException: EntityManagerFactory is closed`) was not caught — only `GtfsDownloadException` was — so it
-propagated to Spring's event infrastructure and logged "Application run failed" with a full stack trace.
-
-**Fix applied (2026-04-24):** Added a second catch in `GtfsDownloadJob.runPipeline()`:
-- Root cause is `IllegalStateException: EntityManagerFactory is closed` → log `WARN`, no stack trace.
-- Any other exception → log full `ERROR` with stack trace as before.
-
-File: `publicbackend/.../port/incoming/scheduled/GtfsDownloadJob.java`
-
-**Verify on next deploy:** The slower container should log a single `WARN` ("GTFS pipeline aborted — application is
-shutting down") instead of "Application run failed" + stack trace. If the `WARN` does not appear, check whether the
-exception chain differs and adjust the condition in the catch block.
-
----
-
-### Finding 2 — OOM crash during GTFS parse (2026-04-25)
-
-**What happened:** The 05:00 Stockholm scheduled pipeline ran (03:00 UTC). Download and unzip succeeded. Parse started:
-agency.txt and routes.txt completed, then the app OOM-crashed ~73 seconds into trips.txt and restarted. DB status is
-stuck at `PARSE_START`.
-
-**Root cause:** `parseTrips()` reads all 88,600 rows of trips.txt (generating heavy GC pressure via per-line
-`splitCsvLine` allocations), then calls `saveAll(retained)` which adds all trip entities to the outer transaction's
-persistence context with no `flush()`+`clear()`. Unlike `parseStopTimes()` which batches explicitly, `parseTrips()`
-accumulates everything in heap until the transaction commits. On Render's 512 MB free tier this is enough to OOM.
-
-**Current DB state:** Tables are **intact** — the OOM is a `java.lang.Error`; the outer `@Transactional` rolled back,
-restoring the previous day's data. Only the `REQUIRES_NEW` status update to `PARSE_START` persisted. The service is
-working normally with yesterday's GTFS data.
-
-**Why `resetToDownloadDone` won't help here:** It resets status to `DOWNLOAD_DONE` expecting the zip to still be in
-`/tmp`, but `/tmp` is wiped on Render after a crash-restart. Calling `unzipIfReady()` after reset would fail immediately
-with file-not-found.
-
-**Immediate recovery:** Delete today's row in Supabase:
-```sql
-DELETE FROM gtfs_download_log WHERE date = '2026-04-25';
-```
-Then hit `POST /api/admin/gtfs/run-pipeline`. This triggers a fresh download+unzip+parse (uses one monthly quota slot).
-
-**Fixes needed in code:**
-
-1. **OOM fix — `GtfsParseService.parseTrips()`:** Add `entityManager.flush()` + `entityManager.clear()` after
-   `saveAll(retained)`, same pattern as `parseStopTimes()`. Consider batching the saveAll too if trips are large.
-
-2. **Recovery logic:** After an OOM crash, the pipeline silently skips all phases on restart (download skips because a
-   record exists; unzip/parse skip due to wrong status). Need automatic recovery: on startup, if today's status is
-   `PARSE_START` or `FAILED` and `/tmp/sl-gtfs-cache/unzipped` does not exist, delete today's `gtfs_download_log` row
-   so the full pipeline can re-run. Alternatively, expose a "delete today's record" admin endpoint alongside the
-   existing reset endpoint.
