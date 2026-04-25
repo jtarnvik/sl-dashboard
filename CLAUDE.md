@@ -326,16 +326,17 @@ shows a Headless UI Listbox (with transport icons) to pick the route group and a
 share identical focus config at startup — throws `IllegalStateException` to abort on misconfiguration.
 `GET /api/protected/gtfs/route-groups` serves the list; `fetchRouteGroups()` in `backend.ts` fetches it.
 
+C2 - FE/BE, When a route group is selected in the traffic view, fetch the route information from the backend. This 
+just sets up the basic FE -> BE flow. So, when a selection has been made in the front end (including the intial first line on
+load) call en endpoint in the GtfsCOntroller with the routegroup and focus parameter as argument. 
+- Set up the call and create the endpoint. 
+- Call a service method int the GTFSRealtime service. 
+- Create an empty return object, with (for now) no information other than a "OK" status string.
+- 
+
 D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
 icons colour-coded by transport mode, oriented by bearing. Show route line shapes from static GTFS data.
-
-E1 - FE/BE wrong timezone for user last login. How to 
-
-F1 - DONE - BE/FE - Give and error message in live traffic view when dataset is empty. When loading this page
-and initial request to fetch route_groups is performed. Could this call return a HTML status code to indicate thath 
-no live traffic is available today or should a specific rest call be made? The call returns an [] list today
-but thats not really a good indicator, in theory this could be empty. 
 
 G1 - BE -   One minor thing to note: rebuildDataset() is called twice on startup — once via the pipeline in GtfsDownloadJob.onApplicationReady() and once directly from GtfsAccessService.onApplicationReady(). Both
 do the right thing, but it's a redundant DB lookup. Not a problem, just worth being aware of.
