@@ -58,3 +58,7 @@ export interface GtfsDataStatus {
   status: string | null;
   staticDataAvailable: boolean;
 }
+
+export interface RouteData {
+  status: string;
+}

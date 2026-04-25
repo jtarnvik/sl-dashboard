@@ -24,10 +24,11 @@ import {
   URL_BACKEND_GTFS_REALTIME_POC,
   URL_BACKEND_GTFS_ROUTE_GROUPS,
   URL_BACKEND_GTFS_DATA_STATUS,
+  URL_BACKEND_GTFS_ROUTE_DATA,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, MonitoredRouteGroup, RecentStop, StatisticsData, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, MonitoredRouteGroup, RecentStop, RouteData, StatisticsData, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -300,6 +301,23 @@ export async function fetchGtfsDataStatus(setError: SetError): Promise<GtfsDataS
     return response.data;
   } catch {
     setError("Kunde inte hämta trafikdatastatus.");
+    return null;
+  }
+}
+
+export async function fetchRouteData(
+  transportMode: string,
+  routeGroup: number,
+  focused: boolean,
+  setError: SetError
+): Promise<RouteData | null> {
+  try {
+    const response = await backend.get<RouteData>(URL_BACKEND_GTFS_ROUTE_DATA, {
+      params: { transportMode, routeGroup, focused },
+    });
+    return response.data;
+  } catch {
+    setError("Kunde inte hämta ruttdata.");
     return null;
   }
 }
