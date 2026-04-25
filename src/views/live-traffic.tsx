@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Switch } from '@headlessui/react';
 import { MdExpandMore } from 'react-icons/md';
 
-import { fetchGtfsDataStatus, fetchRouteGroups } from '../communication/backend';
+import { fetchGtfsDataStatus, fetchRouteData, fetchRouteGroups } from '../communication/backend';
 import { ErrorHandler } from '../components/error-handler';
 import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
@@ -108,6 +108,13 @@ export function LiveTrafficView() {
       setLoading(false);
     });
   }, [loginState, navigate, setError]);
+
+  useEffect(() => {
+    if (!selectedGroup) {
+      return;
+    }
+    fetchRouteData(selectedGroup.transportMode, selectedGroup.routeGroup, focused, setError);
+  }, [selectedGroup, focused, setError]);
 
   function handleListboxChange(group: MonitoredRouteGroup) {
     setSelectedGroup(group);
