@@ -366,7 +366,106 @@ One thing worth noting: since OOM is a java.lang.Error and @Transactional does r
 therefore a conservative safety measure rather than a strictly necessary one.
 --
 Review how this works and maybe better handle the last part.
-            
+
+I1 - BE - Render.com OOM kills — investigation and resolution (April 2026)
+--
+**Root cause:** JVM non-heap (Metaspace + JIT code cache, ~170MB) was invisible to the old heap-only monitor.
+With heap max at 371MB (`-XX:MaxRAMPercentage=75.0` of ~495MB container RAM) + non-heap ~170MB, total RSS
+exceeded Render's 512MB limit, causing silent process kills (logged as "exceeded memory allocation" in Render).
+
+**Fix applied:**
+- `Dockerfile` `-XX:MaxRAMPercentage` reduced from `75.0` → `50.0` (heap max ~247MB, freeing ~120MB for non-heap)
+- `JvmMemoryMonitorJob` extended to log non-heap alongside heap:
+  `JVM memory — heap: NNNmb / NNNmb (NN%) | non-heap: NNNmb / NNNmb committed | old-gen: NNNmb / NNNmb`
+
+**Parse-time spike (ongoing concern as of this writing):** The nightly 05:00 GTFS pipeline runs on a JVM that
+already holds the full in-memory dataset. A second crash occurred during the trip batch-save phase. After the
+successful re-parse, old-gen settled at ~129MB (up from ~61MB before that run). Root cause not confirmed —
+candidates: Hibernate session cache growth during the ~47-minute parse; increased `GtfsTripInfo` object graph
+from the new `stopTimes` list. The next nightly parse may still spike if old-gen stays elevated.
+
+**Parse memory logging added:** `GtfsParseService.logMemory(label)` emits `MEM [label]` lines at:
+`parse-start`, `post-trips`, `stop_times-N` (every 10k rows), `post-stop_times`, `post-calendar_dates`.
+Use these to pinpoint where the spike occurs, then target reductions (e.g. more aggressive `entityManager.clear()`
+calls, triggering a GC before the pipeline runs, or reducing the in-memory model size).
+
+**Related:** G1 (double `rebuildDataset()` on startup) — fixing it would eliminate one redundant dataset load
+and slightly reduce peak startup memory. Consider fixing before the next parse if old-gen remains high.
+--
+
+I2 - BE - Vehicle position as trip percentage — shapeDistTraveled + VehicleLocation.t
+--
+`GtfsGeometryUtil.locateOnRoute()` returns `VehicleLocation(int segIdx, double t)`:
+- `segIdx` — zero-based index of the first stop in the closest segment (vehicle is between `stops[segIdx]` and
+  `stops[segIdx+1]`)
+- `t` — fraction [0,1] along the **straight line** between those two stops (dot-product projection + cosLat
+  correction), NOT a route-distance fraction
+
+`GtfsStopTimeInfo.shapeDistTraveled` is cumulative metres along the route shape polyline from trip start.
+Combined with `t`, vehicle position as a percentage of total trip distance:
+
+```java
+double dStart = stopTimes.get(segIdx).getShapeDistTraveled();
+double dEnd   = stopTimes.get(segIdx + 1).getShapeDistTraveled();
+double dTotal = stopTimes.get(stopTimes.size() - 1).getShapeDistTraveled();
+double pct    = (dStart + t * (dEnd - dStart)) / dTotal * 100.0;
+```
+
+Note: `t` is a straight-line fraction. For short inter-stop segments the difference from true route-distance
+fraction is negligible. For longer segments with significant bends the approximation drifts, but is good enough
+for the schematic view.
+--
+
+I3 - BE - WIP GtfsDataset inner classes (LiveTrip / LiveStop) — C-block context
+--
+`GtfsDataset.java` contains WIP inner classes for building the live traffic view data model. Not yet used;
+present as scaffolding for the C-block schematic work (as of late April 2026):
+
+**`LiveTrip`** — represents a trip in the live view. Two constructors:
+1. `@AllArgsConstructor` (Lombok) — takes `direction`, `stopHeading`, `liveStops` directly
+2. `LiveTrip(GtfsTripInfo firstTrip) throws GtfsLiveException` — convenience constructor that reads
+   `stopTimes.getFirst().getStopHeadsign()` for the heading and maps stop times to `LiveStop` instances.
+
+**`LiveStop`** — skeleton only (`@Data`, empty constructor). Fields and logic TBD when the schematic view
+design is detailed.
+
+**`organizeRoutes()`** — commented out. It groups `tripInfoById.values()` by a
+`record GroupKey(TransportMode, int routeGroup)`, then iterates each group to build `LiveTrip` instances.
+The multi-trip merging loop (`for (int i = 1; i < trips.size(); ++i)`) was left as a stub — this is where
+trips on the same route group are reconciled (same stop sequence, different departure times).
+
+**Why it is commented out:** `new LiveTrip(firstTrip)` throws `GtfsLiveException` (checked), which cannot
+propagate from inside a `forEach` lambda. When resuming C-block work, pick one of:
+- Replace `forEach` with a regular `for` loop
+- Make `GtfsLiveException` extend `RuntimeException`
+- Wrap as unchecked inside the lambda and unwrap after
+
+This block is the kernel of C3+ work (build the live route data the schematic view will consume).
+--
+
+I4 - BE - Render health check timeout (April 2026) — "en gång ingen gång"
+--
+**Symptom:** Render sent a "HTTP health check failed (timed out after 5 seconds)" alert, triggering an
+automatic restart. This is distinct from the OOM kills in I1 — Render's message for OOM is "exceeded memory
+allocation"; a health check timeout means the JVM was alive but unresponsive to HTTP requests.
+
+**Likely cause:** A stop-the-world GC pause longer than 5 seconds. On Render's 0.1 CPU allocation, GC work
+that takes ~1 second on a full machine can take 10× longer. A non-heap spike of +14MB in the interval before
+the crash (170 → 184MB, likely JIT compilation from a new endpoint being hit) may have triggered a more
+aggressive GC cycle shortly after. The `/ping` health check could not get a response while all threads were
+frozen for GC.
+
+**Decision:** Treat as a one-off ("en gång ingen gång") — memory metrics were healthy, Render flagged it as
+transient, and the restart was automatic. No action taken.
+
+**If it recurs:** Add a G1GC pause target to `Dockerfile`:
+```
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=50.0", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=500", "-jar", "app.jar"]
+```
+`-XX:MaxGCPauseMillis=500` tells G1 to prefer more frequent short collections over infrequent long ones —
+reduces the risk of a pause long enough to fail the 5-second health check.
+--
+
 ## Future Enhancements
 
 Ideas that are not currently needed but should be remembered if the need arises.
