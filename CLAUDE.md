@@ -341,6 +341,12 @@ icons colour-coded by transport mode, oriented by bearing. Show route line shape
 G1 - BE -   One minor thing to note: rebuildDataset() is called twice on startup — once via the pipeline in GtfsDownloadJob.onApplicationReady() and once directly from GtfsAccessService.onApplicationReady(). Both
 do the right thing, but it's a redundant DB lookup. Not a problem, just worth being aware of.
 
+G2 - BE - `GtfsRealtimePollJob` is a temporary scheduled job (`port.incoming.scheduled`) that polls
+`SamtrafikenProvider.fetchVehiclePositions()` every 5 minutes between 06:00 and 23:55 Stockholm time and
+discards the result. Its sole purpose is to keep the Samtrafiken RT feed warm and verify that continuous
+polling works within the API quota. Remove this job when the C-block schematic view starts consuming live
+vehicle positions for real.
+
 H1 - BE - Difference and handling of FAILED/ERROR_IN_PARSE
 --
 FAILED — set by GtfsDownloadService.handlePipelineFailure() (download/unzip phases) or GtfsParseService.handlePipelineFailure() (parse phase) when an exception is caught during the pipeline. An
