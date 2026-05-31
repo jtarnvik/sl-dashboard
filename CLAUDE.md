@@ -326,7 +326,7 @@ shows a Headless UI Listbox (with transport icons) to pick the route group and a
 share identical focus config at startup — throws `IllegalStateException` to abort on misconfiguration.
 `GET /api/protected/gtfs/route-groups` serves the list; `fetchRouteGroups()` in `backend.ts` fetches it.
 
-C2 - FE/BE, When a route group is selected in the traffic view, fetch the route information from the backend. This 
+C2 - DONE - FE/BE, When a route group is selected in the traffic view, fetch the route information from the backend. This 
 just sets up the basic FE -> BE flow. So, when a selection has been made in the front end (including the intial first line on
 load) call en endpoint in the GtfsCOntroller with the routegroup and focus parameter as argument. 
 - Set up the call and create the endpoint. 
