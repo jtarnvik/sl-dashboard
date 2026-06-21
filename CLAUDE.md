@@ -472,9 +472,23 @@ ENTRYPOINT ["java", "-XX:MaxRAMPercentage=50.0", "-XX:+UseG1GC", "-XX:MaxGCPause
 reduces the risk of a pause long enough to fail the 5-second health check.
 --
 
-## Future Enhancements
+## Planned Improvements
 
-Ideas that are not currently needed but should be remembered if the need arises.
+Prioritized improvement work, in order. Unlike the "Future Enhancements" ideas below, these are committed
+follow-ups — do them in sequence.
+
+1. **Add frontend tests.** The frontend has no tests today, which makes refactoring the effect-heavy panes
+   risky — there is nothing to catch a silent regression. Add a test setup (Vitest + React Testing Library is
+   the natural fit for Vite) and cover the panes and views that own non-trivial effect/fetch logic. This is
+   step 1 specifically so that step 2 can be done safely.
+
+2. **Learn, then fix `react-hooks/set-state-in-effect`.** The `eslint-plugin-react-hooks` 7.1 bump added this
+   rule; it is currently downgraded to `warn` in `eslint.config.js`. Four sites trigger it: `views/shared-route.tsx`,
+   `pane/departures`, `common/deviation-modal`, `admin/gtfs-status`. First understand *why* synchronous setState
+   in an effect causes cascading renders, and which of the four are true positives versus conservative warnings
+   (several set state after an `await`, which React considers acceptable). Then fix them deliberately, one at a
+   time — ideally after (1) so the changes are covered by tests. Restore the rule to `error` once the sites are
+   clean.
 
 ### Frontend cache for deviation interpretations
 Cache backend interpretation results in a `Map<string, BackendInterpretationResult>` keyed by deviation text for the lifetime of the page session. On each SL refresh cycle, check the cache before sending texts to the backend — only send uncached texts, then merge cached and fresh results before enrichment.

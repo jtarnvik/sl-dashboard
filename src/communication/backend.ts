@@ -279,7 +279,7 @@ export async function runGtfsPipeline(setError: SetError): Promise<boolean> {
   try {
     await backend.post(URL_BACKEND_GTFS_RUN_PIPELINE);
     return true;
-  } catch (error) {
+  } catch {
     setError("Could not run GTFS pipeline.");
     return false;
   }
@@ -289,7 +289,7 @@ export async function runRealtimePoc(setError: SetError): Promise<boolean> {
   try {
     await backend.post(URL_BACKEND_GTFS_REALTIME_POC);
     return true;
-  } catch (error) {
+  } catch {
     setError("Could not run realtime POC.");
     return false;
   }
