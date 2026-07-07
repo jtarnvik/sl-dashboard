@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RxHamburgerMenu } from 'react-icons/rx';
+import { HiExternalLink } from 'react-icons/hi';
 
 import { fetchAccessRequestCount } from '../../../communication/backend';
 
@@ -71,6 +72,16 @@ export function NavMenu({ logout, isAdmin }: Props) {
           >
             Aktuell trafik
           </button>
+          <a
+            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer flex items-center justify-between"
+            href="https://sl.se/reseplanering/kartor/spartrafikkartor"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setMenuOpen(false)}
+          >
+            <span>Spårkarta</span>
+            <HiExternalLink className="text-gray-500 text-base" />
+          </a>
           <hr className="border-gray-200" />
           {isAdmin && (
             <>
