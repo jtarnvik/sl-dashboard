@@ -294,8 +294,10 @@ GTFS keys — no synthetic IDs, no timestamp columns. Full transaction design an
 `entityManager.detach(entry)` lock-avoidance pattern are documented in `GtfsParseService` class-level Javadoc.
 
 **Package layout:** JPA entities live in `model/domain/entity/`; in-memory models (`GtfsDataset`,
-`GtfsRouteInfo`, `GtfsTripInfo`, `GtfsVehiclePosition`, `GeoPosition`) live in `model/gtfs/`. `GtfsRouteInfo`
-wraps `GtfsRoute` + its matching `GtfsMonitoredRoute`, giving C1 access to `transportMode` and `routeGroup`.
+`GtfsRouteInfo`, `GtfsTripInfo`, `GtfsStopInfo`, `GtfsStopTimeInfo`, `GtfsVehiclePosition`, `GeoPosition`,
+`ParentStopIdentifier`) live in `model/gtfs/`, with checked exceptions in `model/gtfs/exception/` and the
+C-block live route model in `model/gtfs/livetraffic/` (see I3). `GtfsRouteInfo` wraps `GtfsRoute` + its
+matching `GtfsMonitoredRoute`, giving C1 access to `transportMode` and `routeGroup`.
 Name-variant matching (e.g. 43X) lives in `GtfsNameUtil` and is shared between parse and access services.
 
 **`gtfs_stop` includes parent stations** (`9021001xxxxxxxxx`, `location_type=1`) as well as platform stops
@@ -334,12 +336,29 @@ load) call en endpoint in the GtfsCOntroller with the routegroup and focus param
 - Create an empty return object, with (for now) no information other than a "OK" status string.
 - 
 
+C3 - IN PROGRESS - BE, Live route model (`model/gtfs/livetraffic/`). Builds, per route group, the canonical
+stop chain that the schematic will draw. Implemented and building at dataset construction time; not yet
+consumed by any endpoint. See I3 for the class-by-class detail and the design reasoning.
+
+Remaining before the schematic can render:
+- Wire `GtfsDataset.liveTrips` into `GtfsRealtimeService.getRouteData()` — today it returns a bare
+  `status: "OK"` and ignores the `focused` flag.
+- Place vehicles on the chain: `GtfsGeometryUtil.locateOnRoute()` gives `(segIdx, t)`; convert to a trip
+  percentage with `shapeDistTraveled` (formula in I2).
+- Implement `GtfsRealtimeCache.getContinously()` — currently throws `Not implemented`. This is the ~15s TTL
+  cache from the A-block rate-limit analysis; `getDirect()` (uncached) is what `getRouteData()` and `poc()`
+  use today.
+- Design the `RouteDataResponse` payload the frontend will draw from.
+- Note: live traffic cannot be exercised on Render until the non-local dataset switch is lifted — see I5.
+
 D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
 icons colour-coded by transport mode, oriented by bearing. Show route line shapes from static GTFS data.
 
-G1 - BE -   One minor thing to note: rebuildDataset() is called twice on startup — once via the pipeline in GtfsDownloadJob.onApplicationReady() and once directly from GtfsAccessService.onApplicationReady(). Both
-do the right thing, but it's a redundant DB lookup. Not a problem, just worth being aware of.
+G1 - MOSTLY RESOLVED - BE - `rebuildDataset()` used to run twice on startup — once via the pipeline in
+`GtfsDownloadJob.onApplicationReady()` and once directly from `GtfsAccessService.onApplicationReady()`.
+The second call is now guarded by an `if (!dataset.get().isEmpty())` early return, so the redundant DB
+load is gone. What still runs twice is `validateRouteGroupConsistency()`, which is cheap and in-memory.
 
 G2 - BE - `GtfsRealtimePollJob` is a temporary scheduled job (`port.incoming.scheduled`) that polls
 `SamtrafikenProvider.fetchVehiclePositions()` every 5 minutes between 06:00 and 23:55 Stockholm time and
@@ -422,31 +441,59 @@ fraction is negligible. For longer segments with significant bends the approxima
 for the schematic view.
 --
 
-I3 - BE - WIP GtfsDataset inner classes (LiveTrip / LiveStop) — C-block context
+I3 - BE - The live route model (`model/gtfs/livetraffic/`) — C-block context
 --
-`GtfsDataset.java` contains WIP inner classes for building the live traffic view data model. Not yet used;
-present as scaffolding for the C-block schematic work (as of late April 2026):
+The live traffic data model has moved out of `GtfsDataset` into its own package and is now implemented
+(the "commented-out `organizeRoutes()`" state described here previously is gone). Nothing consumes it yet —
+see C3 for what remains.
 
-**`LiveTrip`** — represents a trip in the live view. Two constructors:
-1. `@AllArgsConstructor` (Lombok) — takes `direction`, `stopHeading`, `liveStops` directly
-2. `LiveTrip(GtfsTripInfo firstTrip) throws GtfsLiveException` — convenience constructor that reads
-   `stopTimes.getFirst().getStopHeadsign()` for the heading and maps stop times to `LiveStop` instances.
+**The core problem it solves:** a route group contains hundreds of trips per day that differ in stop count
+(short turns, forks, depot runs). The schematic needs *one* canonical stop chain per group, not hundreds.
+The design picks a single **identity trip** — the one trip that traverses the whole line — and treats every
+other trip as a variation on it.
 
-**`LiveStop`** — skeleton only (`@Data`, empty constructor). Fields and logic TBD when the schematic view
-design is detailed.
+**`GtfsDataset.organizeRoutes()`** groups `tripInfoById.values()` by `GtfsTripInfo.getGroupKey()`, resolves a
+selector per group, and stores the result in `Map<GroupKey, LiveTrip> liveTrips`. Built in the constructor;
+a `GtfsLiveException` is caught and logged as a warning so a bad group cannot prevent the dataset from
+loading at all. `hasLiveSupport()` reports whether any group produced a `LiveTrip`.
+The checked-exception-in-lambda problem noted earlier was solved by using a plain `for` loop over the
+grouped entries — `GtfsLiveException` stayed checked.
 
-**`organizeRoutes()`** — commented out. It groups `tripInfoById.values()` by a
-`record GroupKey(TransportMode, int routeGroup)`, then iterates each group to build `LiveTrip` instances.
-The multi-trip merging loop (`for (int i = 1; i < trips.size(); ++i)`) was left as a stub — this is where
-trips on the same route group are reconciled (same stop sequence, different departure times).
+**`GroupKey`** — `record (TransportMode, int routeGroup)`, promoted to its own top-level type in
+`livetraffic/`. The same pair the frontend sends to `/route-data`. Note that `GtfsAccessService` still
+declares two *local* `GroupKey` records of its own (in `getMonitoredRouteGroups()` and
+`validateRouteGroupConsistency()`) — candidates for consolidation onto this type.
 
-**Why it is commented out:** `new LiveTrip(firstTrip)` throws `GtfsLiveException` (checked), which cannot
-propagate from inside a `forEach` lambda. When resuming C-block work, pick one of:
-- Replace `forEach` with a regular `for` loop
-- Make `GtfsLiveException` extend `RuntimeException`
-- Wrap as unchecked inside the lambda and unwrap after
+**`GtfsTripInfoSelector`** (abstract) — per-line strategy holding an expected `stationCount` and a start
+terminus (`ParentStopIdentifier`). `findIdTrip()` scans the group for the trip matching both. Subclasses:
+`Train43`, `Bus112`, `Bus117`, `MetroGreen`, registered in a static map in `GtfsTripInfoSelectorFactory`
+keyed by each class's `getGroupKey()`. An unregistered group throws
+`GtfsNoRegisteredSelectorForGroupKeyException`.
 
-This block is the kernel of C3+ work (build the live route data the schematic view will consume).
+*Why hardcoded station counts and termini:* the GTFS feed has no field that says "this is the full line".
+Trip length plus start station is the only reliable discriminator, and both are stable per line. The cost is
+that a permanent line extension means editing the selector — deliberate, since such a change needs a look
+at the schematic anyway.
+
+**`LiveTrip`** — the canonical chain for one group: `direction`, `stopHeading`, `List<LiveStop>`, plus
+`Map<Integer, RouteVariant> edgeVariants` (terminus per direction) and `List<RouteVariant> routeVariants`.
+`reverseTrip()` flips the chain in place, recomputing `shapeDistTraveled` from the total so distances still
+run from zero at the new start.
+
+**`LiveStop`** — fully implemented (`stopId`, `stopName`, `shapeDistTraveled`, `shapeDistTraveledSinceLast`,
+lat/lon; implements `GeoPosition` so it feeds straight into `GtfsGeometryUtil.locateOnRoute()`). It always
+resolves the **parent station**, never the platform — the schematic is direction-neutral. Missing parent or
+stop info throws (`GtfsNoParentForStopException` / `GtfsNoStopInfoException`) rather than silently placing a
+stop at the wrong coordinates.
+
+**`variations/`** — `RouteVariant` (abstract) with three kinds: `EndStopRouteVariant` (expected terminus per
+direction), `RouteForkVariant` (a branch as a `List<LiveForkStop>`), `AtypicalRouteVariant` (a stop plus an
+info message). `MetroGreen` declares its forks as `ForkPart(start, end, length)` records — Skärmarbrink →
+Farsta strand (9) and Skärmarbrink → Skarpnäck (6) — resolved by `getRouteForkVariant()` scanning trips for
+a matching sub-sequence. The variant classes currently only hold data; no behaviour yet.
+
+**`GtfsUtil`** (`livetraffic/util/`) — `getParent()` / `getSafeParent()` / `getParentId()` /
+`getReverseDirection()`. Distinct from `service/util/GtfsNameUtil` — that one does line-name matching.
 --
 
 I4 - BE - Render health check timeout (April 2026) — "en gång ingen gång"
@@ -470,6 +517,29 @@ ENTRYPOINT ["java", "-XX:MaxRAMPercentage=50.0", "-XX:+UseG1GC", "-XX:MaxGCPause
 ```
 `-XX:MaxGCPauseMillis=500` tells G1 to prefer more frequent short collections over infrequent long ones —
 reduces the risk of a pause long enough to fail the 5-second health check.
+--
+
+I5 - BE - **The in-memory GTFS dataset is currently disabled outside the `local` profile**
+--
+`GtfsAccessService.rebuildDataset()` returns immediately unless the `local` profile is active:
+
+```java
+if (!environment.acceptsProfiles(Profiles.of("local"))) {
+  log.info("GTFS in-memory dataset disabled in non-local profile — skipping load");
+  return;
+}
+```
+
+**Consequence:** on Render the dataset stays empty. `/route-groups` returns an empty list,
+`/status` reports `staticDataAvailable: false`, and live traffic does not work in production. The nightly
+pipeline still runs and still fills the DB tables — only the in-memory load is skipped.
+
+**Why:** a temporary mitigation for the I1 OOM kills (commit "Temporary removal of static dataset"). The
+dataset is the largest single allocation in the JVM and holding it left too little headroom under Render's
+512MB cap during the nightly parse.
+
+**Before lifting it:** the dataset has to fit alongside the parse-time peak, so this depends on the I1
+parse-memory work (and possibly G1). Development of the C-block continues locally in the meantime.
 --
 
 ## Planned Improvements
