@@ -52,7 +52,7 @@ export function LiveTrafficOverview({ routeData }: LiveTrafficOverviewProps) {
   const last = stops[stops.length - 1];
 
   return (
-    <div className="flex flex-col space-y-3 overflow-y-auto">
+    <div className="flex flex-col space-y-3">
       <div className="text-gray-800">
         <p>
           Sträcka: {first?.stopName ?? '?'} → {last?.stopName ?? '?'} ({stops.length} hållplatser)
