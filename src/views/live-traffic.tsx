@@ -13,8 +13,19 @@ import PageTitleContext from '../contexts/page-title-context';
 import { useUserLoginState, UserLoginState } from '../hook/use-user';
 import { GtfsDataStatus, MonitoredRouteGroup } from '../types/backend';
 
+// The line to preselect. Without this the first group alphabetically wins, which is bus 112 — a line kept
+// only to exercise the route presentation logic.
+const DEFAULT_GROUP_DISPLAY_NAME = '117';
+
 function groupKey(group: MonitoredRouteGroup): string {
   return `${group.transportMode}:${group.routeGroup}`;
+}
+
+function pickDefaultGroup(groups: MonitoredRouteGroup[]): MonitoredRouteGroup | null {
+  if (groups.length === 0) {
+    return null;
+  }
+  return groups.find((group) => group.displayName === DEFAULT_GROUP_DISPLAY_NAME) ?? groups[0];
 }
 
 function toTransportationMode(transportMode: string): TransportationMode {
@@ -100,9 +111,10 @@ export function LiveTrafficView() {
       setGtfsStatus(status);
       if (status?.staticDataAvailable !== false) {
         setGroups(groups);
-        if (groups.length > 0) {
-          setSelectedGroup(groups[0]);
-          setFocused(groups[0].onlyFocused);
+        const defaultGroup = pickDefaultGroup(groups);
+        if (defaultGroup) {
+          setSelectedGroup(defaultGroup);
+          setFocused(defaultGroup.onlyFocused);
         }
       }
       setLoading(false);
