@@ -85,6 +85,8 @@ export interface LiveTrip {
 export interface LiveVehicle {
   vehicleId: string;
   tripId: string;
+  /** Where this vehicle terminates — its own trip's destination, so short turns are reported correctly. */
+  destination: string | null;
   lat: number;
   lng: number;
   bearing: number;

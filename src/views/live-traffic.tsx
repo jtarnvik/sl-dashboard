@@ -9,6 +9,7 @@ import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
 import { TransportationIconCommon, TransportationMode } from '../components/common/line';
 import { ModalDialog } from '../components/common/modal-dialog';
+import { LiveTrafficGraph } from '../components/pane/live-traffic-graph';
 import { LiveTrafficOverview } from '../components/pane/live-traffic-overview';
 import ErrorContext from '../contexts/error-context';
 import PageTitleContext from '../contexts/page-title-context';
@@ -205,9 +206,8 @@ export function LiveTrafficView() {
               {/* TODO: temporary — remove once the graphical view replaces the text representation. */}
               <SLButton onClick={() => setOverviewOpen(true)} thin>Text</SLButton>
             </div>
-            {/* TODO: temporary — placeholder marking the area the graphical live view will occupy. */}
-            <div className="flex-1 min-h-0 bg-red-500/20 border-2 border-red-500 rounded flex items-center justify-center">
-              <span className="text-sm text-red-700">Graphical-Live-Trip</span>
+            <div className="flex-1 min-h-0">
+              <LiveTrafficGraph routeData={routeData} />
             </div>
           </div>
         </div>

@@ -73,7 +73,7 @@ The hamburger icon shows a red badge when there are pending access requests. The
 | `Statistics` | `/admin/statistics` | Admin | Usage statistics (shared routes, AI queries, user count) |
 | `SharedRouteView` | `/route/:id` | Any | View a shared journey; shows login teaser to non-logged-in users |
 | `Gdpr` | `/gdpr` | Any | GDPR info page |
-| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle; schematic vehicle view (in progress) |
+| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle; schematic vehicle view (`live-traffic-graph`), polled every 8s. A temporary "Text" button opens the same data as text (`live-traffic-overview`) |
 | `Denied` | `/denied` | — | Shown when access is denied during OAuth2 |
 
 All routes except `/denied` are rendered inside `Layout`, which wraps them with `Navbar` and an `ErrorBoundary`.
@@ -345,21 +345,70 @@ load) call en endpoint in the GtfsCOntroller with the routegroup and focus param
 - Create an empty return object, with (for now) no information other than a "OK" status string.
 - 
 
-C3 - IN PROGRESS - BE, Live route model (`model/gtfs/livetraffic/`). Builds, per route group, the canonical
-stop chain that the schematic will draw. Implemented and building at dataset construction time; not yet
-consumed by any endpoint. See I3 for the class-by-class detail and the design reasoning.
+C3 - DONE - BE, Live route model (`model/gtfs/livetraffic/`) and the realtime endpoint that serves it.
+See I3 for the class-by-class detail and the design reasoning behind the model itself.
 
-Remaining before the schematic can render:
-- Wire `GtfsDataset.liveTrips` into `GtfsRealtimeService.getRouteData()` — today it returns a bare
-  `status: "OK"` and ignores the `focused` flag.
-- Place vehicles on the chain: `GtfsGeometryUtil.locateOnRoute()` gives `(segIdx, t)`; convert to a trip
-  percentage with `shapeDistTraveled` (formula in I2).
-- DONE — `GtfsRealtimeCache.getContinously()`: request-driven poll loop on a virtual thread, 5s interval,
-  5-minute sliding window renewed by each request. Interval and window are constants at the top of the inner
-  class. Logs per-cycle timings (`fetch`, `join`, `sincePreviousCycle`) for analysis. **Not yet wired up** —
-  `getRouteData()` and `poc()` still call `getDirect()` / the provider directly.
-- Design the `RouteDataResponse` payload the frontend will draw from.
+- `GtfsRealtimeCache.getContinously()` — request-driven poll loop on a virtual thread, 5s interval, 5-minute
+  **sliding** window renewed by each request (so a long viewing session never hits a mid-session blocking
+  fetch, and polling stops promptly when the user leaves). Interval and window are constants at the top of
+  the inner class. Logs per-cycle timings (`fetch`, `join`, `sincePreviousCycle`).
+- `GtfsRealtimeService.getRouteData()` — resolves the group's `LiveTrip` **first** (so a misconfigured group
+  cannot trigger an upstream call), then locates every vehicle on that one shared chain via
+  `GtfsGeometryUtil.locateOnRoute(liveTrip.getLiveStops(), vp)`. Placing all vehicles on one chain is the
+  point: equal `segIdx` means genuinely between the same two stations.
+- `RouteData` (domain) → `RouteDataMapper` → `RouteDataResponse` (wire). The chain is sent **once** per
+  response, not per vehicle. Route/edge variants are deliberately not serialized yet.
+- `LiveVehicle.getDestination()` reads the vehicle's **own** trip (`stop_headsign`, falling back to its last
+  stop's parent station). Deriving destination from the chain's end was wrong for short turns, which are
+  routine on the metro and on 117 at rush hour.
+- Missing `LiveTrip` for a group is a loud `log.error` + `status: "No live trip for group"` — it is a
+  configuration failure, not a data gap.
+- `GtfsDataset.organizeRoutes()` now builds each group independently: one bad group no longer wipes out all
+  live trips, and an unchecked `GtfsNoRegisteredSelectorForGroupKeyException` no longer escapes the
+  constructor and kills the whole dataset. Summary line `Live trips built for N of M route groups`.
 - Note: live traffic cannot be exercised on Render until the non-local dataset switch is lifted — see I5.
+
+C4 - DONE - FE, Live traffic view. Types in `src/types/backend.ts` (`LiveStop`, `LiveTrip`, `LiveVehicle`,
+`RouteData`); two components under `src/components/pane/`.
+
+- `live-traffic-graph/` — the schematic. Vertical axis at `AXIS_X_PERCENT` (65%, one constant drives axis,
+  stop rows and both label lanes). Stop names hug the left edge with a flexbox leader dash that fills the
+  remaining space and ends on the axis — no measuring, names of any length line up. Triangles ride 8px off
+  the axis (▼ right / ▲ left) so opposing vehicles never overlap; destination labels sit in lanes either
+  side. `transition-[top]` slides vehicles between polls.
+- **Equal (schematic) stop spacing, not proportional.** `stopY(i) = i / (n-1)`,
+  `vehicleY(v) = (segIdx + segmentFraction) / (n-1)`. Proportional was tried on paper and fails badly on
+  line 43: 74 km over 20 stops puts inner-city stations ~8px apart in a 600px box. Consequence: screen speed
+  no longer reflects real speed, and `shapeDistTraveled` is not consulted at all (so its nullability is moot).
+  Both position functions are pure and swappable if a to-scale mode is ever wanted.
+- `live-traffic-overview/` — the text representation, now behind a temporary "Text" button in a modal.
+  Marked TODO; remove when the graph fully replaces it. Reads the same `routeData`, so it updates live.
+- **Drawing technique: positioned divs, not SVG.** Everything here is axis-aligned lines plus text, which
+  divs do well — and SVG `<text>` has no wrapping or ellipsis, which long Swedish station names need. Switch
+  to SVG when branches (metro forks), rotation, or curves arrive.
+- Polling is 8s with a `document.visibilityState` check in the tick, plus `useVisibility` for an immediate
+  refresh on return. Responses are stored with a `requestKey` (group + focused) and ignored if they no longer
+  match the selection — a late reply for a previous line would otherwise paint the wrong vehicles onto the
+  new chain.
+- 117 is preselected via `DEFAULT_GROUP_DISPLAY_NAME`; without it the first group alphabetically wins, which
+  is bus 112 (the test line).
+
+C5 - NEXT - BE/FE, Honour the `focused` flag. Currently accepted by `getRouteData()` and ignored. Motivation:
+the metro and train chains carry many stops in areas of no interest, and cropping also sidesteps the branch
+problem below.
+
+Design decisions still open (to be settled before implementing):
+- What focus crops. Trimming `liveTrip.stops` to the `focusStart`/`focusEnd` window is the obvious half;
+  the question is what happens to vehicles outside the window — dropped, or kept and clamped to the ends so
+  an approaching vehicle is still visible.
+- Whether `segIdx` stays an index into the **returned** stop list. The frontend assumes it does. If the
+  chain is cropped after location, the indices must be rebased or the drawing breaks silently.
+
+**Related problem this fixes:** `locateOnRoute()` projects every vehicle onto the drawn chain, always
+choosing the geometrically closest segment. Green-line trains on the *other* branch (Skarpnäck vs Farsta
+strand) are therefore projected onto the drawn leg and shown at stations they will never reach — silently
+plausible and wrong. `distanceMetres` in the response is the tell; it goes large when a vehicle is not really
+on the chain. Cropping to the pre-fork corridor removes the case. 117 and 43 are unaffected.
 
 D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
