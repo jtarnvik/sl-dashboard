@@ -242,21 +242,29 @@ notifications — already integrated). This is the most complex goal but the mos
 
 **Data sources (Samtrafiken API, key-based)**
 - Static GTFS: `https://opendata.samtrafiken.se/gtfs/sl/sl.zip` — published daily 03:00–07:00, contains routes,
-  trips, stops, shapes. Bronze: 50 calls/month — DB cache is essential. Silver upgrade requested.
+  trips, stops, shapes. Bronze: 50 calls/month — DB cache is essential. No upgrade applied for; one download
+  per day fits comfortably, so there has been no need. The July 2026 upgrade below covers the realtime feed
+  only; the two feeds have separate keys and separate tiers.
 - Realtime GTFS-RT: `https://opendata.samtrafiken.se/gtfs-rt/sl/VehiclePositions.pb` — live vehicle positions.
-  Bronze: 50 calls/minute, 30,000 calls/month. Requires `Accept-Encoding: gzip` header or the API returns 406.
+  **Upgraded tier granted (July 2026): 2,000,000 calls per rolling 30 days.** Requires `Accept-Encoding: gzip`
+  header or the API returns 406.
 
-**Realtime rate limit analysis (Bronze: 50/min, 30,000/month)**
-30,000/month ≈ 1,000/day ≈ one upstream call every 86 seconds if spread evenly around the clock. This is enough
-for normal use but not for aggressive continuous polling by multiple clients.
+**Realtime rate limit analysis (2,000,000 per 30 days)**
+2,000,000/30 days ≈ 66,700/day ≈ 46 calls/minute sustained around the clock. The monthly budget is effectively
+a non-constraint: the implemented 5-second poll interval is 12 calls/minute, so even a loop running 24/7 uses
+roughly a quarter of the budget. The interval could go below 2 seconds before the quota became the limiting
+factor.
 
-The backend caches the vehicle position response for ~15 seconds. With this cache, 10 simultaneous clients all
-polling every 15 seconds generate only 4 upstream calls/minute — well within the 50/minute rate limit and
-conservative on monthly budget.
+*Superseded:* the original Bronze tier was 50/min and 30,000/month (≈1,000/day), which made the budget the
+dominant design constraint — it is what motivated the ~15s TTL and the "one call every 86 seconds" arithmetic
+that earlier versions of this file were built around. Those numbers no longer apply; the design decisions they
+produced (request-driven polling, nothing running when nobody is watching) are still worth keeping for other
+reasons — Render's 0.1 CPU allocation and simple good manners toward a free API.
 
-Main risk: a client leaving the map view open overnight. Mitigation: pause polling when the browser tab is
-hidden. The `useVisibility` hook already exists in the codebase (`src/hook/use-visibility.ts`) and is used by
-the departures pane for exactly this purpose — reuse it in the map view.
+Remaining constraints, in order of relevance: the per-minute rate limit on the new tier (12/min is far below
+any plausible value), and Render CPU. A client leaving the map view open overnight is no longer a quota
+problem, but the frontend should still pause polling when the tab is hidden — `useVisibility`
+(`src/hook/use-visibility.ts`) already does this for the departures pane; reuse it in the map view.
 
 **Static GTFS loading strategy**
 - DB is the durable cache; `/tmp` is the working area for parsing. See A1 for full detail.
@@ -268,9 +276,10 @@ the departures pane for exactly this purpose — reuse it in the map view.
   is validity periods only).
 
 **Vehicle position polling strategy**
-- Backend does NOT poll continuously. Instead, it fetches and caches positions with a short TTL (~15 seconds)
-  and only on client request. If no clients are active, nothing polls. This avoids burning API quota overnight
-  and fits within the Render free tier's 0.1 CPU allocation.
+- Backend does NOT poll continuously on a schedule. `GtfsRealtimeCache` (inner class in `GtfsRealtimeService`)
+  polls only while clients are asking: the first request fetches directly and starts a background loop that
+  refreshes every 5 seconds; the loop shuts down 5 minutes after the last request (sliding window). If no
+  clients are active, nothing polls. Now motivated by Render's 0.1 CPU rather than by API quota.
 - Frontend requests positions only when the map view is active.
 
 **Render free tier constraints**
@@ -345,9 +354,10 @@ Remaining before the schematic can render:
   `status: "OK"` and ignores the `focused` flag.
 - Place vehicles on the chain: `GtfsGeometryUtil.locateOnRoute()` gives `(segIdx, t)`; convert to a trip
   percentage with `shapeDistTraveled` (formula in I2).
-- Implement `GtfsRealtimeCache.getContinously()` — currently throws `Not implemented`. This is the ~15s TTL
-  cache from the A-block rate-limit analysis; `getDirect()` (uncached) is what `getRouteData()` and `poc()`
-  use today.
+- DONE — `GtfsRealtimeCache.getContinously()`: request-driven poll loop on a virtual thread, 5s interval,
+  5-minute sliding window renewed by each request. Interval and window are constants at the top of the inner
+  class. Logs per-cycle timings (`fetch`, `join`, `sincePreviousCycle`) for analysis. **Not yet wired up** —
+  `getRouteData()` and `poc()` still call `getDirect()` / the provider directly.
 - Design the `RouteDataResponse` payload the frontend will draw from.
 - Note: live traffic cannot be exercised on Render until the non-local dataset switch is lifted — see I5.
 
