@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Switch } from '@headlessui/react';
 import { MdExpandMore } from 'react-icons/md';
@@ -8,17 +8,38 @@ import { ErrorHandler } from '../components/error-handler';
 import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
 import { TransportationIconCommon, TransportationMode } from '../components/common/line';
+import { LiveTrafficOverview } from '../components/pane/live-traffic-overview';
 import ErrorContext from '../contexts/error-context';
 import PageTitleContext from '../contexts/page-title-context';
 import { useUserLoginState, UserLoginState } from '../hook/use-user';
-import { GtfsDataStatus, MonitoredRouteGroup } from '../types/backend';
+import { useVisibility } from '../hook/use-visibility';
+import { GtfsDataStatus, MonitoredRouteGroup, RouteData } from '../types/backend';
 
 // The line to preselect. Without this the first group alphabetically wins, which is bus 112 — a line kept
 // only to exercise the route presentation logic.
 const DEFAULT_GROUP_DISPLAY_NAME = '117';
 
+// Vehicles move, so a snapshot goes stale fast. The backend refreshes its own cache every 5s, so polling
+// much faster than this would only re-read the same values.
+const ROUTE_DATA_POLL_MS = 8 * 1000;
+
 function groupKey(group: MonitoredRouteGroup): string {
   return `${group.transportMode}:${group.routeGroup}`;
+}
+
+/** Identifies what a route data response was asked for, so a late reply for an old selection can be ignored. */
+function requestKey(group: MonitoredRouteGroup, focused: boolean): string {
+  return `${groupKey(group)}:${focused}`;
+}
+
+/**
+ * A response together with the selection it answers. Switching line while a request is in flight would
+ * otherwise show the old line's vehicles on the new line's chain — and the late reply could land last and
+ * win. Keeping the key with the data lets the render simply ignore anything that no longer matches.
+ */
+type FetchedRouteData = {
+  key: string;
+  data: RouteData | null;
 }
 
 function pickDefaultGroup(groups: MonitoredRouteGroup[]): MonitoredRouteGroup | null {
@@ -91,9 +112,14 @@ export function LiveTrafficView() {
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [gtfsStatus, setGtfsStatus] = useState<GtfsDataStatus | null>(null);
+  const [fetchedRouteData, setFetchedRouteData] = useState<FetchedRouteData | null>(null);
 
   const focusDisabled = selectedGroup?.onlyFocused ?? false;
   const focusLabelClass = `font-medium select-none ${focusDisabled ? 'text-gray-400' : 'text-gray-700'}`;
+
+  // Only show data that answers the current selection; anything else is a leftover from a previous one.
+  const currentKey = selectedGroup ? requestKey(selectedGroup, focused) : null;
+  const routeData = fetchedRouteData?.key === currentKey ? fetchedRouteData.data : null;
 
   useEffect(() => {
     setHeading('Aktuell trafik');
@@ -121,12 +147,28 @@ export function LiveTrafficView() {
     });
   }, [loginState, navigate, setError]);
 
-  useEffect(() => {
+  const updateRouteData = useCallback(() => {
     if (!selectedGroup) {
       return;
     }
-    fetchRouteData(selectedGroup.transportMode, selectedGroup.routeGroup, focused, setError);
+    const key = requestKey(selectedGroup, focused);
+    fetchRouteData(selectedGroup.transportMode, selectedGroup.routeGroup, focused, setError)
+      .then((data) => setFetchedRouteData({ key, data }));
   }, [selectedGroup, focused, setError]);
+
+  useVisibility({ onVisible: updateRouteData });
+
+  useEffect(() => {
+    updateRouteData();
+    const intervalId = setInterval(() => {
+      // Polling also holds the backend's sliding poll window open, so stopping while the tab is hidden lets
+      // the upstream loop wind down on its own.
+      if (document.visibilityState === 'visible') {
+        updateRouteData();
+      }
+    }, ROUTE_DATA_POLL_MS);
+    return () => clearInterval(intervalId);
+  }, [updateRouteData]);
 
   function handleListboxChange(group: MonitoredRouteGroup) {
     setSelectedGroup(group);
@@ -144,8 +186,8 @@ export function LiveTrafficView() {
           <p className="text-sm text-gray-500 mt-2">Försök igen imorgon eller kontakta administratören.</p>
         </div>
       ) : (
-        <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4 flex-1 overflow-hidden">
-          <div className="flex flex-col space-y-3">
+        <div className="bg-[#F1F2F3] border border-gray-200 rounded-lg shadow p-4 flex-1 overflow-hidden flex flex-col">
+          <div className="flex flex-col space-y-3 min-h-0 flex-1">
             <div className="flex items-center gap-3">
               <span className="font-medium text-gray-700">Linje</span>
               <RouteGroupListbox groups={groups} selectedGroup={selectedGroup} onChange={handleListboxChange} />
@@ -159,12 +201,7 @@ export function LiveTrafficView() {
               </Switch>
               <span className={focusLabelClass}>Fokus</span>
             </div>
-            {selectedGroup && (
-              <p className="text-sm text-gray-500">
-                Vald grupp: {selectedGroup.displayName} (transportMode: {selectedGroup.transportMode},
-                routeGroup: {selectedGroup.routeGroup}), Fokuserad: {focused ? 'ja' : 'nej'}
-              </p>
-            )}
+            {selectedGroup && <LiveTrafficOverview routeData={routeData} />}
           </div>
         </div>
       )}

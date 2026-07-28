@@ -59,6 +59,44 @@ export interface GtfsDataStatus {
   staticDataAvailable: boolean;
 }
 
+/** One stop in a route group's canonical chain. Always a parent station, never a platform. */
+export interface LiveStop {
+  stopId: string;
+  stopName: string;
+  shapeDistTraveled: number | null;
+}
+
+/**
+ * The route group's canonical stop chain, sent once per response. Normalized to one direction: a vehicle
+ * whose `directionId` equals `direction` travels from `stops[0]` towards the end, one that differs runs the
+ * chain backwards.
+ */
+export interface LiveTrip {
+  direction: number;
+  stopHeading: string;
+  stops: LiveStop[];
+}
+
+/**
+ * One vehicle, placed on the chain: it is between `stops[segIdx]` and `stops[segIdx + 1]`,
+ * `segmentFraction` (0..1) of the way along that segment. `distanceMetres` is how far the vehicle really is
+ * from that segment — a large value means the geometric match is poor.
+ */
+export interface LiveVehicle {
+  vehicleId: string;
+  tripId: string;
+  lat: number;
+  lng: number;
+  bearing: number;
+  timestamp: number;
+  directionId: number;
+  segIdx: number;
+  segmentFraction: number;
+  distanceMetres: number;
+}
+
 export interface RouteData {
   status: string;
+  liveTrip: LiveTrip | null;
+  vehicles: LiveVehicle[];
 }
