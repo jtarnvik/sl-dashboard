@@ -44,6 +44,29 @@ type FetchedRouteData = {
   data: RouteData | null;
 }
 
+/** A group can only be focused if a window was configured for it. Buses have none. */
+function hasFocusWindow(group: MonitoredRouteGroup): boolean {
+  return group.focusStart !== null && group.focusEnd !== null;
+}
+
+/**
+ * Whether the focus switch can be operated at all. It is locked in two opposite situations: `onlyFocused`
+ * groups (the metro) must stay focused because the unfocused view would have to draw a fork it cannot
+ * render, and groups without a window (the buses) have nothing to focus.
+ */
+function isFocusLocked(group: MonitoredRouteGroup): boolean {
+  return group.onlyFocused || !hasFocusWindow(group);
+}
+
+/**
+ * Focused is the default wherever it is possible — for the train it is what you almost always want, and for
+ * the metro it is the only allowed view. A group with no window is the exception: there is nothing to focus,
+ * so the flag stays off and says so honestly to the backend.
+ */
+function defaultFocused(group: MonitoredRouteGroup): boolean {
+  return hasFocusWindow(group);
+}
+
 function pickDefaultGroup(groups: MonitoredRouteGroup[]): MonitoredRouteGroup | null {
   if (groups.length === 0) {
     return null;
@@ -117,7 +140,7 @@ export function LiveTrafficView() {
   const [fetchedRouteData, setFetchedRouteData] = useState<FetchedRouteData | null>(null);
   const [overviewOpen, setOverviewOpen] = useState(false);
 
-  const focusDisabled = selectedGroup?.onlyFocused ?? false;
+  const focusDisabled = selectedGroup ? isFocusLocked(selectedGroup) : true;
   const focusLabelClass = `font-medium select-none ${focusDisabled ? 'text-gray-400' : 'text-gray-700'}`;
 
   // Only show data that answers the current selection; anything else is a leftover from a previous one.
@@ -143,7 +166,7 @@ export function LiveTrafficView() {
         const defaultGroup = pickDefaultGroup(groups);
         if (defaultGroup) {
           setSelectedGroup(defaultGroup);
-          setFocused(defaultGroup.onlyFocused);
+          setFocused(defaultFocused(defaultGroup));
         }
       }
       setLoading(false);
@@ -175,7 +198,7 @@ export function LiveTrafficView() {
 
   function handleListboxChange(group: MonitoredRouteGroup) {
     setSelectedGroup(group);
-    setFocused(group.onlyFocused);
+    setFocused(defaultFocused(group));
   }
 
   return (

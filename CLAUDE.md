@@ -313,10 +313,32 @@ Name-variant matching (e.g. 43X) lives in `GtfsNameUtil` and is shared between p
 (`9022001xxxxxxxxx`). Two-pass parse: first pass collects platform stops and their `parentStation` IDs; second
 pass retains those parent rows. Parent stations are the direction-neutral reference points for the schematic map.
 
-**`gtfs_monitored_route` focus window columns:** `focus_start` / `focus_end` (nullable parent station
-`stop_id`) bound the sub-corridor shown on the schematic; `only_focused BOOLEAN NOT NULL DEFAULT FALSE`
-hides the full route for branching lines (metro 17/18/19). Both or neither must be set — enforced by
-convention. Values populated manually after stop ID investigation.
+**`gtfs_monitored_route` focus window columns:** `focus_start` / `focus_end` (nullable **parent station**
+`stop_id`, `9021001…`) bound the sub-corridor shown on the schematic; `only_focused BOOLEAN NOT NULL DEFAULT
+FALSE` hides the full route for branching lines. The ids must be parent stations because that is what
+`LiveStop` resolves to — platform ids (`9022001…`) would never match — and must be given in **chain order**
+(start nearer `stops[0]`); nothing sorts them.
+
+Seeded values (changesets 036–038, updated by `transport_mode` so a group cannot diverge):
+
+| Group | focus_start | focus_end | only_focused |
+|---|---|---|---|
+| TRAIN 43/44 | Kungsängen `9021001006081000` | Älvsjö `9021001005141000` | false |
+| METRO 17/18/19 | Åkeshov `9021001001241000` | Gullmarsplan `9021001001551000` | **true** |
+| BUS 112, 117 | — | — | false |
+
+*Why Gullmarsplan:* it is the last station all three green lines share — 19 branches to Hagsätra right after
+it, 17/18 continue via Skärmarbrink. Everything inside the window is therefore on common track, so no vehicle
+can be projected onto a branch that is not drawn. `only_focused` is set for the metro because the unfocused
+view would have to render a fork the schematic cannot draw, and `locateOnRoute()` would place branch trains
+at stations they never reach.
+
+`GtfsAccessService.validateRouteGroupConsistency()` enforces three rules at startup, aborting with
+`IllegalStateException` (all violations are logged before the abort, so one startup shows the full picture):
+1. All rows in a group carry identical focus config.
+2. Both ends of the window are set, or neither — a half-set window reads as "no window" in the frontend and
+   silently disables the toggle.
+3. `only_focused` requires a complete window, or the group is locked into a view that cannot be produced.
 
 **RT provider:** `SamtrafikenProvider.fetchVehiclePositions()` streams `VehiclePositions.pb` in-memory,
 no temp file. `current_stop_sequence`, `stop_id`, and `route_id` are never populated in the Samtrafiken
@@ -393,10 +415,25 @@ C4 - DONE - FE, Live traffic view. Types in `src/types/backend.ts` (`LiveStop`, 
 - 117 is preselected via `DEFAULT_GROUP_DISPLAY_NAME`; without it the first group alphabetically wins, which
   is bus 112 (the test line).
 
-C5 - NEXT - BE/FE, Honour the `focused` flag. Currently accepted by `getRouteData()` and ignored. Motivation:
-the metro and train chains carry many stops in areas of no interest, and cropping also sidesteps the branch
-problem below.
+C5 - IN PROGRESS - BE/FE, Honour the `focused` flag. Motivation: the metro and train chains carry many stops
+in areas of no interest, and cropping also sidesteps the branch problem below.
 
+**Done — configuration and GUI.** Focus values seeded (see the B-block table above), the three startup
+validation rules added, and the view now derives the toggle's state from the group rather than hardcoding it.
+Three predicates in `views/live-traffic.tsx` carry the rules:
+
+| Group | focused on load | Switch |
+|---|---|---|
+| Train 43/44 | true | enabled — the only group where it can be turned off |
+| Metro 17/18/19 | true | locked on (`onlyFocused`) |
+| Bus 112/117 | false | locked off (no window) |
+
+Switching group resets `focused` to that group's default rather than remembering the user's last choice —
+less state for a preference the reasoning says is rarely changed. The lock is presentational only: `focused`
+is still a plain request parameter, so `getRouteData()` should force it true for `onlyFocused` groups rather
+than trusting the caller.
+
+**Remaining — the actual cropping in `getRouteData()`**, which still accepts `focused` and ignores it.
 Design decisions still open (to be settled before implementing):
 - What focus crops. Trimming `liveTrip.stops` to the `focusStart`/`focusEnd` window is the obvious half;
   the question is what happens to vehicles outside the window — dropped, or kept and clamped to the ends so
@@ -405,10 +442,11 @@ Design decisions still open (to be settled before implementing):
   chain is cropped after location, the indices must be rebased or the drawing breaks silently.
 
 **Related problem this fixes:** `locateOnRoute()` projects every vehicle onto the drawn chain, always
-choosing the geometrically closest segment. Green-line trains on the *other* branch (Skarpnäck vs Farsta
-strand) are therefore projected onto the drawn leg and shown at stations they will never reach — silently
-plausible and wrong. `distanceMetres` in the response is the tell; it goes large when a vehicle is not really
-on the chain. Cropping to the pre-fork corridor removes the case. 117 and 43 are unaffected.
+choosing the geometrically closest segment. Green-line trains on a branch the chain does not follow are
+therefore projected onto the drawn leg and shown at stations they will never reach — silently plausible and
+wrong. `distanceMetres` in the response is the tell; it goes large when a vehicle is not really on the chain.
+The metro window ending at Gullmarsplan removes the case entirely, since everything inside it is on common
+track. 117 and 43 are unaffected.
 
 D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
 MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
