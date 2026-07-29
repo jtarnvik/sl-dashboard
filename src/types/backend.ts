@@ -97,8 +97,23 @@ export interface LiveVehicle {
   distanceMetres: number;
 }
 
+/**
+ * How a focused chain terminates, and what is waiting beyond it. Null when the view is not focused.
+ *
+ * A truncated end means the line continues past the stops that were sent — draw a "continues here" marker
+ * rather than an end of line. The counts are of *approaching* vehicles only, so zero means nothing is on its
+ * way in, not that nothing is out there.
+ */
+export interface RouteFocus {
+  truncatedStart: boolean;
+  truncatedEnd: boolean;
+  approachingAtStart: number;
+  approachingAtEnd: number;
+}
+
 export interface RouteData {
   status: string;
   liveTrip: LiveTrip | null;
   vehicles: LiveVehicle[];
+  focus: RouteFocus | null;
 }

@@ -319,19 +319,21 @@ FALSE` hides the full route for branching lines. The ids must be parent stations
 `LiveStop` resolves to — platform ids (`9022001…`) would never match — and must be given in **chain order**
 (start nearer `stops[0]`); nothing sorts them.
 
-Seeded values (changesets 036–038, updated by `transport_mode` so a group cannot diverge):
+Seeded values (changesets 036–039, updated by `transport_mode` so a group cannot diverge):
 
 | Group | focus_start | focus_end | only_focused |
 |---|---|---|---|
 | TRAIN 43/44 | Kungsängen `9021001006081000` | Älvsjö `9021001005141000` | false |
-| METRO 17/18/19 | Åkeshov `9021001001241000` | Gullmarsplan `9021001001551000` | **true** |
+| METRO 17/18/19 | Åkeshov `9021001001241000` | Medborgarplatsen `9021001001511000` | **true** |
 | BUS 112, 117 | — | — | false |
 
-*Why Gullmarsplan:* it is the last station all three green lines share — 19 branches to Hagsätra right after
-it, 17/18 continue via Skärmarbrink. Everything inside the window is therefore on common track, so no vehicle
-can be projected onto a branch that is not drawn. `only_focused` is set for the metro because the unfocused
-view would have to render a fork the schematic cannot draw, and `locateOnRoute()` would place branch trains
-at stations they never reach.
+*Why the metro window ends before Gullmarsplan:* Gullmarsplan is the last station all three green lines share
+— 19 branches to Hagsätra right after it, 17/18 continue via Skärmarbrink. Ending at or before it keeps the
+whole window on common track, so no vehicle can be projected onto a branch that is not drawn.
+Medborgarplatsen (changeset 039, two stations earlier than the original Gullmarsplan) was chosen purely to
+fit fewer stations on screen. `only_focused` is set for the metro because the unfocused view would have to
+render a fork the schematic cannot draw, and `locateOnRoute()` would place branch trains at stations they
+never reach.
 
 `GtfsAccessService.validateRouteGroupConsistency()` enforces three rules at startup, aborting with
 `IllegalStateException` (all violations are logged before the abort, so one startup shows the full picture):

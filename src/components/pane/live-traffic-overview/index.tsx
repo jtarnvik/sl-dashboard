@@ -60,6 +60,13 @@ export function LiveTrafficOverview({ routeData }: LiveTrafficOverviewProps) {
         <p className="text-sm text-gray-500">
           Riktning {liveTrip.direction} mot {liveTrip.stopHeading} · status: {status}
         </p>
+        {routeData.focus && (
+          <p className="text-sm text-gray-500">
+            Fokuserad · avkortad i början: {routeData.focus.truncatedStart ? 'ja' : 'nej'}, i slutet:{' '}
+            {routeData.focus.truncatedEnd ? 'ja' : 'nej'} · på väg in: {routeData.focus.approachingAtStart}{' '}
+            uppifrån, {routeData.focus.approachingAtEnd} nedifrån
+          </p>
+        )}
       </div>
 
       <div>

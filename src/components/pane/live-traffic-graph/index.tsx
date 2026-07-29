@@ -1,4 +1,4 @@
-import { LiveTrip, LiveVehicle, RouteData } from '../../../types/backend';
+import { LiveTrip, LiveVehicle, RouteData, RouteFocus } from '../../../types/backend';
 
 type LiveTrafficGraphProps = {
   routeData: RouteData | null;
@@ -12,19 +12,39 @@ type LiveTrafficGraphProps = {
 const AXIS_X_PERCENT = 65;
 
 /**
+ * Fraction of the axis reserved at a truncated end for the "line continues" marker. The first and last stops
+ * are pushed in by this much so the marker has somewhere to sit beyond them.
+ */
+const TRUNCATION_INSET = 0.07;
+
+/** The fractions of the axis that the first and last stop occupy, leaving room for truncation markers. */
+type AxisSpan = {
+  top: number;
+  bottom: number;
+}
+
+function axisSpan(focus: RouteFocus | null): AxisSpan {
+  return {
+    top: focus?.truncatedStart ? TRUNCATION_INSET : 0,
+    bottom: focus?.truncatedEnd ? 1 - TRUNCATION_INSET : 1,
+  };
+}
+
+/**
  * Position of a stop along the axis, 0 at the top and 1 at the bottom. Equal spacing — schematic, not to
  * scale, the way a real transit map is drawn. Swap this one function to go proportional.
  */
-function stopY(index: number, stopCount: number): number {
-  return index / (stopCount - 1);
+function stopY(index: number, stopCount: number, span: AxisSpan): number {
+  return span.top + (index / (stopCount - 1)) * (span.bottom - span.top);
 }
 
 /**
  * Position of a vehicle along the axis. `segmentFraction` is how far it has come towards its next stop,
  * applied to a segment of uniform screen length — real distance never enters the drawing.
  */
-function vehicleY(vehicle: LiveVehicle, stopCount: number): number {
-  return (vehicle.segIdx + vehicle.segmentFraction) / (stopCount - 1);
+function vehicleY(vehicle: LiveVehicle, stopCount: number, span: AxisSpan): number {
+  const alongChain = (vehicle.segIdx + vehicle.segmentFraction) / (stopCount - 1);
+  return span.top + alongChain * (span.bottom - span.top);
 }
 
 /** A vehicle running with the chain heads for its last stop, which is downwards on screen. */
@@ -45,6 +65,69 @@ function destinationName(vehicle: LiveVehicle, liveTrip: LiveTrip): string {
   return isDownwards(vehicle, liveTrip) ? stops[stops.length - 1].stopName : stops[0].stopName;
 }
 
+/** Shared pill shape. Real vehicles and approaching counts differ only in colour. */
+const PILL_CLASS = 'absolute -translate-y-1/2 truncate rounded-full px-2 py-0.5 text-xs';
+
+/** A vehicle at a known position on the drawn chain. */
+const PILL_VEHICLE_CLASS = 'bg-[#184fc2] text-white';
+
+/**
+ * A count of vehicles beyond the drawn chain. Muted like a disabled control, because unlike a vehicle pill
+ * it marks no particular place — it sits at the truncation marker, not at a position on the line. The text
+ * stays full-strength blue: white on a 40% background was too washed out to read.
+ */
+const PILL_APPROACHING_CLASS = 'bg-[#184fc2]/25 text-[#184fc2]';
+
+/** How far a label sits from the axis. Approaching counts stand further out than vehicles at real positions. */
+const VEHICLE_LANE_OFFSET_REM = 1.25;
+const APPROACHING_LANE_OFFSET_REM = 2.5;
+
+/**
+ * Places a label in the lane for its direction — right of the axis for downward, left for upward. The offset
+ * is measured from the axis on both sides, so the two lanes sit symmetrically however wide the regions are.
+ */
+function laneStyle(down: boolean, offsetRem: number) {
+  return down
+    ? { left: `calc(${AXIS_X_PERCENT}% + ${offsetRem}rem)` }
+    : { right: `calc(${100 - AXIS_X_PERCENT}% + ${offsetRem}rem)` };
+}
+
+type TruncationMarkerProps = {
+  y: number;
+  approaching: number;
+  /** True at the bottom end, where vehicles enter the window travelling upwards. */
+  fromBelow: boolean;
+}
+
+/**
+ * The "line continues" marker at a cropped end: a vertical ellipsis at the very end of the axis, and — when
+ * anything is on its way in — a count in the lane of the direction it will arrive from. Vehicles heading
+ * away from the window are not counted, so no marker appears for them.
+ * <p>
+ * The count stands further out from the axis than a vehicle label: a vehicle about to enter the window is
+ * drawn close to this marker, and at the same offset the two would land on top of each other.
+ */
+function TruncationMarker({ y, approaching, fromBelow }: TruncationMarkerProps) {
+  return (
+    <div className="absolute left-0 right-0" style={{ top: `${y * 100}%` }}>
+      <span
+        className="absolute -translate-x-1/2 -translate-y-1/2 text-sm leading-none text-gray-400"
+        style={{ left: `${AXIS_X_PERCENT}%` }}
+      >
+        ⋮
+      </span>
+      {approaching > 0 && (
+        <span
+          className={`${PILL_CLASS} ${PILL_APPROACHING_CLASS} max-w-[26%]`}
+          style={laneStyle(!fromBelow, APPROACHING_LANE_OFFSET_REM)}
+        >
+          +{approaching} på väg
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function LiveTrafficGraph({ routeData }: LiveTrafficGraphProps) {
   if (!routeData) {
     return <p className="text-sm text-gray-600">Hämtar trafikdata...</p>;
@@ -58,6 +141,9 @@ export function LiveTrafficGraph({ routeData }: LiveTrafficGraphProps) {
   if (stops.length < 2) {
     return <p className="text-sm text-gray-600">Linjen har för få hållplatser för att ritas.</p>;
   }
+
+  const focus = routeData.focus;
+  const span = axisSpan(focus);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -75,7 +161,7 @@ export function LiveTrafficGraph({ routeData }: LiveTrafficGraphProps) {
             key={stop.stopId}
             className="absolute left-0 flex -translate-y-1/2 items-center gap-2"
             style={{
-              top: `${stopY(index, stops.length) * 100}%`,
+              top: `${stopY(index, stops.length, span) * 100}%`,
               right: `${100 - AXIS_X_PERCENT}%`,
             }}
           >
@@ -85,13 +171,22 @@ export function LiveTrafficGraph({ routeData }: LiveTrafficGraphProps) {
           </div>
         ))}
 
+        {/* Centred on the very ends of the axis, so the marker reads as the line running off the view. The
+            inset that pushes the first and last stop in is what keeps them clear of it. */}
+        {focus?.truncatedStart && (
+          <TruncationMarker y={0} approaching={focus.approachingAtStart} fromBelow={false} />
+        )}
+        {focus?.truncatedEnd && (
+          <TruncationMarker y={1} approaching={focus.approachingAtEnd} fromBelow={true} />
+        )}
+
         {routeData.vehicles.map((vehicle) => {
           const down = isDownwards(vehicle, liveTrip);
           return (
             <div
               key={vehicle.tripId}
               className="absolute left-0 right-0 transition-[top] duration-1000 ease-linear"
-              style={{ top: `${vehicleY(vehicle, stops.length) * 100}%` }}
+              style={{ top: `${vehicleY(vehicle, stops.length, span) * 100}%` }}
             >
               {/* The triangle rides alongside the axis, offset far enough that it reads as a deliberate
                   lane rather than a misalignment — and so an up and a down vehicle at the same point sit
@@ -105,14 +200,8 @@ export function LiveTrafficGraph({ routeData }: LiveTrafficGraphProps) {
                 {down ? '▼' : '▲'}
               </span>
               <span
-                className={`absolute -translate-y-1/2 truncate rounded-full bg-[#184fc2] px-2 py-0.5 text-xs text-white ${
-                  down ? 'max-w-[30%]' : 'max-w-[38%]'
-                }`}
-                style={
-                  down
-                    ? { left: `calc(${AXIS_X_PERCENT}% + 1.25rem)` }
-                    : { right: `calc(${100 - AXIS_X_PERCENT}% + 1.25rem)` }
-                }
+                className={`${PILL_CLASS} ${PILL_VEHICLE_CLASS} ${down ? 'max-w-[30%]' : 'max-w-[38%]'}`}
+                style={laneStyle(down, VEHICLE_LANE_OFFSET_REM)}
               >
                 {destinationName(vehicle, liveTrip)}
               </span>
