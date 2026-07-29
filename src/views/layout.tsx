@@ -10,6 +10,7 @@ import { saveSettings } from '../communication/backend.ts';
 import ErrorContext from '../contexts/error-context.ts';
 import InDebugModeContext from '../contexts/debug-context.ts';
 import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user.ts';
+import { FavouriteStop, UserSettings } from '../types/backend.ts';
 import { loadStopHint } from '../util/stop-hint.ts';
 import { DEFAULT_SETTINGS } from '../communication/constant.ts';
 
@@ -31,16 +32,19 @@ export function Layout() {
       }
     : (loadStopHint() ?? DEFAULT_SETTINGS);
 
+  const currentFavourites = (isLoggedIn && user?.settings?.favouriteStops) || [];
+
   useEffect(() => {
     const openSettings = () => setSettingsOpen(true);
     window.addEventListener('openSettings', openSettings);
     return () => window.removeEventListener('openSettings', openSettings);
   }, []);
 
-  async function handleSaveSettings(data: SettingsData) {
-    const success = await saveSettings(data, setError);
+  async function handleSaveSettings(data: SettingsData, favourites: FavouriteStop[]) {
+    const payload: UserSettings = { ...data, favouriteStops: favourites };
+    const success = await saveSettings(payload, setError);
     if (success) {
-      updateSettings(data);
+      updateSettings(payload);
     }
   }
 
@@ -61,6 +65,7 @@ export function Layout() {
           settingsOpen={settingsOpen}
           setSettingsOpen={setSettingsOpen}
           currentSettings={settingsData}
+          currentFavourites={currentFavourites}
           onSave={handleSaveSettings}
         />
       )}

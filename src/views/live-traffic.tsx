@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Switch } from '@headlessui/react';
 import { MdExpandMore } from 'react-icons/md';
@@ -7,12 +7,13 @@ import { fetchGtfsDataStatus, fetchRouteData, fetchRouteGroups } from '../commun
 import { ErrorHandler } from '../components/error-handler';
 import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
-import { TransportationIconCommon, TransportationMode } from '../components/common/line';
+import { TransportationIconCommon } from '../components/common/line';
 import { LiveTrafficGraph } from '../components/pane/live-traffic-graph';
 import ErrorContext from '../contexts/error-context';
 import PageTitleContext from '../contexts/page-title-context';
-import { useUserLoginState, UserLoginState } from '../hook/use-user';
+import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user';
 import { useVisibility } from '../hook/use-visibility';
+import { toTransportationMode } from '../util/transport-mode';
 import { GtfsDataStatus, MonitoredRouteGroup, RouteData } from '../types/backend';
 
 // The line to preselect. Without this the first group alphabetically wins, which is bus 112 — a line kept
@@ -72,16 +73,6 @@ function pickDefaultGroup(groups: MonitoredRouteGroup[]): MonitoredRouteGroup | 
   return groups.find((group) => group.displayName === DEFAULT_GROUP_DISPLAY_NAME) ?? groups[0];
 }
 
-function toTransportationMode(transportMode: string): TransportationMode {
-  switch (transportMode) {
-    case 'TRAIN': return TransportationMode.TRAIN;
-    case 'BUS':   return TransportationMode.BUS;
-    case 'METRO': return TransportationMode.SUBWAY;
-    case 'TRAM':  return TransportationMode.TRAM;
-    default:      return TransportationMode.UNKNOWN;
-  }
-}
-
 type RouteGroupListboxProps = {
   groups: MonitoredRouteGroup[];
   selectedGroup: MonitoredRouteGroup | null;
@@ -127,6 +118,7 @@ function RouteGroupListbox({ groups, selectedGroup, onChange }: RouteGroupListbo
 
 export function LiveTrafficView() {
   const loginState = useUserLoginState();
+  const { user } = useUser();
   const navigate = useNavigate();
   const { setError } = useContext(ErrorContext);
   const { setHeading } = useContext(PageTitleContext);
@@ -136,6 +128,10 @@ export function LiveTrafficView() {
   const [loading, setLoading] = useState(true);
   const [gtfsStatus, setGtfsStatus] = useState<GtfsDataStatus | null>(null);
   const [fetchedRouteData, setFetchedRouteData] = useState<FetchedRouteData | null>(null);
+
+  const favouriteStopIds = useMemo(
+    () => new Set((user?.settings?.favouriteStops ?? []).map(favourite => favourite.stopId)),
+    [user?.settings?.favouriteStops]);
 
   const focusDisabled = selectedGroup ? isFocusLocked(selectedGroup) : true;
   const focusLabelClass = `font-medium select-none ${focusDisabled ? 'text-gray-400' : 'text-gray-700'}`;
@@ -225,7 +221,7 @@ export function LiveTrafficView() {
               <span className={focusLabelClass}>Fokus</span>
             </div>
             <div className="flex-1 min-h-0">
-              <LiveTrafficGraph routeData={routeData} />
+              <LiveTrafficGraph routeData={routeData} favouriteStopIds={favouriteStopIds} />
             </div>
           </div>
         </div>

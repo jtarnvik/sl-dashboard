@@ -4,11 +4,37 @@ export interface RecentStop {
   stopPointParentName?: string;
 }
 
+/**
+ * A stop the user wants emphasised on the live traffic schematic. `stopId` is a GTFS parent station id,
+ * matching `LiveStop.stopId` — note this is a different namespace from `UserSettings.stopPointId`, which is
+ * an SL journey planner site id. The name is stored so the settings dialog can render a selection even when
+ * the GTFS dataset is unavailable.
+ */
+export interface FavouriteStop {
+  stopId: string;
+  stopName: string;
+}
+
 export interface UserSettings {
   stopPointId: string;
   stopPointName: string;
   useAiInterpretation: boolean;
   recentStops?: RecentStop[];
+  favouriteStops?: FavouriteStop[];
+}
+
+/** One pickable stop in the favourites catalogue. Structurally like FavouriteStop but a separate contract. */
+export interface SelectableStop {
+  stopId: string;
+  stopName: string;
+}
+
+/** The stops of one route group, for the favourites picker. A stop may appear in more than one group. */
+export interface RouteGroupStops {
+  transportMode: string;
+  routeGroup: number;
+  displayName: string;
+  stops: SelectableStop[];
 }
 
 export interface User {

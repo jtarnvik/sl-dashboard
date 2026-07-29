@@ -6,6 +6,7 @@ import PageTitleContext from './contexts/page-title-context.ts';
 import UserContext from './contexts/user-context.ts';
 import { User, UserSettings } from './types/backend.ts';
 import { checkLoginStatus, login, logout } from './communication/backend.ts';
+import { DEFAULT_SETTINGS } from './communication/constant.ts';
 import { saveStopHint } from './util/stop-hint.ts';
 import { Denied } from './views/denied.tsx';
 import { Gdpr } from './views/gdpr.tsx';
@@ -57,9 +58,15 @@ function App() {
     setUser(null);
   }
 
-  function updateSettings(settings: UserSettings) {
-    saveStopHint(settings);
-    setUser(prev => prev ? { ...prev, settings } : prev);
+  /**
+   * Patches the settings held in context rather than replacing them. Callers send only the fields they
+   * own — the settings dialog knows nothing about recentStops, which are written on a different trigger
+   * entirely — and a wholesale replace silently dropped everything it did not mention.
+   */
+  function updateSettings(patch: Partial<UserSettings>) {
+    const merged = { ...(user?.settings ?? DEFAULT_SETTINGS), ...patch } as UserSettings;
+    saveStopHint(merged);
+    setUser(prev => prev ? { ...prev, settings: merged } : prev);
   }
 
   useEffect(() => {

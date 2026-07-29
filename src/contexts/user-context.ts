@@ -6,7 +6,8 @@ const UserContext = createContext({
   backendOffline: false,
   login: () => {},
   logout: () => {},
-  updateSettings: (_settings: UserSettings) => {},
+  // Partial: callers patch the fields they own, see updateSettings in App.tsx
+  updateSettings: (_settings: Partial<UserSettings>) => {},
 });
 
 export default UserContext;

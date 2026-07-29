@@ -24,10 +24,11 @@ import {
   URL_BACKEND_GTFS_ROUTE_GROUPS,
   URL_BACKEND_GTFS_DATA_STATUS,
   URL_BACKEND_GTFS_ROUTE_DATA,
+  URL_BACKEND_GTFS_ROUTE_GROUP_STOPS,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, MonitoredRouteGroup, RecentStop, RouteData, StatisticsData, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, MonitoredRouteGroup, RecentStop, RouteData, RouteGroupStops, StatisticsData, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -308,6 +309,17 @@ export async function fetchRouteData(
   } catch {
     setError("Kunde inte hämta ruttdata.");
     return null;
+  }
+}
+
+/** The favourites catalogue. Empty when the GTFS dataset is not loaded — not an error condition. */
+export async function fetchRouteGroupStops(setError: SetError): Promise<RouteGroupStops[]> {
+  try {
+    const response = await backend.get<RouteGroupStops[]>(URL_BACKEND_GTFS_ROUTE_GROUP_STOPS);
+    return response.data;
+  } catch {
+    setError("Kunde inte hämta hållplatser.");
+    return [];
   }
 }
 

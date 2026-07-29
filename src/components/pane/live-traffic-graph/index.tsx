@@ -2,6 +2,8 @@ import { LiveTrip, LiveVehicle, RouteData, RouteFocus } from '../../../types/bac
 
 type LiveTrafficGraphProps = {
   routeData: RouteData | null;
+  /** Stops the user has marked as favourites, by parent station id. Rendered emphasised. */
+  favouriteStopIds?: ReadonlySet<string>;
 }
 
 /**
@@ -128,7 +130,7 @@ function TruncationMarker({ y, approaching, fromBelow }: TruncationMarkerProps) 
   );
 }
 
-export function LiveTrafficGraph({ routeData }: LiveTrafficGraphProps) {
+export function LiveTrafficGraph({ routeData, favouriteStopIds }: LiveTrafficGraphProps) {
   if (!routeData) {
     return <p className="text-sm text-gray-600">Hämtar trafikdata...</p>;
   }
@@ -165,7 +167,11 @@ export function LiveTrafficGraph({ routeData }: LiveTrafficGraphProps) {
               right: `${100 - AXIS_X_PERCENT}%`,
             }}
           >
-            <span className="min-w-0 truncate text-xs text-gray-600">{stop.stopName}</span>
+            <span className={`min-w-0 truncate text-xs ${
+              favouriteStopIds?.has(stop.stopId) ? 'font-bold text-gray-900' : 'text-gray-600'
+            }`}>
+              {stop.stopName}
+            </span>
             <span className="h-px min-w-3 flex-1 bg-gray-300" />
             <span className="absolute right-0 top-1/2 size-2 -translate-y-1/2 translate-x-1/2 rounded-full bg-gray-500" />
           </div>
