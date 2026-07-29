@@ -213,11 +213,9 @@ carried out: what is left should be what helps future work, not a record of how 
 
 ## Goals, in order
 
-These five are the current plan. Everything below them is either finished or deferred until they are done.
+These four are the current plan. Everything below them is either finished or deferred until they are done.
 
-**1 - FE/BE, Personalized home stops.** *(to be detailed — the shape of this is not decided yet)*
-
-**2 - BE/infra, Move the backend to the home Mac so production can actually be used.**
+**1 - BE/infra, Move the backend to the home Mac so production can actually be used.**
 Render's free tier is what forces most of the compromises recorded in the reference notes: 512 MB RAM with the
 in-memory GTFS dataset therefore disabled outside the `local` profile (I5), OOM kills during the nightly parse
 (I1), and a 5-second health check that a long GC pause can fail (I4). A Mac Mini at home removes all three —
@@ -228,7 +226,7 @@ Supabase. The application itself is unchanged; only where it runs and what it ta
 - **This is the gate for the whole live traffic feature.** The schematic works only on `local` today, so until
   this is done none of the C-block work is usable from a phone at a bus stop, which was the point of it.
 
-**3 - FE/BE, Arrival times on the schematic** *(was A-Goal-2)*.
+**2 - FE/BE, Arrival times on the schematic** *(was A-Goal-2)*.
 The train map shows where each train is and which stations it is between, but not "its probable arrival time at
 the next station", which the original goal asked for and which is what makes the view actionable.
 - Worth knowing before starting: the scheduled times are not merely unsent, they are absent from the live model
@@ -238,7 +236,7 @@ the next station", which the original goal asked for and which is what makes the
   populated for buses but is always 0.0 or noise for trains, so schedule-based is the only option that works
   for both.
 
-**4 - FE/BE, Bus tracking with push notification** *(was A-Goal-3)*. The most personally useful of these.
+**3 - FE/BE, Bus tracking with push notification** *(was A-Goal-3)*. The most personally useful of these.
 A schematic of bus 117 — which now exists — where the user marks a specific bus as the one they intend to catch,
 and the backend sends a push notification when it passes a designated trigger stop. The use case is knowing when
 to leave for the stop, six minutes' walk away.
@@ -247,11 +245,11 @@ to leave for the stop, six minutes' walk away.
 - The one design question: a tracked bus has to survive the backend forgetting it. The poll loop shuts down five
   minutes after the last request, so a "notify me" registration must outlive it and drive its own polling.
 
-**5 - FE, Journey planner route map** *(was A-Goal-1 / D1)*.
+**4 - FE, Journey planner route map** *(was A-Goal-1 / D1)*.
 Show the routes suggested by the route planner pane on a map — the whole journey and each individual leg. The
 coordinates are already in the journey planner API response, so no GTFS realtime data is involved. Choosing and
 integrating a map library (Leaflet or MapLibre) is part of this goal; the frontend has none today.
-- Unlike the schematic, this one genuinely needs a map, and unlike goals 3 and 4 it does not depend on goal 2.
+- Unlike the schematic, this one genuinely needs a map, and unlike goals 2 and 3 it does not depend on goal 1.
 
 ---
 
@@ -337,6 +335,34 @@ in a muted pill. Truncated ends get a ⋮ at the very end of the axis with the s
   on the metro and on 117 at rush hour.
 - Focus toggle state is derived from the group: train enabled and defaulting on, metro locked on, buses locked
   off (no window). Switching group resets the flag to that group's default.
+
+**D - DONE - BE/FE, Favourite stops.** A user marks up to 10 stops in the settings dialog; their names render
+bold on the live traffic schematic. Stored per user as JSON in `user_settings.favourite_stops` (changeset 040),
+delivered on `GET /api/auth/me` inside `SettingsResponse` — no separate fetch on the live traffic view.
+
+- **The stored `stopName` is load-bearing, not cosmetic.** The GTFS dataset is empty outside `local` (I5), so
+  the catalogue endpoint returns nothing in production; the stored name is the only way the dialog can render
+  an existing selection at all. Hence also the "Valda (ej i aktuell trafikdata)" section, which is what lets a
+  favourite be removed when the catalogue is unavailable or a stop has left the timetable.
+- **`favouriteStops: null` in `PUT /settings` means "leave unchanged"**, `[]` means clear. The frontend is a
+  static bundle on GitHub Pages, so a user on a cached older bundle sends no such field — with `@NotNull` their
+  entire settings save would 400 and they could no longer even change their stop. Elements are unvalidated for
+  the same reason; the service drops blanks, dedupes by id and truncates to 10 silently.
+- **Two id namespaces.** `FavouriteStop.stopId` is a GTFS parent station id (`9021001…`), matching
+  `LiveStop.stopId`. `UserSettings.stopPointId` / `RecentStop` use SL journey planner site ids — never
+  interchangeable, which is why `FavouriteStop` is its own type rather than a reuse of `RecentStop`.
+- `GET /api/protected/gtfs/route-group-stops` serves the catalogue, deliberately separate from `/route-groups`
+  (fetched on every live view mount, would grow ~30× for data it never uses) and fetched lazily when the dialog
+  opens. Stops are **not** deduplicated across groups — Alvik is on the green line and is the 112 terminus, and
+  seeing it under both is how a user looks for it; selection is by id so both checkboxes tick together, and the
+  cap counts unique ids.
+- The whole chain is offered, not just the drawable focus window: favouriting a stop outside a window simply
+  never shows, and widening a window later does not orphan anything already chosen.
+- **Fixed along the way:** `updateSettings` in `App.tsx` replaced `user.settings` wholesale, dropping
+  `recentStops` on every save. It now merges a `Partial<UserSettings>`. The bug was invisible because
+  `StopAutocomplete` seeds its state with a lazy initialiser at mount; favourites would not have hidden it.
+- The dialog uses local error state, not `ErrorContext` — `Layout` renders no `ErrorHandler`, so a global error
+  would be invisible behind the modal backdrop.
 
 ---
 
