@@ -73,7 +73,7 @@ The hamburger icon shows a red badge when there are pending access requests. The
 | `Statistics` | `/admin/statistics` | Admin | Usage statistics (shared routes, AI queries, user count) |
 | `SharedRouteView` | `/route/:id` | Any | View a shared journey; shows login teaser to non-logged-in users |
 | `Gdpr` | `/gdpr` | Any | GDPR info page |
-| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle; schematic vehicle view (`live-traffic-graph`), polled every 8s. A temporary "Text" button opens the same data as text (`live-traffic-overview`) |
+| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle; schematic vehicle view (`live-traffic-graph`), polled every 8s |
 | `Denied` | `/denied` | — | Shown when access is denied during OAuth2 |
 
 All routes except `/denied` are rendered inside `Layout`, which wraps them with `Navbar` and an `ErrorBoundary`.
@@ -198,126 +198,86 @@ Prefer 125 character wide lines in this file where the format allows it.
 
 Implementation Steps
 
-There are a few large blocks of implementation. Each block has its own letter and each step within that block
-has its own order by number.
+Work is organised as a short ordered list of goals. A goal is broken into steps only when it is started; steps
+are intentionally small to aid understanding and AI collaboration.
 
-When discussing or designing a block or step, read the relevant source files first before asking clarifying
+When discussing or designing a goal or step, read the relevant source files first before asking clarifying
 questions or proposing steps. Design suggestions based on assumptions about the code rather than the actual code
 produce steps that may be subtly wrong. If it is unclear which files are relevant, identify and read them before
 starting the discussion.
 
-When rewriting or detailing a block or step, preserve the motivating context — the "why" behind design choices
-that are not obvious from the code. Capture this at the block level (the `X - ...` line) as a brief sentence or
-two, and within steps as inline notes where a non-obvious constraint or decision was made. Do not remove existing
-"why" notes when rewriting step details.
+When rewriting a goal, a step or a completed entry, preserve the motivating context — the "why" behind design
+choices that are not obvious from the code — as inline notes where a non-obvious constraint or decision was
+made. Do not remove existing "why" notes when rewriting. Conversely, remove planning text once it has been
+carried out: what is left should be what helps future work, not a record of how the work was scheduled.
 
-A - FE/BE, Live vehicle map. Three distinct map views, each serving a different use case. All share the same
-backend GTFS data pipeline but differ in what they display and how. Steps are intentionally small — get the
-data pipeline working first (A1–A2), then implement the views one at a time.
+## Goals, in order
 
-### Goals
+These five are the current plan. Everything below them is either finished or deferred until they are done.
 
-**A-Goal-1: Route map for journey planner**
-Show the suggested routes from the route planner pane on a map — both the complete suggested route and each
-individual leg. The data is already in the journey planner API response (coordinates per leg), so no GTFS
-realtime data is needed. No map library exists yet in the frontend — choosing and integrating one is part of
-this goal.
+**1 - FE/BE, Personalized home stops.** *(to be detailed — the shape of this is not decided yet)*
 
-**A-Goal-2: Schematic train map**
-A schematic (not geographically accurate) map of the monitored commuter train lines (43, 44) showing
-approximately where each train is, which station it is at or between, and its probable arrival time at the
-next station. Scale and exact position are not important — the station sequence and relative position between
-stations is what matters. Metro lines (17, 18, 19) are excluded — they run frequently enough that tracking
-individual vehicles is not useful. Data sources: GTFS-RT vehicle positions + static stops/trips for station
-names and sequence.
+**2 - BE/infra, Move the backend to the home Mac so production can actually be used.**
+Render's free tier is what forces most of the compromises recorded in the reference notes: 512 MB RAM with the
+in-memory GTFS dataset therefore disabled outside the `local` profile (I5), OOM kills during the nightly parse
+(I1), and a 5-second health check that a long GC pause can fail (I4). A Mac Mini at home removes all three —
+more RAM and CPU, a persistent disk making the GTFS zip cacheable indefinitely, and local PostgreSQL replacing
+Supabase. The application itself is unchanged; only where it runs and what it talks to.
+- Trade-offs vs Render: depends on home network reliability, and needs a DDNS service for a stable external
+  address. A Raspberry Pi 5 is the more fun tinkering option if the Mac Mini feels like overkill.
+- **This is the gate for the whole live traffic feature.** The schematic works only on `local` today, so until
+  this is done none of the C-block work is usable from a phone at a bus stop, which was the point of it.
 
-**A-Goal-3: Bus tracking with push notification**
-A schematic map of bus line 117 showing each stop in sequence and the current position of the bus. The primary
-use case is knowing when to leave for the bus stop (6 minutes walk). The user can mark a specific bus as the
-one they intend to catch, and the backend sends a push notification when that bus passes a designated trigger
-stop. All the required data appears to be available (GTFS-RT positions, static stop sequences, Pushover for
-notifications — already integrated). This is the most complex goal but the most personally useful.
+**3 - FE/BE, Arrival times on the schematic** *(was A-Goal-2)*.
+The train map shows where each train is and which stations it is between, but not "its probable arrival time at
+the next station", which the original goal asked for and which is what makes the view actionable.
+- Worth knowing before starting: the scheduled times are not merely unsent, they are absent from the live model
+  entirely. `LiveStop` carries no times, so the chain the frontend receives has no time information anywhere.
+  `GtfsStopTimeInfo.arrivalTime` / `departureTime` are the source; plumbing them into `LiveStop` is step one.
+- The alternative source is dead reckoning from `shapeDistTraveled` plus vehicle speed. Note that `speed` is
+  populated for buses but is always 0.0 or noise for trains, so schedule-based is the only option that works
+  for both.
 
-### Architecture decisions captured so far
+**4 - FE/BE, Bus tracking with push notification** *(was A-Goal-3)*. The most personally useful of these.
+A schematic of bus 117 — which now exists — where the user marks a specific bus as the one they intend to catch,
+and the backend sends a push notification when it passes a designated trigger stop. The use case is knowing when
+to leave for the stop, six minutes' walk away.
+- Everything needed is already in place: `vehicleId` and `tripId` are in the response, stop sequences are in the
+  dataset, and Pushover is integrated for error notifications. This is additive rather than blocked.
+- The one design question: a tracked bus has to survive the backend forgetting it. The poll loop shuts down five
+  minutes after the last request, so a "notify me" registration must outlive it and drive its own polling.
 
-**Data sources (Samtrafiken API, key-based)**
-- Static GTFS: `https://opendata.samtrafiken.se/gtfs/sl/sl.zip` — published daily 03:00–07:00, contains routes,
-  trips, stops, shapes. Bronze: 50 calls/month — DB cache is essential. No upgrade applied for; one download
-  per day fits comfortably, so there has been no need. The July 2026 upgrade below covers the realtime feed
-  only; the two feeds have separate keys and separate tiers.
-- Realtime GTFS-RT: `https://opendata.samtrafiken.se/gtfs-rt/sl/VehiclePositions.pb` — live vehicle positions.
-  **Upgraded tier granted (July 2026): 2,000,000 calls per rolling 30 days.** Requires `Accept-Encoding: gzip`
-  header or the API returns 406.
+**5 - FE, Journey planner route map** *(was A-Goal-1 / D1)*.
+Show the routes suggested by the route planner pane on a map — the whole journey and each individual leg. The
+coordinates are already in the journey planner API response, so no GTFS realtime data is involved. Choosing and
+integrating a map library (Leaflet or MapLibre) is part of this goal; the frontend has none today.
+- Unlike the schematic, this one genuinely needs a map, and unlike goals 3 and 4 it does not depend on goal 2.
 
-**Realtime rate limit analysis (2,000,000 per 30 days)**
-2,000,000/30 days ≈ 66,700/day ≈ 46 calls/minute sustained around the clock. The monthly budget is effectively
-a non-constraint: the implemented 5-second poll interval is 12 calls/minute, so even a loop running 24/7 uses
-roughly a quarter of the budget. The interval could go below 2 seconds before the quota became the limiting
-factor.
+---
 
-*Superseded:* the original Bronze tier was 50/min and 30,000/month (≈1,000/day), which made the budget the
-dominant design constraint — it is what motivated the ~15s TTL and the "one call every 86 seconds" arithmetic
-that earlier versions of this file were built around. Those numbers no longer apply; the design decisions they
-produced (request-driven polling, nothing running when nobody is watching) are still worth keeping for other
-reasons — Render's 0.1 CPU allocation and simple good manners toward a free API.
+## Completed
 
-Remaining constraints, in order of relevance: the per-minute rate limit on the new tier (12/min is far below
-any plausible value), and Render CPU. A client leaving the map view open overnight is no longer a quota
-problem, but the frontend should still pause polling when the tab is hidden — `useVisibility`
-(`src/hook/use-visibility.ts`) already does this for the departures pane; reuse it in the map view.
+**A/B - DONE - BE, GTFS pipeline and in-memory dataset.**
+`GtfsDownloadJob` fires at 05:00 and on `ApplicationReadyEvent`; `GtfsPipelineService.runPipeline()` orchestrates
+download → unzip → parse → rebuild dataset → verify realtime feed. Five DB tables (`gtfs_route`, `gtfs_trip`,
+`gtfs_stop_time`, `gtfs_stop`, `gtfs_calendar_date`) use natural GTFS keys — no synthetic IDs, no timestamp
+columns. Full transaction design and the critical `entityManager.detach(entry)` lock-avoidance pattern are in the
+`GtfsParseService` class Javadoc.
 
-**Static GTFS loading strategy**
-- DB is the durable cache; `/tmp` is the working area for parsing. See A1 for full detail.
-- Relevant files: `routes.txt` (line names/types), `trips.txt` (trip→route join), `stops.txt` (stop names/coords),
-  `shapes.txt` (route polylines for map), `stop_times.txt` (stop sequences per trip — needed for geometric vehicle placement
-  since `current_stop_sequence` is never populated in the RT feed).
-- Key lookup chain from realtime feed: `trip_id` → `trips.txt` → `route_id` → `routes.txt` → `route_long_name`.
-- What varies daily is which trips are active, controlled by `calendar_dates.txt` (actual service dates — `calendar.txt`
-  is validity periods only).
+**Package layout:** JPA entities in `model/domain/entity/`; in-memory models (`GtfsDataset`, `GtfsRouteInfo`,
+`GtfsTripInfo`, `GtfsStopInfo`, `GtfsStopTimeInfo`, `GtfsVehiclePosition`, `GeoPosition`, `ParentStopIdentifier`)
+in `model/gtfs/`, checked exceptions in `model/gtfs/exception/`, and the live route model in
+`model/gtfs/livetraffic/` (see I3). Name-variant matching (e.g. 43X) lives in `GtfsNameUtil`, shared by the parse
+and access services.
 
-**Vehicle position polling strategy**
-- Backend does NOT poll continuously on a schedule. `GtfsRealtimeCache` (inner class in `GtfsRealtimeService`)
-  polls only while clients are asking: the first request fetches directly and starts a background loop that
-  refreshes every 5 seconds; the loop shuts down 5 minutes after the last request (sliding window). If no
-  clients are active, nothing polls. Now motivated by Render's 0.1 CPU rather than by API quota.
-- Frontend requests positions only when the map view is active.
-
-**Render free tier constraints**
-- 512 MB RAM, 0.1 CPU (shared), no persistent disk, one server running 24/7 within monthly free hours.
-- UptimeRobot pings `/ping` every 5 min to prevent the 15-minute inactivity sleep.
-- In-memory static GTFS for 6 lines is a small fraction of the raw file sizes and fits comfortably in 512 MB.
-
-**Backup hosting: home server (Mac Mini or Raspberry Pi 5)**
-If Render's constraints (CPU, API quota, cold starts) become too limiting, self-hosting at home is a planned
-alternative. A Mac Mini is the pragmatic choice — more capable hardware, straightforward Java/Spring Boot
-deployment, and Time Machine backups. A Raspberry Pi 5 is the more fun tinkering option. Either way the
-architecture is identical: same Spring Boot app, local PostgreSQL replaces Supabase, persistent disk makes
-the GTFS zip cacheable indefinitely. Tradeoffs vs Render: depends on home network reliability and requires
-a DDNS service for a stable external address.
-
-B - DONE - BE, Parse unzipped GTFS files into the database and serve from an in-memory `GtfsDataset`.
-`GtfsParseService` owns all parse logic; `GtfsPipelineService` orchestrates; `GtfsAccessService` holds the
-`AtomicReference<GtfsDataset>`, rebuilt from DB on `ApplicationReadyEvent` so data survives restarts.
-Five DB tables (`gtfs_route`, `gtfs_trip`, `gtfs_stop_time`, `gtfs_stop`, `gtfs_calendar_date`) use natural
-GTFS keys — no synthetic IDs, no timestamp columns. Full transaction design and the critical
-`entityManager.detach(entry)` lock-avoidance pattern are documented in `GtfsParseService` class-level Javadoc.
-
-**Package layout:** JPA entities live in `model/domain/entity/`; in-memory models (`GtfsDataset`,
-`GtfsRouteInfo`, `GtfsTripInfo`, `GtfsStopInfo`, `GtfsStopTimeInfo`, `GtfsVehiclePosition`, `GeoPosition`,
-`ParentStopIdentifier`) live in `model/gtfs/`, with checked exceptions in `model/gtfs/exception/` and the
-C-block live route model in `model/gtfs/livetraffic/` (see I3). `GtfsRouteInfo` wraps `GtfsRoute` + its
-matching `GtfsMonitoredRoute`, giving C1 access to `transportMode` and `routeGroup`.
-Name-variant matching (e.g. 43X) lives in `GtfsNameUtil` and is shared between parse and access services.
-
-**`gtfs_stop` includes parent stations** (`9021001xxxxxxxxx`, `location_type=1`) as well as platform stops
-(`9022001xxxxxxxxx`). Two-pass parse: first pass collects platform stops and their `parentStation` IDs; second
-pass retains those parent rows. Parent stations are the direction-neutral reference points for the schematic map.
+**`gtfs_stop` includes parent stations** (`9021001…`, `location_type=1`) as well as platform stops (`9022001…`).
+Two-pass parse: the first collects platform stops and their `parentStation` ids, the second retains those parent
+rows. Parent stations are the direction-neutral reference points the schematic is drawn from.
 
 **`gtfs_monitored_route` focus window columns:** `focus_start` / `focus_end` (nullable **parent station**
-`stop_id`, `9021001…`) bound the sub-corridor shown on the schematic; `only_focused BOOLEAN NOT NULL DEFAULT
-FALSE` hides the full route for branching lines. The ids must be parent stations because that is what
-`LiveStop` resolves to — platform ids (`9022001…`) would never match — and must be given in **chain order**
-(start nearer `stops[0]`); nothing sorts them.
+`stop_id`) bound the sub-corridor shown on the schematic; `only_focused` hides the full route for branching
+lines. The ids must be parent stations because that is what `LiveStop` resolves to — platform ids would never
+match — and must be in **chain order** (start nearer `stops[0]`); nothing sorts them.
 
 Seeded values (changesets 036–039, updated by `transport_mode` so a group cannot diverge):
 
@@ -327,143 +287,92 @@ Seeded values (changesets 036–039, updated by `transport_mode` so a group cann
 | METRO 17/18/19 | Åkeshov `9021001001241000` | Medborgarplatsen `9021001001511000` | **true** |
 | BUS 112, 117 | — | — | false |
 
-*Why the metro window ends before Gullmarsplan:* Gullmarsplan is the last station all three green lines share
-— 19 branches to Hagsätra right after it, 17/18 continue via Skärmarbrink. Ending at or before it keeps the
-whole window on common track, so no vehicle can be projected onto a branch that is not drawn.
-Medborgarplatsen (changeset 039, two stations earlier than the original Gullmarsplan) was chosen purely to
-fit fewer stations on screen. `only_focused` is set for the metro because the unfocused view would have to
-render a fork the schematic cannot draw, and `locateOnRoute()` would place branch trains at stations they
-never reach.
+*Why the metro window ends before Gullmarsplan:* Gullmarsplan is the last station all three green lines share —
+19 branches to Hagsätra right after it, 17/18 continue via Skärmarbrink. Ending at or before it keeps the whole
+window on common track, so no vehicle can be projected onto a branch that is not drawn. Medborgarplatsen, two
+stations earlier, was chosen purely to fit fewer stations on screen — that part is preference, the
+at-or-before-Gullmarsplan part is a constraint. `only_focused` is set for the metro because the unfocused view
+would have to render a fork the schematic cannot draw.
 
 `GtfsAccessService.validateRouteGroupConsistency()` enforces three rules at startup, aborting with
 `IllegalStateException` (all violations are logged before the abort, so one startup shows the full picture):
 1. All rows in a group carry identical focus config.
-2. Both ends of the window are set, or neither — a half-set window reads as "no window" in the frontend and
-   silently disables the toggle.
-3. `only_focused` requires a complete window, or the group is locked into a view that cannot be produced.
+2. Both ends of the window are set, or neither.
+3. `only_focused` requires a complete window.
 
-**RT provider:** `SamtrafikenProvider.fetchVehiclePositions()` streams `VehiclePositions.pb` in-memory,
-no temp file. `current_stop_sequence`, `stop_id`, and `route_id` are never populated in the Samtrafiken
-feed — vehicle placement uses `GtfsGeometryUtil.locateOnRoute()` (dot-product projection + Haversine).
+**`gtfs_monitored_route` is the source of truth for which lines are tracked.** Seeded via Liquibase: 43/44
+(TRAIN), 112/117 (BUS), 17/18/19 (METRO). 112 exists to exercise route presentation logic and is not shown in
+the deviation pane.
 
-**Route group selector:** `(transportMode, routeGroup)` uniquely identifies a group. C1 sends this pair back
-to the backend to select which group to display. `GET /api/protected/gtfs/route-groups` serves the list.
+**C - DONE - BE/FE, Live traffic view.** `/live-traffic` shows a schematic of the selected route group with live
+vehicles on it, polled every 8 seconds.
 
-**Pending:** `feed_version` column on `gtfs_download_log` — populate from `feed_info.txt` during parse.
+*Backend.* `GtfsRealtimeCache` (inner class in `GtfsRealtimeService`) is a request-driven poll loop on a virtual
+thread: 5-second interval, 5-minute **sliding** window renewed by each request, so a long viewing session never
+hits a mid-session blocking fetch and polling stops promptly when the user leaves. Nothing polls when nobody is
+watching. `getRouteData()` resolves the group's `LiveTrip` first (so a misconfigured group cannot trigger an
+upstream call), locates every vehicle against the **full** chain, then crops — geometry never depends on which
+view was asked for. When focused, the chain is a cropped copy and vehicle `segIdx` values are rebased onto it,
+so the frontend always receives a self-contained picture. `onlyFocused` groups are forced focused server-side
+rather than trusting the caller. Vehicles outside the window are dropped and counted in `RouteFocus` —
+**approaching only**, since a vehicle that has already left tells the viewer nothing about when the next arrives.
 
-C - BE/FE, Vehicle position endpoint and view. Create a view this will show a schematic representation of
-the route and a live view of vehicles on that route. 
+*Frontend.* `live-traffic-graph` draws a vertical axis at `AXIS_X_PERCENT` (one constant drives axis, stop rows
+and both label lanes). Stop names hug the left edge with a flexbox leader dash that fills the remaining space and
+ends on the axis — no measuring, names of any length line up. Triangles ride 8px off the axis (▼ right / ▲ left)
+so opposing vehicles never overlap; destination labels sit in lanes either side, approaching counts further out
+in a muted pill. Truncated ends get a ⋮ at the very end of the axis with the stops inset by `TRUNCATION_INSET`.
 
-C1 - DONE - FE/BE, Route group selection view. `LiveTrafficView` (`src/views/live-traffic.tsx`) at `/live-traffic`
-shows a Headless UI Listbox (with transport icons) to pick the route group and a Switch toggle for focus mode.
-`MonitoredRouteGroupResponse` extended with `focusStart`, `focusEnd`, `onlyFocused` (converted from record to
-`@Value @Builder`). `GtfsAccessService.validateRouteGroupConsistency()` validates that all routes in a group
-share identical focus config at startup — throws `IllegalStateException` to abort on misconfiguration.
-`GET /api/protected/gtfs/route-groups` serves the list; `fetchRouteGroups()` in `backend.ts` fetches it.
-
-C2 - DONE - FE/BE, When a route group is selected in the traffic view, fetch the route information from the backend. This 
-just sets up the basic FE -> BE flow. So, when a selection has been made in the front end (including the intial first line on
-load) call en endpoint in the GtfsCOntroller with the routegroup and focus parameter as argument. 
-- Set up the call and create the endpoint. 
-- Call a service method int the GTFSRealtime service. 
-- Create an empty return object, with (for now) no information other than a "OK" status string.
-- 
-
-C3 - DONE - BE, Live route model (`model/gtfs/livetraffic/`) and the realtime endpoint that serves it.
-See I3 for the class-by-class detail and the design reasoning behind the model itself.
-
-- `GtfsRealtimeCache.getContinously()` — request-driven poll loop on a virtual thread, 5s interval, 5-minute
-  **sliding** window renewed by each request (so a long viewing session never hits a mid-session blocking
-  fetch, and polling stops promptly when the user leaves). Interval and window are constants at the top of
-  the inner class. Logs per-cycle timings (`fetch`, `join`, `sincePreviousCycle`).
-- `GtfsRealtimeService.getRouteData()` — resolves the group's `LiveTrip` **first** (so a misconfigured group
-  cannot trigger an upstream call), then locates every vehicle on that one shared chain via
-  `GtfsGeometryUtil.locateOnRoute(liveTrip.getLiveStops(), vp)`. Placing all vehicles on one chain is the
-  point: equal `segIdx` means genuinely between the same two stations.
-- `RouteData` (domain) → `RouteDataMapper` → `RouteDataResponse` (wire). The chain is sent **once** per
-  response, not per vehicle. Route/edge variants are deliberately not serialized yet.
+- **Equal (schematic) stop spacing, not proportional.** `stopY(i) = i / (n-1)`. Proportional fails badly on line
+  43: 74 km over 20 stops puts inner-city stations ~8px apart in a 600px box. Consequence: screen speed no longer
+  reflects real speed, and `shapeDistTraveled` is not consulted at all. Both position functions are pure and
+  swappable if a to-scale mode is ever wanted.
+- **Positioned divs, not SVG.** Everything here is axis-aligned lines plus text, which divs do well — and SVG
+  `<text>` has no wrapping or ellipsis, which long Swedish station names need. Switch to SVG when branches
+  (metro forks), rotation, or curves arrive.
+- Responses are stored with a `requestKey` (group + focused) and ignored if they no longer match the selection —
+  a late reply for a previous line would otherwise paint the wrong vehicles onto the new chain.
 - `LiveVehicle.getDestination()` reads the vehicle's **own** trip (`stop_headsign`, falling back to its last
-  stop's parent station). Deriving destination from the chain's end was wrong for short turns, which are
-  routine on the metro and on 117 at rush hour.
-- Missing `LiveTrip` for a group is a loud `log.error` + `status: "No live trip for group"` — it is a
-  configuration failure, not a data gap.
-- `GtfsDataset.organizeRoutes()` now builds each group independently: one bad group no longer wipes out all
-  live trips, and an unchecked `GtfsNoRegisteredSelectorForGroupKeyException` no longer escapes the
-  constructor and kills the whole dataset. Summary line `Live trips built for N of M route groups`.
-- Note: live traffic cannot be exercised on Render until the non-local dataset switch is lifted — see I5.
+  stop's parent station). Deriving destination from the chain's end was wrong for short turns, which are routine
+  on the metro and on 117 at rush hour.
+- Focus toggle state is derived from the group: train enabled and defaulting on, metro locked on, buses locked
+  off (no window). Switching group resets the flag to that group's default.
 
-C4 - DONE - FE, Live traffic view. Types in `src/types/backend.ts` (`LiveStop`, `LiveTrip`, `LiveVehicle`,
-`RouteData`); two components under `src/components/pane/`.
+---
 
-- `live-traffic-graph/` — the schematic. Vertical axis at `AXIS_X_PERCENT` (65%, one constant drives axis,
-  stop rows and both label lanes). Stop names hug the left edge with a flexbox leader dash that fills the
-  remaining space and ends on the axis — no measuring, names of any length line up. Triangles ride 8px off
-  the axis (▼ right / ▲ left) so opposing vehicles never overlap; destination labels sit in lanes either
-  side. `transition-[top]` slides vehicles between polls.
-- **Equal (schematic) stop spacing, not proportional.** `stopY(i) = i / (n-1)`,
-  `vehicleY(v) = (segIdx + segmentFraction) / (n-1)`. Proportional was tried on paper and fails badly on
-  line 43: 74 km over 20 stops puts inner-city stations ~8px apart in a 600px box. Consequence: screen speed
-  no longer reflects real speed, and `shapeDistTraveled` is not consulted at all (so its nullability is moot).
-  Both position functions are pure and swappable if a to-scale mode is ever wanted.
-- `live-traffic-overview/` — the text representation, now behind a temporary "Text" button in a modal.
-  Marked TODO; remove when the graph fully replaces it. Reads the same `routeData`, so it updates live.
-- **Drawing technique: positioned divs, not SVG.** Everything here is axis-aligned lines plus text, which
-  divs do well — and SVG `<text>` has no wrapping or ellipsis, which long Swedish station names need. Switch
-  to SVG when branches (metro forks), rotation, or curves arrive.
-- Polling is 8s with a `document.visibilityState` check in the tick, plus `useVisibility` for an immediate
-  refresh on return. Responses are stored with a `requestKey` (group + focused) and ignored if they no longer
-  match the selection — a late reply for a previous line would otherwise paint the wrong vehicles onto the
-  new chain.
-- 117 is preselected via `DEFAULT_GROUP_DISPLAY_NAME`; without it the first group alphabetically wins, which
-  is bus 112 (the test line).
+## Reference notes
 
-C5 - IN PROGRESS - BE/FE, Honour the `focused` flag. Motivation: the metro and train chains carry many stops
-in areas of no interest, and cropping also sidesteps the branch problem below.
+**GTFS data sources (Samtrafiken, key-based)**
+- Static: `https://opendata.samtrafiken.se/gtfs/sl/sl.zip` — published daily 03:00–07:00. Bronze: 50 calls/month,
+  so the DB cache is essential. No upgrade applied for; one download per day fits comfortably.
+- Realtime: `https://opendata.samtrafiken.se/gtfs-rt/sl/VehiclePositions.pb`. **Upgraded tier (July 2026):
+  2,000,000 calls per rolling 30 days** — the two feeds have separate keys and separate tiers. Requires an
+  `Accept-Encoding: gzip` header or the API returns 406.
+- 2,000,000/30 days ≈ 66,700/day ≈ 46 calls/minute sustained. The quota is effectively a non-constraint: the
+  5-second poll interval is 12 calls/minute, about a quarter of the budget even running 24/7. The design that
+  came from the old Bronze limits — request-driven polling, nothing running when nobody watches — is kept for
+  other reasons: CPU, and good manners toward a free API.
+- `GtfsPipelineService.verifyRealtimeFeed()` fetches once at the end of each static pipeline run and discards
+  the result, to keep the API exercised and to surface credential/quota/format problems in a log that is being
+  read anyway.
 
-**Done — configuration and GUI.** Focus values seeded (see the B-block table above), the three startup
-validation rules added, and the view now derives the toggle's state from the group rather than hardcoding it.
-Three predicates in `views/live-traffic.tsx` carry the rules:
+**Static GTFS file notes**
+- DB is the durable cache; `/tmp` is the working area for parsing.
+- Relevant files: `routes.txt` (line names/types), `trips.txt` (trip→route join), `stops.txt` (names/coords),
+  `shapes.txt` (polylines, for a future real map), `stop_times.txt` (stop sequences — needed for geometric
+  placement since `current_stop_sequence` is never populated in the RT feed).
+- Lookup chain from the realtime feed: `trip_id` → `trips.txt` → `route_id` → `routes.txt`.
+- What varies daily is which trips are active, controlled by `calendar_dates.txt` (`calendar.txt` is validity
+  periods only and is unused by Samtrafiken).
 
-| Group | focused on load | Switch |
-|---|---|---|
-| Train 43/44 | true | enabled — the only group where it can be turned off |
-| Metro 17/18/19 | true | locked on (`onlyFocused`) |
-| Bus 112/117 | false | locked off (no window) |
+**Render free tier constraints** *(the reason for goal 2)*
+- 512 MB RAM, 0.1 CPU (shared), no persistent disk. UptimeRobot pings `/ping` every 5 min to prevent the
+  15-minute inactivity sleep.
 
-Switching group resets `focused` to that group's default rather than remembering the user's last choice —
-less state for a preference the reasoning says is rarely changed. The lock is presentational only: `focused`
-is still a plain request parameter, so `getRouteData()` should force it true for `onlyFocused` groups rather
-than trusting the caller.
-
-**Remaining — the actual cropping in `getRouteData()`**, which still accepts `focused` and ignores it.
-Design decisions still open (to be settled before implementing):
-- What focus crops. Trimming `liveTrip.stops` to the `focusStart`/`focusEnd` window is the obvious half;
-  the question is what happens to vehicles outside the window — dropped, or kept and clamped to the ends so
-  an approaching vehicle is still visible.
-- Whether `segIdx` stays an index into the **returned** stop list. The frontend assumes it does. If the
-  chain is cropped after location, the indices must be rebased or the drawing breaks silently.
-
-**Related problem this fixes:** `locateOnRoute()` projects every vehicle onto the drawn chain, always
-choosing the geometrically closest segment. Green-line trains on a branch the chain does not follow are
-therefore projected onto the drawn leg and shown at stations they will never reach — silently plausible and
-wrong. `distanceMetres` in the response is the tell; it goes large when a vehicle is not really on the chain.
-The metro window ending at Gullmarsplan removes the case entirely, since everything inside it is on common
-track. 117 and 43 are unaffected.
-
-D1 - FE, Map view. Add a new pane or route that renders vehicle positions on a map (library TBD — Leaflet or
-MapLibre are candidates). Poll the backend vehicle position endpoint while the view is active. Display vehicle
-icons colour-coded by transport mode, oriented by bearing. Show route line shapes from static GTFS data.
-
-G1 - MOSTLY RESOLVED - BE - `rebuildDataset()` used to run twice on startup — once via the pipeline in
-`GtfsDownloadJob.onApplicationReady()` and once directly from `GtfsAccessService.onApplicationReady()`.
-The second call is now guarded by an `if (!dataset.get().isEmpty())` early return, so the redundant DB
-load is gone. What still runs twice is `validateRouteGroupConsistency()`, which is cheap and in-memory.
-
-G2 - BE - `GtfsRealtimePollJob` is a temporary scheduled job (`port.incoming.scheduled`) that polls
-`SamtrafikenProvider.fetchVehiclePositions()` every 5 minutes between 06:00 and 23:55 Stockholm time and
-discards the result. Its sole purpose is to keep the Samtrafiken RT feed warm and verify that continuous
-polling works within the API quota. Remove this job when the C-block schematic view starts consuming live
-vehicle positions for real.
+**G1 - BE - Startup double-load, mostly resolved.** `rebuildDataset()` used to run twice on startup — once via
+the pipeline and once from `GtfsAccessService.onApplicationReady()`. The second call is now guarded by an
+`isEmpty()` early return. What still runs twice is `validateRouteGroupConsistency()`, which is cheap and
+in-memory.
 
 H1 - BE - Difference and handling of FAILED/ERROR_IN_PARSE
 --

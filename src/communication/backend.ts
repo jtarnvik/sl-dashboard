@@ -21,7 +21,6 @@ import {
   URL_BACKEND_GTFS_STATUS,
   URL_BACKEND_GTFS_RESET,
   URL_BACKEND_GTFS_RUN_PIPELINE,
-  URL_BACKEND_GTFS_REALTIME_POC,
   URL_BACKEND_GTFS_ROUTE_GROUPS,
   URL_BACKEND_GTFS_DATA_STATUS,
   URL_BACKEND_GTFS_ROUTE_DATA,
@@ -281,16 +280,6 @@ export async function runGtfsPipeline(setError: SetError): Promise<boolean> {
     return true;
   } catch {
     setError("Could not run GTFS pipeline.");
-    return false;
-  }
-}
-
-export async function runRealtimePoc(setError: SetError): Promise<boolean> {
-  try {
-    await backend.post(URL_BACKEND_GTFS_REALTIME_POC);
-    return true;
-  } catch {
-    setError("Could not run realtime POC.");
     return false;
   }
 }

@@ -28,7 +28,6 @@ export const URL_BACKEND_ADMIN_STATISTICS = "/api/admin/statistics";
 export const URL_BACKEND_GTFS_STATUS = "/api/admin/gtfs/status";
 export const URL_BACKEND_GTFS_RESET = "/api/admin/gtfs/reset";
 export const URL_BACKEND_GTFS_RUN_PIPELINE = "/api/admin/gtfs/run-pipeline";
-export const URL_BACKEND_GTFS_REALTIME_POC = "/api/admin/gtfs/realtime-poc";
 
 export const URL_BACKEND_SHARED_ROUTE_CREATE = "/api/protected/routes";
 export const URL_BACKEND_SHARED_ROUTE_GET = (id: string) => `/api/public/routes/${id}`;

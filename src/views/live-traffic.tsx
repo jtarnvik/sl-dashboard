@@ -8,9 +8,7 @@ import { ErrorHandler } from '../components/error-handler';
 import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
 import { TransportationIconCommon, TransportationMode } from '../components/common/line';
-import { ModalDialog } from '../components/common/modal-dialog';
 import { LiveTrafficGraph } from '../components/pane/live-traffic-graph';
-import { LiveTrafficOverview } from '../components/pane/live-traffic-overview';
 import ErrorContext from '../contexts/error-context';
 import PageTitleContext from '../contexts/page-title-context';
 import { useUserLoginState, UserLoginState } from '../hook/use-user';
@@ -138,7 +136,6 @@ export function LiveTrafficView() {
   const [loading, setLoading] = useState(true);
   const [gtfsStatus, setGtfsStatus] = useState<GtfsDataStatus | null>(null);
   const [fetchedRouteData, setFetchedRouteData] = useState<FetchedRouteData | null>(null);
-  const [overviewOpen, setOverviewOpen] = useState(false);
 
   const focusDisabled = selectedGroup ? isFocusLocked(selectedGroup) : true;
   const focusLabelClass = `font-medium select-none ${focusDisabled ? 'text-gray-400' : 'text-gray-700'}`;
@@ -226,8 +223,6 @@ export function LiveTrafficView() {
                 <span className="size-4 rounded-full bg-white shadow-sm transition-transform translate-x-0 group-data-checked:translate-x-4" />
               </Switch>
               <span className={focusLabelClass}>Fokus</span>
-              {/* TODO: temporary — remove once the graphical view replaces the text representation. */}
-              <SLButton onClick={() => setOverviewOpen(true)} thin>Text</SLButton>
             </div>
             <div className="flex-1 min-h-0">
               <LiveTrafficGraph routeData={routeData} />
@@ -236,16 +231,6 @@ export function LiveTrafficView() {
         </div>
       )}
 
-      {/* TODO: temporary — the text representation lives here until the graphical view can replace it. It
-          reads the same routeData as the view, so it keeps updating while polling continues. */}
-      <ModalDialog
-        isOpen={overviewOpen}
-        onClose={() => setOverviewOpen(false)}
-        title="Aktuell trafik som text"
-        scrollable
-      >
-        <LiveTrafficOverview routeData={routeData} />
-      </ModalDialog>
       <div className="flex justify-end">
         <SLButton onClick={() => navigate('/')} thin>Tillbaka till startsidan</SLButton>
       </div>
