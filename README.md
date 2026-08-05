@@ -5,8 +5,8 @@ built as a static React app hosted on GitHub Pages. Used by the developer and a 
 
 ## Live
 
-- **Frontend:** https://jtarnvik.github.io/sl-dashboard/
-- **Backend:** https://tarnvik.onrender.com
+- **Frontend:** https://sl.tarnvik.com
+- **Backend:** https://api2.tarnvik.com
 
 ## What it does
 
