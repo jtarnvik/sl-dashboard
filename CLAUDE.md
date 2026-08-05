@@ -223,6 +223,8 @@ more RAM and CPU, a persistent disk making the GTFS zip cacheable indefinitely, 
 Supabase. The application itself is unchanged; only where it runs and what it talks to.
 - Trade-offs vs Render: depends on home network reliability, and needs a DDNS service for a stable external
   address. A Raspberry Pi 5 is the more fun tinkering option if the Mac Mini feels like overkill.
+- The `local`-profile gate on the in-memory dataset (I5) is already removed on the `local_host` branch, so
+  live traffic works on the Mini as soon as it serves the frontend. It stays broken on Render either way.
 - **This is the gate for the whole live traffic feature.** The schematic works only on `local` today, so until
   this is done none of the C-block work is usable from a phone at a bus stop, which was the point of it.
 
@@ -340,10 +342,11 @@ in a muted pill. Truncated ends get a ⋮ at the very end of the axis with the s
 bold on the live traffic schematic. Stored per user as JSON in `user_settings.favourite_stops` (changeset 040),
 delivered on `GET /api/auth/me` inside `SettingsResponse` — no separate fetch on the live traffic view.
 
-- **The stored `stopName` is load-bearing, not cosmetic.** The GTFS dataset is empty outside `local` (I5), so
-  the catalogue endpoint returns nothing in production; the stored name is the only way the dialog can render
-  an existing selection at all. Hence also the "Valda (ej i aktuell trafikdata)" section, which is what lets a
-  favourite be removed when the catalogue is unavailable or a stop has left the timetable.
+- **The stored `stopName` is load-bearing, not cosmetic.** It was written when the GTFS dataset was empty
+  outside `local` (I5) and the catalogue endpoint therefore returned nothing in production, making the stored
+  name the only way the dialog could render an existing selection. That gate is gone, but the reasoning
+  survives it: the catalogue is also empty whenever a parse has failed or a stop has left the timetable.
+  Hence the "Valda (ej i aktuell trafikdata)" section, which is what lets such a favourite still be removed.
 - **`favouriteStops: null` in `PUT /settings` means "leave unchanged"**, `[]` means clear. The frontend is a
   static bundle on GitHub Pages, so a user on a cached older bundle sends no such field — with `@NotNull` their
   entire settings save would 400 and they could no longer even change their stop. Elements are unvalidated for
@@ -553,27 +556,24 @@ ENTRYPOINT ["java", "-XX:MaxRAMPercentage=50.0", "-XX:+UseG1GC", "-XX:MaxGCPause
 reduces the risk of a pause long enough to fail the 5-second health check.
 --
 
-I5 - BE - **The in-memory GTFS dataset is currently disabled outside the `local` profile**
+I5 - BE - **The in-memory GTFS dataset profile gate — removed (August 2026)**
 --
-`GtfsAccessService.rebuildDataset()` returns immediately unless the `local` profile is active:
+`GtfsAccessService.rebuildDataset()` used to return immediately unless the `local` profile was active, so on
+Render the dataset stayed empty: `/route-groups` returned an empty list, `/status` reported
+`staticDataAvailable: false`, and live traffic did not work in production.
 
-```java
-if (!environment.acceptsProfiles(Profiles.of("local"))) {
-  log.info("GTFS in-memory dataset disabled in non-local profile — skipping load");
-  return;
-}
-```
+**Why it existed:** a temporary mitigation for the I1 OOM kills (commit "Temporary removal of static
+dataset"). The dataset is the largest single allocation in the JVM and holding it left too little headroom
+under Render's 512MB cap during the nightly parse.
 
-**Consequence:** on Render the dataset stays empty. `/route-groups` returns an empty list,
-`/status` reports `staticDataAvailable: false`, and live traffic does not work in production. The nightly
-pipeline still runs and still fills the DB tables — only the in-memory load is skipped.
+**Why it could go:** the Mac Mini has no 512MB cap, so the constraint the gate existed for is gone. The
+gate was removed on the `local_host` branch — which is deliberately not merged to `main` — so Render, which
+builds `main`, keeps the gate until it is decommissioned. **Do not merge `local_host` to `main` while Render
+still serves traffic**: the dataset would load there and the I1 OOM kills would come back.
 
-**Why:** a temporary mitigation for the I1 OOM kills (commit "Temporary removal of static dataset"). The
-dataset is the largest single allocation in the JVM and holding it left too little headroom under Render's
-512MB cap during the nightly parse.
-
-**Before lifting it:** the dataset has to fit alongside the parse-time peak, so this depends on the I1
-parse-memory work (and possibly G1). Development of the C-block continues locally in the meantime.
+The dataset now loads under every profile, including `test`. `GtfsParseService` keeps a separate `local`
+check for something unrelated — the future `PARSE_DONE` placeholder rows that suppress downloads to stay
+inside the static feed's 50-calls-per-month Bronze quota. That one stays local-only.
 --
 
 ## Planned Improvements
