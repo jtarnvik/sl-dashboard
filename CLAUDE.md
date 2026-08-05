@@ -213,22 +213,9 @@ carried out: what is left should be what helps future work, not a record of how 
 
 ## Goals, in order
 
-These four are the current plan. Everything below them is either finished or deferred until they are done.
+These three are the current plan. Everything below them is either finished or deferred until they are done.
 
-**1 - BE/infra, Move the backend to the home Mac so production can actually be used.**
-Render's free tier is what forces most of the compromises recorded in the reference notes: 512 MB RAM with the
-in-memory GTFS dataset therefore disabled outside the `local` profile (I5), OOM kills during the nightly parse
-(I1), and a 5-second health check that a long GC pause can fail (I4). A Mac Mini at home removes all three —
-more RAM and CPU, a persistent disk making the GTFS zip cacheable indefinitely, and local PostgreSQL replacing
-Supabase. The application itself is unchanged; only where it runs and what it talks to.
-- Trade-offs vs Render: depends on home network reliability, and needs a DDNS service for a stable external
-  address. A Raspberry Pi 5 is the more fun tinkering option if the Mac Mini feels like overkill.
-- The `local`-profile gate on the in-memory dataset (I5) is already removed on the `local_host` branch, so
-  live traffic works on the Mini as soon as it serves the frontend. It stays broken on Render either way.
-- **This is the gate for the whole live traffic feature.** The schematic works only on `local` today, so until
-  this is done none of the C-block work is usable from a phone at a bus stop, which was the point of it.
-
-**2 - FE/BE, Arrival times on the schematic** *(was A-Goal-2)*.
+**1 - FE/BE, Arrival times on the schematic** *(was A-Goal-2)*.
 The train map shows where each train is and which stations it is between, but not "its probable arrival time at
 the next station", which the original goal asked for and which is what makes the view actionable.
 - Worth knowing before starting: the scheduled times are not merely unsent, they are absent from the live model
@@ -238,7 +225,7 @@ the next station", which the original goal asked for and which is what makes the
   populated for buses but is always 0.0 or noise for trains, so schedule-based is the only option that works
   for both.
 
-**3 - FE/BE, Bus tracking with push notification** *(was A-Goal-3)*. The most personally useful of these.
+**2 - FE/BE, Bus tracking with push notification** *(was A-Goal-3)*. The most personally useful of these.
 A schematic of bus 117 — which now exists — where the user marks a specific bus as the one they intend to catch,
 and the backend sends a push notification when it passes a designated trigger stop. The use case is knowing when
 to leave for the stop, six minutes' walk away.
@@ -247,15 +234,54 @@ to leave for the stop, six minutes' walk away.
 - The one design question: a tracked bus has to survive the backend forgetting it. The poll loop shuts down five
   minutes after the last request, so a "notify me" registration must outlive it and drive its own polling.
 
-**4 - FE, Journey planner route map** *(was A-Goal-1 / D1)*.
+**3 - FE, Journey planner route map** *(was A-Goal-1 / D1)*.
 Show the routes suggested by the route planner pane on a map — the whole journey and each individual leg. The
 coordinates are already in the journey planner API response, so no GTFS realtime data is involved. Choosing and
 integrating a map library (Leaflet or MapLibre) is part of this goal; the frontend has none today.
-- Unlike the schematic, this one genuinely needs a map, and unlike goals 2 and 3 it does not depend on goal 1.
+- Unlike the schematic, this one genuinely needs a map. It also touches no GTFS data at all, so it is the one
+  goal here that is independent of everything in the E-block.
 
 ---
 
 ## Completed
+
+**E - DONE - BE/infra, Backend moved from Render to the home Mac Mini (August 2026).**
+`sl.tarnvik.com` now talks to `api2.tarnvik.com` on a Mac Mini instead of `api.tarnvik.com` on Render.
+The application code is unchanged — only where it runs and what it talks to.
+
+*Why it was worth doing.* Render's free tier forced most of the compromises in the reference notes below:
+512 MB RAM, which is why the in-memory GTFS dataset was disabled outside `local` (I5), why the nightly parse
+was OOM-killed (I1), and why a long GC pause could fail a 5-second health check (I4). All three are gone.
+**Live traffic now works in production for the first time** — the C-block schematic was previously usable
+only on `local`, which defeated the point of building it.
+
+*What runs where.* Cloudflare (DNS + proxy) → Caddy on :443 with a Cloudflare origin certificate →
+Spring Boot on :8081, profile `production`. GoDNS keeps the `api2` A record pointed at the home IP.
+The database is **MySQL in Docker** (`mysql-mini`, schema `commuter_prod`) — the same engine as the `local`
+profile, not the PostgreSQL that Supabase provided. Consequence: the `dbms="postgresql"` changesets (row
+level security, 002's BYTEA fix) no longer apply in production, and MySQL takes the LONGBLOB path instead.
+
+*The one thing that broke twice, both times silently.* `FRONTEND_URL` and `ALLOWED_ORIGINS` must **both**
+name the deployed frontend origin, and they fail differently: a wrong `FRONTEND_URL` lands the user on the
+wrong host after login, while a wrong `ALLOWED_ORIGINS` gives every API call a bare `403 Invalid CORS
+request` from Spring's `CorsFilter` — which runs *before* the security chain, so nothing reaches a
+controller and the backend reads as dead rather than misconfigured. It hides from local testing because
+`localhost:5173` is on the allowlist, so a passing `npm run dev` proves nothing about the deployed origin.
+The verification curl and the full explanation are in `publicbackend`'s `deployment/publicbackend.env.example`.
+
+*Deliberate trade-offs, so they are not re-litigated:*
+- **The backend runs in a foreground terminal via `just start`, with no launchd service.** Accepted: the
+  Mini is stable, and a manual restart after a power cut is fine for a personal dashboard. The database
+  is not left to the same treatment — Docker Desktop starts at login and `mysql-mini` is set to
+  `--restart unless-stopped`, so MySQL is back before anyone touches the machine. After a power cut the
+  backend is therefore the single manual step, not a two-part recovery.
+- **`local_host` stays unmerged to `main` until Render is decommissioned**, because Render builds `main`
+  and would reload the dataset it cannot hold (see I5). Render is kept alive only as a rollback path;
+  its Google OAuth redirect URI stays registered for the same reason.
+- **The infrastructure manual is local-only, not in git.** `publicbackend` is a *public* repo, and the
+  manual records the home WAN IP, the UniFi port-forward rule and the Cloudflare account id. The WAN IP is
+  the one that matters: the `api2` record is proxied precisely so the origin stays hidden. Gitignored there,
+  with the reasoning in the `.gitignore` comment.
 
 **A/B - DONE - BE, GTFS pipeline and in-memory dataset.**
 `GtfsDownloadJob` fires at 05:00 and on `ApplicationReadyEvent`; `GtfsPipelineService.runPipeline()` orchestrates
@@ -394,7 +420,7 @@ delivered on `GET /api/auth/me` inside `SettingsResponse` — no separate fetch 
 - What varies daily is which trips are active, controlled by `calendar_dates.txt` (`calendar.txt` is validity
   periods only and is unused by Samtrafiken).
 
-**Render free tier constraints** *(the reason for goal 2)*
+**Render free tier constraints** *(historical — the reason for the E-block move; Render is a rollback path only)*
 - 512 MB RAM, 0.1 CPU (shared), no persistent disk. UptimeRobot pings `/ping` every 5 min to prevent the
   15-minute inactivity sleep.
 
@@ -569,7 +595,9 @@ under Render's 512MB cap during the nightly parse.
 **Why it could go:** the Mac Mini has no 512MB cap, so the constraint the gate existed for is gone. The
 gate was removed on the `local_host` branch — which is deliberately not merged to `main` — so Render, which
 builds `main`, keeps the gate until it is decommissioned. **Do not merge `local_host` to `main` while Render
-still serves traffic**: the dataset would load there and the I1 OOM kills would come back.
+is still deployed**: the dataset would load there and the I1 OOM kills would come back. As of the E-block
+move Render no longer serves the frontend, but it is kept running as a rollback path, so the constraint
+still holds — it lifts only when Render is actually switched off.
 
 The dataset now loads under every profile, including `test`. `GtfsParseService` keeps a separate `local`
 check for something unrelated — the future `PARSE_DONE` placeholder rows that suppress downloads to stay
