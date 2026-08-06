@@ -255,6 +255,21 @@ was OOM-killed (I1), and why a long GC pause could fail a 5-second health check 
 **Live traffic now works in production for the first time** — the C-block schematic was previously usable
 only on `local`, which defeated the point of building it.
 
+*What the first nightly parse on the Mini measured (2026-08-06).* The whole pipeline ran in **54 seconds**:
+5.0s download (64.6 MB zip), 0.95s unzip, **47.1s parse**, 0.67s commit, 4ms dataset rebuild, 134ms realtime
+verify. The same parse took roughly 47 *minutes* on Render — same number, different unit. Peak parse heap was
+**293 MB against a 2048 MB max**, sawtoothing normally; on Render the heap ceiling was 371 MB with ~200 MB of
+non-heap beside it, which is I1 in a single line. Idle old-gen sat flat at 147 MB for the five hours before
+the parse, so there is no leak.
+- **`stop_times` is 43.7s of the 47s, and the cost is MySQL, not file reading.** Every 10k-row block takes
+  ~2.32s regardless of how much file it scanned; the last 68% of the 140 MB file — which matches no monitored
+  trip — is scanned in 0.76s. So the parser reads at ~125 MB/s and writes at ~4,300 rows/s. Any future
+  speedup has to come from JDBC batching, not from the CSV side. There is no early exit in `parseStopTimes`;
+  the "% of file read" figure only looks like one because the retained rows sit in the first third of the file.
+- **Old-gen reads 242 MB right after a parse, then creeps.** That is region *occupancy*, not live set: at 16%
+  heap usage G1 never runs a mixed collection, so the discarded previous dataset is never swept. Do not read
+  it as growth. `jcmd <pid> GC.run` before the next monitor line gives the real figure if it is ever wanted.
+
 *What runs where.* Cloudflare (DNS + proxy) → Caddy on :443 with a Cloudflare origin certificate →
 Spring Boot on :8081, profile `production`. GoDNS keeps the `api2` A record pointed at the home IP.
 The database is **MySQL in Docker** (`mysql-mini`, schema `commuter_prod`) — the same engine as the `local`
@@ -275,9 +290,15 @@ The verification curl and the full explanation are in `publicbackend`'s `deploym
   is not left to the same treatment — Docker Desktop starts at login and `mysql-mini` is set to
   `--restart unless-stopped`, so MySQL is back before anyone touches the machine. After a power cut the
   backend is therefore the single manual step, not a two-part recovery.
-- **`local_host` stays unmerged to `main` until Render is decommissioned**, because Render builds `main`
-  and would reload the dataset it cannot hold (see I5). Render is kept alive only as a rollback path;
-  its Google OAuth redirect URI stays registered for the same reason.
+- **Render and Supabase are gone (August 2026), and there is no rollback target.** `local_host` was held
+  back from `main` while Render built `main` and would have reloaded the dataset it could not hold (I5);
+  with Render switched off that gate lifted and the branch was merged. Two things are worth keeping from
+  how the decommissioning was decided, because both are reusable: the insurance decayed on its own — once
+  the `api.tarnvik.com` OAuth redirect URI was dropped and Supabase's data went a day stale, "roll back to
+  Render" was no longer one commit and would have discarded everything since cutover. And the *cost* was
+  not zero: Render kept downloading `sl.zip` daily into Supabase to the end, because the I5 gate sat inside
+  `rebuildDataset()` and never stopped the download or the parse — two backends against a 50-calls-per-month
+  Bronze quota is roughly 62. A parked deployment is not an idle one; check what it still does on a timer.
 - **The infrastructure manual is local-only, not in git.** `publicbackend` is a *public* repo, and the
   manual records the home WAN IP, the UniFi port-forward rule and the Cloudflare account id. The WAN IP is
   the one that matters: the `api2` record is proxied precisely so the origin stays hidden. Gitignored there,
@@ -420,9 +441,13 @@ delivered on `GET /api/auth/me` inside `SettingsResponse` — no separate fetch 
 - What varies daily is which trips are active, controlled by `calendar_dates.txt` (`calendar.txt` is validity
   periods only and is unused by Samtrafiken).
 
-**Render free tier constraints** *(historical — the reason for the E-block move; Render is a rollback path only)*
-- 512 MB RAM, 0.1 CPU (shared), no persistent disk. UptimeRobot pings `/ping` every 5 min to prevent the
-  15-minute inactivity sleep.
+**Render free tier constraints** *(historical only — Render was decommissioned in August 2026. Kept because
+I1, I4 and I5 below are unreadable without it.)*
+- 512 MB RAM, 0.1 CPU (shared), no persistent disk. UptimeRobot pinged `/ping` every 5 min to prevent the
+  15-minute inactivity sleep — those pings were load-bearing, not monitoring. UptimeRobot now points at
+  `api2.tarnvik.com/ping` on the Mini, where nothing sleeps, so it is monitoring for the first time. That
+  matters more here than it looks: the backend runs in a foreground terminal with no supervisor, so
+  UptimeRobot is the only thing that will tell you it went down.
 
 **G1 - BE - Startup double-load, mostly resolved.** `rebuildDataset()` used to run twice on startup — once via
 the pipeline and once from `GtfsAccessService.onApplicationReady()`. The second call is now guarded by an
@@ -466,19 +491,22 @@ exceeded Render's 512MB limit, causing silent process kills (logged as "exceeded
 - `JvmMemoryMonitorJob` extended to log non-heap alongside heap:
   `JVM memory — heap: NNNmb / NNNmb (NN%) | non-heap: NNNmb / NNNmb committed | old-gen: NNNmb / NNNmb`
 
-**Parse-time spike (ongoing concern as of this writing):** The nightly 05:00 GTFS pipeline runs on a JVM that
-already holds the full in-memory dataset. A second crash occurred during the trip batch-save phase. After the
-successful re-parse, old-gen settled at ~129MB (up from ~61MB before that run). Root cause not confirmed —
-candidates: Hibernate session cache growth during the ~47-minute parse; increased `GtfsTripInfo` object graph
-from the new `stopTimes` list. The next nightly parse may still spike if old-gen stays elevated.
+**Parse-time spike — closed by the E-block move (August 2026).** The nightly 05:00 pipeline runs on a JVM
+that already holds the full in-memory dataset, and on Render a second crash occurred during the trip
+batch-save phase; after the successful re-parse old-gen settled at ~129MB (up from ~61MB). Root cause was
+never confirmed — candidates were Hibernate session cache growth during the parse, which on Render took
+roughly **47 minutes**, and the larger `GtfsTripInfo` object graph from the new `stopTimes` list. It stopped
+mattering rather than being solved: the same parse takes **47 seconds** on the Mini with a peak heap of
+293 MB against 2048 MB (measured figures in the E-block above). The headroom is now ~7× the peak, so a spike
+of this size has nowhere to do damage.
 
-**Parse memory logging added:** `GtfsParseService.logMemory(label)` emits `MEM [label]` lines at:
+**Parse memory logging (kept):** `GtfsParseService.logMemory(label)` emits `MEM [label]` lines at
 `parse-start`, `post-trips`, `stop_times-N` (every 10k rows), `post-stop_times`, `post-calendar_dates`.
-Use these to pinpoint where the spike occurs, then target reductions (e.g. more aggressive `entityManager.clear()`
-calls, triggering a GC before the pipeline runs, or reducing the in-memory model size).
+It is what made the 2026-08-06 measurement possible with no extra instrumentation, which is reason enough to
+keep it even though the constraint it was written for is gone.
 
-**Related:** G1 (double `rebuildDataset()` on startup) — fixing it would eliminate one redundant dataset load
-and slightly reduce peak startup memory. Consider fixing before the next parse if old-gen remains high.
+**Related:** G1 (double `rebuildDataset()` on startup). It no longer has a memory motive — the second load is
+guarded by an `isEmpty()` early return and the peak it would have added is irrelevant at this heap size.
 --
 
 I2 - BE - Vehicle position as trip percentage — shapeDistTraveled + VehicleLocation.t
@@ -592,12 +620,17 @@ Render the dataset stayed empty: `/route-groups` returned an empty list, `/statu
 dataset"). The dataset is the largest single allocation in the JVM and holding it left too little headroom
 under Render's 512MB cap during the nightly parse.
 
-**Why it could go:** the Mac Mini has no 512MB cap, so the constraint the gate existed for is gone. The
-gate was removed on the `local_host` branch — which is deliberately not merged to `main` — so Render, which
-builds `main`, keeps the gate until it is decommissioned. **Do not merge `local_host` to `main` while Render
-is still deployed**: the dataset would load there and the I1 OOM kills would come back. As of the E-block
-move Render no longer serves the frontend, but it is kept running as a rollback path, so the constraint
-still holds — it lifts only when Render is actually switched off.
+**Why it could go:** the Mac Mini has no 512MB cap, so the constraint the gate existed for is gone. The gate
+was removed on the `local_host` branch, which was then held back from `main` for as long as Render built
+`main` — merging early would have loaded the dataset there and brought the I1 OOM kills back. Render was
+decommissioned in August 2026 and the branch has been merged; the constraint is fully discharged and no
+longer restricts anything.
+
+**One thing the gate did not do, which cost a quota:** it lived inside `rebuildDataset()`, so it suppressed
+only the in-memory load. `GtfsDownloadJob` is `@Profile("!test")` and ran on Render throughout, downloading
+and parsing `sl.zip` into Supabase every night for nothing. The per-date guard is a `gtfs_download_log` row,
+which is per-database, so the two deployments never coordinated. If a gate is ever added again to save
+memory, put it where the *work* is, not where the result is stored.
 
 The dataset now loads under every profile, including `test`. `GtfsParseService` keeps a separate `local`
 check for something unrelated — the future `PARSE_DONE` placeholder rows that suppress downloads to stay
