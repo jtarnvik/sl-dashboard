@@ -86,6 +86,14 @@ export interface MonitoredRouteGroup {
   transportMode: string;
   routeGroup: number;
   displayName: string;
+  /**
+   * The group's line numbers, for deciding whether a line belongs to it. `displayName` is these joined.
+   *
+   * Optional because a backend older than the field simply omits it, and the frontend deploys independently
+   * — a dev server pointed at production is the everyday case. Absent means no line matches, so the rows
+   * are inert until the backend catches up, rather than the pane crashing.
+   */
+  lines?: string[];
   focusStart: string | null;
   focusEnd: string | null;
   onlyFocused: boolean;
@@ -116,6 +124,17 @@ export interface LiveTrip {
 }
 
 /**
+ * When a vehicle is due to leave one stop of the chain, as epoch *seconds*. Absolute rather than a
+ * countdown because the view polls every 8 seconds and counts down locally in between.
+ *
+ * `stopId` is a parent station id, so it matches `LiveStop.stopId` directly.
+ */
+export interface StopPrediction {
+  stopId: string;
+  departure: number;
+}
+
+/**
  * One vehicle, placed on the chain: it is between `stops[segIdx]` and `stops[segIdx + 1]`,
  * `segmentFraction` (0..1) of the way along that segment. `distanceMetres` is how far the vehicle really is
  * from that segment — a large value means the geometric match is poor.
@@ -133,6 +152,14 @@ export interface LiveVehicle {
   segIdx: number;
   segmentFraction: number;
   distanceMetres: number;
+  /**
+   * When this vehicle is due to leave each chain stop still ahead of it, in the order it reaches them.
+   * Stops its own trip does not call at are absent, so a short turn stops predicting at its real terminus.
+   *
+   * Optional for the same reason as `MonitoredRouteGroup.lines`: a backend older than the field omits it,
+   * and then there are simply no countdowns to draw.
+   */
+  stopPredictions?: StopPrediction[];
 }
 
 /**

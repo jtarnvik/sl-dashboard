@@ -324,12 +324,17 @@ export async function fetchRouteGroupStops(setError: SetError): Promise<RouteGro
   }
 }
 
-export async function fetchRouteGroups(setError: SetError): Promise<MonitoredRouteGroup[]> {
+/**
+ * `setError` is optional because there are two kinds of caller. The live traffic view cannot work without
+ * this list and must say so; the main page only uses it to decide whether a departure row offers a shortcut,
+ * and a banner for a missing shortcut would be out of proportion.
+ */
+export async function fetchRouteGroups(setError?: SetError): Promise<MonitoredRouteGroup[]> {
   try {
     const response = await backend.get<MonitoredRouteGroup[]>(URL_BACKEND_GTFS_ROUTE_GROUPS);
     return response.data;
   } catch {
-    setError("Kunde inte hämta linjegrupper.");
+    setError?.("Kunde inte hämta linjegrupper.");
     return [];
   }
 }

@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 
 import { DEFAULT_SETTINGS } from '../communication/constant.ts';
+import { fetchRouteGroups } from '../communication/backend.ts';
 import { loadStopHint } from '../util/stop-hint.ts';
 import { ErrorHandler } from '../components/error-handler';
 import { Departures } from '../components/pane/departures';
@@ -13,6 +14,7 @@ import InDebugModeContext from '../contexts/debug-context.ts';
 import PageTitleContext from '../contexts/page-title-context.ts';
 import { LoginTeaser } from '../components/pane/login-teaser';
 import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user.ts';
+import { MonitoredRouteGroup } from '../types/backend.ts';
 
 export function Main() {
   const { setError } = useContext(ErrorContext);
@@ -29,6 +31,11 @@ export function Main() {
   const [departuresGen, setDeparturesGen] = useState(0);
   const [routesGen, setRoutesGen] = useState(0);
   const [deviationsGen, setDeviationsGen] = useState(0);
+
+  // Which lines have live traffic data, so Departures knows which of its rows can lead there. Fetched here
+  // rather than in the pane because the pane is remounted by its generation key whenever settings change,
+  // and this list does not.
+  const [routeGroups, setRouteGroups] = useState<MonitoredRouteGroup[]>([]);
 
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
 
@@ -57,6 +64,15 @@ export function Main() {
   }, [settingsData.stopPointId, settingsData.useAiInterpretation]);
 
   useEffect(() => {
+    if (!isLoggedIn) {
+      return;
+    }
+    // No error handler on purpose: failing to learn which lines are monitored costs a shortcut, not the
+    // departures themselves, and a banner over the main page would be out of proportion to that.
+    fetchRouteGroups().then(setRouteGroups);
+  }, [isLoggedIn]);
+
+  useEffect(() => {
     const handleReset = () => {
       setDeparturesGen(g => g + 1);
       setDeviationsGen(g => g + 1);
@@ -68,7 +84,11 @@ export function Main() {
   return (
     <View>
       <ErrorHandler />
-      <Departures key={`dep-${departuresGen}`} stopPoint16Chars={settingsData.stopPointId} />
+      <Departures
+        key={`dep-${departuresGen}`}
+        stopPoint16Chars={settingsData.stopPointId}
+        routeGroups={routeGroups}
+      />
       {isLoggedIn ? (
         <div className="grid gap-2" style={{ gridTemplateColumns: '1fr auto' }}>
           <Routes key={`routes-${routesGen}`} settingsData={settingsData} />

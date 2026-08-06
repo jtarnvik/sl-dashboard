@@ -1,4 +1,5 @@
 import {useCallback, useContext, useEffect, useRef, useState} from "react";
+import {useNavigate} from "react-router-dom";
 import {MdInfoOutline, MdRefresh, MdWarningAmber} from "react-icons/md";
 import {DateTime, Duration} from "luxon";
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
@@ -14,8 +15,10 @@ import {BackendInterpretationResult, EnrichedDeviation, isShown, isValidDeviatio
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
+import {MonitoredRouteGroup} from "../../../types/backend.ts";
 import {Departure, SlDeparturesResponse, TransportMode} from "../../../types/sl-responses.ts";
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
+import {findRouteGroupForLine} from "../../../util/route-group.ts";
 import {sortDeparturesByDestination} from "../../../util/sorters.ts";
 import {Destination} from "./destination.tsx";
 import {destinations, scanLegend, symbols} from "./legend-data.tsx";
@@ -40,11 +43,14 @@ function transportModeToIconMode(mode: TransportMode): TransportationMode {
 
 type Props = {
   stopPoint16Chars: string
+  /** The lines with live traffic data. Empty when not logged in, which leaves every row unclickable. */
+  routeGroups?: MonitoredRouteGroup[]
 }
 
-export function Departures({stopPoint16Chars}: Props) {
+export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
   const {inDebugMode} = useContext(InDebugModeContext);
   const {setError} = useContext(ErrorContext);
+  const navigate = useNavigate();
 
   const latestRequest = useRef<AbortControllerState | undefined>(undefined);
   const lastDepartures = useRef<Departure[] | undefined>(undefined);
@@ -250,6 +256,14 @@ export function Departures({stopPoint16Chars}: Props) {
     setCurrentPage(0);
   }
 
+  /**
+   * Opens the live traffic view on this departure's line. The group is all that is passed — a departure and
+   * a live vehicle share no identifier, so which vehicle on that line is still up to the user to pick.
+   */
+  function showLiveTraffic(group: MonitoredRouteGroup) {
+    navigate(`/live-traffic?mode=${group.transportMode}&group=${group.routeGroup}`);
+  }
+
   return (
     <Card>
       <div className="flex justify-between">
@@ -271,9 +285,15 @@ export function Departures({stopPoint16Chars}: Props) {
         displayedDepartures.map((departure) => {
             const uniqueId = getUniqueId(departure);
             const showAsDeparting = departing.has(getUniqueId(departure));
+            const liveGroup = findRouteGroupForLine(routeGroups, departure.line.transport_mode, departure.line.designation);
 
             return (
-              <div key={uniqueId} className={"departures-grid " + ((showAsDeparting) ? "departure-row-removing" : "")}>
+              <div
+                key={uniqueId}
+                className={"departures-grid " + ((showAsDeparting) ? "departure-row-removing " : "")
+                  + ((liveGroup) ? "cursor-pointer hover:bg-gray-200/60 rounded-sm" : "")}
+                onClick={liveGroup ? () => showLiveTraffic(liveGroup) : undefined}
+              >
                 <div className="grid-line justify-self-start">
                   <LineJourney
                     extraIconClass="departure-icon"
@@ -285,7 +305,10 @@ export function Departures({stopPoint16Chars}: Props) {
                 <div className="grid-name departure-row">
                   <Destination journey={departure.journey} destination={departure.destination} />
                 </div>
-                <div className="grid-time justify-self-end departure-row">
+                {/* The deviation modal lives in here and opens on click. Stopping the bubble locally keeps
+                    the row navigation off it — DeviationWrapper itself must not stop propagation, because
+                    the routes pane nests it inside a clickable journey card that relies on the bubble. */}
+                <div className="grid-time justify-self-end departure-row" onClick={e => e.stopPropagation()}>
                   <ScanningUnderline active={interpretationPending && (departure.deviations ?? []).length > 0}>
                     <DeviationWrapper deviations={
                       (departure.deviations ?? [])

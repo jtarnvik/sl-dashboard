@@ -73,7 +73,7 @@ The hamburger icon shows a red badge when there are pending access requests. The
 | `Statistics` | `/admin/statistics` | Admin | Usage statistics (shared routes, AI queries, user count) |
 | `SharedRouteView` | `/route/:id` | Any | View a shared journey; shows login teaser to non-logged-in users |
 | `Gdpr` | `/gdpr` | Any | GDPR info page |
-| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle, both remembered per user; schematic vehicle view (`live-traffic-graph`), polled every 8s |
+| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle, both remembered per user; schematic vehicle view (`live-traffic-graph`), polled every 8s. Accepts `?mode=&group=` to preselect a line, used by the departures pane |
 | `Denied` | `/denied` | — | Shown when access is denied during OAuth2 |
 
 All routes except `/denied` are rendered inside `Layout`, which wraps them with `Navbar` and an `ErrorBoundary`.
@@ -375,6 +375,48 @@ pill. Truncated ends get a ⋮ at the very end of the axis with the stops inset 
 - Focus toggle state is derived from the group: train enabled and defaulting on, metro locked on, buses locked
   off (no window). Switching group resets the flag to that group's default.
 
+### Vehicle selection and stop times
+
+Clicking a vehicle dims the rest and writes a countdown on each leader dash from that vehicle onwards. The
+component is split: `LiveTrafficGraph` holds the guard returns, `Schematic` holds every hook — the guards run
+before any hook, so they cannot sit in one component.
+
+- **`selectedTripId` lives in the view, not the schematic**, so it survives the poll replacing `routeData`
+  every 8s. It is cleared in the listbox and focus handlers — never in an effect watching the data, which
+  would fight the poll loop. The selected vehicle is *derived* (`vehicles.find(...)`), so a vehicle missing
+  from one response shows no times and comes back on the next rather than clearing the selection.
+- **Dimmed vehicles keep their triangle but lose their destination label.** Not only decluttering: the upward
+  label lane is anchored at `right: calc(35% + 1.25rem)`, exactly where the leader dashes are, so leaving them
+  up would cover the countdowns the selection exists to show.
+- Both the triangle and the label are click targets with `p-2 -m-2` padding — the triangle is a 10px glyph and
+  is unhittable on a phone without it. The container deselects on click, so the buttons stop propagation.
+- **The countdown clock ticks unconditionally** (10s), rather than only while something is selected. Gating it
+  would mean seeding a fresh `now` when a selection starts, which is a `setState` inside an effect — the rule
+  the improvements list wants driven back to zero — and the saving is nothing beside the 8s poll.
+
+### Predicted times (`GtfsPredictionUtil`, `GtfsTimeUtil`)
+
+**Only VehiclePositions is fetched — there is no TripUpdates feed, so no delay or predicted time ever arrives
+from upstream.** A raw scheduled time would be wrong by exactly however late the vehicle is, which is when
+someone is looking. The delay is instead derived from the one thing the feed does give, position:
+`GtfsGeometryUtil.locateOnRoute()` is run a second time against the vehicle's **own** trip, the scheduled time
+at that point is interpolated, and the gap from the position report's timestamp is added to every remaining
+stop. Two guards stop a bad match producing a confident wrong number — a projection over 1000 m off the trip
+falls back to the plain timetable, and the delay is clamped to ±30 min.
+
+- **GTFS times are not clock times.** Hours run past 24, and the instant is built as *noon minus twelve hours*
+  on the service date rather than midnight — that is the spec's definition and it is what survives a DST
+  changeover, where the two differ by an hour.
+- The service day is resolved by trying yesterday/today/tomorrow and keeping whichever scheduled span sits
+  closest to the observation. Deliberately independent of `calendar_dates.txt`: the vehicle is on the road, so
+  the question is not whether the service runs but which midnight its times count from.
+- The chain counts in **parent stations**, the trip's stop times in **platforms** — joined via
+  `GtfsUtil.getParentId()`. A chain stop the trip never calls at (short turn, `43X` variant) yields nothing,
+  which is the normal case, not a fault.
+- Predictions are computed against the full chain and filtered in `rebase()`, the same rule the geometry
+  follows. Sent for **every** vehicle each poll so selection costs no round trip; absolute epoch seconds, not
+  minutes, so the browser counts down between polls.
+
 ### Favourite stops
 
 Stored per user as JSON in `user_settings.favourite_stops` (changeset 040) and delivered on `GET /api/auth/me`
@@ -465,17 +507,17 @@ carried out: what is left should be what helps future work, not a record of how 
 
 ## Goals, in order
 
-These three are the current plan, in order.
-
-**1 - FE/BE, Arrival times on the schematic.**
-The train map shows where each train is and which stations it is between, but not "its probable arrival time at
-the next station", which is what would make the view actionable.
-- Worth knowing before starting: the scheduled times are not merely unsent, they are absent from the live model
-  entirely. `LiveStop` carries no times, so the chain the frontend receives has no time information anywhere.
-  `GtfsStopTimeInfo.arrivalTime` / `departureTime` are the source; plumbing them into `LiveStop` is step one.
-- The alternative source is dead reckoning from `shapeDistTraveled` plus vehicle speed. Note that `speed` is
-  populated for buses but is always 0.0 or noise for trains, so schedule-based is the only option that works
-  for both.
+**1 - FE/BE, Resolve a departure row to a specific vehicle.**
+Clicking a departure now opens the live view on the right *line*; it cannot open it on the right *vehicle*,
+because the two sides share no identifier. SL's `journey.id` is a number in SL's own namespace, GTFS `trip_id`
+is a string like `14010000656749468`, and the site id encodings differ too (`9091001000003715` for an SL site,
+`9021001006081000` for a GTFS parent station).
+- The workable bridge is a content match rather than an id match: `(transport mode, line, destination text,
+  scheduled HH:MM, stop name)`. SL supplies `departure.scheduled`, `destination` and `stop_area.name`; GTFS
+  supplies `stop_headsign`, `departure_time` and the stop's parent station name. Matching on **names and
+  times** sidesteps the id namespaces entirely.
+- Would be a new `GET /api/protected/gtfs/resolve-trip`. The url already leaves room for a `&trip=` param
+  alongside `mode` and `group`.
 
 **2 - FE/BE, Bus tracking with push notification.** The most personally useful of these.
 A schematic of bus 117 — which now exists — where the user marks a specific bus as the one they intend to catch,
@@ -506,6 +548,11 @@ The design notes worth keeping from these live in the GTFS chapter above. The re
   on it, polled every 8 seconds.
 - **D — BE/FE, Favourite stops.** Up to 10 stops per user, marked in the settings dialog, rendered bold on the
   schematic.
+- **F — BE/FE, Vehicle selection and arrival times.** Click a vehicle on the schematic: the others dim and
+  every stop ahead of it gets a countdown on its leader dash. A departure row for a monitored line opens the
+  view on that line. Design notes are in "Vehicle selection and stop times" and "Predicted times" above; the
+  one thing to remember without reading them is that **the times are the timetable corrected by an observed
+  delay, because there is no TripUpdates feed to ask.**
 - **E — BE/infra, Backend moved from Render to the home Mac Mini (August 2026).** `sl.tarnvik.com` now talks to
   `api2.tarnvik.com`; the application code was unchanged, only where it runs. Render and Supabase are gone and
   there is no rollback target. Live traffic works in production for the first time — Render's 512 MB cap was

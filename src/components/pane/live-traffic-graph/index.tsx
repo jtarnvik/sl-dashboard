@@ -1,9 +1,14 @@
-import { LiveTrip, LiveVehicle, RouteData, RouteFocus } from '../../../types/backend';
+import { useEffect, useMemo, useState } from 'react';
+
+import { LiveStop, LiveTrip, LiveVehicle, RouteData, RouteFocus } from '../../../types/backend';
 
 type LiveTrafficGraphProps = {
   routeData: RouteData | null;
   /** Stops the user has marked as favourites, by parent station id. Rendered emphasised. */
   favouriteStopIds?: ReadonlySet<string>;
+  /** The vehicle whose times are shown, by trip id. Null when nothing is selected. */
+  selectedTripId: string | null;
+  onSelectVehicle: (tripId: string | null) => void;
 }
 
 /**
@@ -18,6 +23,9 @@ const AXIS_X_PERCENT = 65;
  * are pushed in by this much so the marker has somewhere to sit beyond them.
  */
 const TRUNCATION_INSET = 0.07;
+
+/** How often the countdowns are recomputed. They are shown in whole minutes, so a finer tick buys nothing. */
+const COUNTDOWN_TICK_MS = 10 * 1000;
 
 /** The fractions of the axis that the first and last stop occupy, leaving room for truncation markers. */
 type AxisSpan = {
@@ -65,6 +73,15 @@ function destinationName(vehicle: LiveVehicle, liveTrip: LiveTrip): string {
   }
   const stops = liveTrip.stops;
   return isDownwards(vehicle, liveTrip) ? stops[stops.length - 1].stopName : stops[0].stopName;
+}
+
+/**
+ * A predicted departure as the minutes left until it. "Nu" once it has arrived rather than a count that
+ * goes negative — a vehicle standing at a stop is at it, however its report and the timetable disagree.
+ */
+function countdownLabel(departureEpochSeconds: number, now: number): string {
+  const minutes = Math.round((departureEpochSeconds * 1000 - now) / 60_000);
+  return minutes <= 0 ? 'Nu' : `${minutes} min`;
 }
 
 /** Shared pill shape. Real vehicles and approaching counts differ only in colour. */
@@ -130,25 +147,177 @@ function TruncationMarker({ y, approaching, fromBelow }: TruncationMarkerProps) 
   );
 }
 
-export function LiveTrafficGraph({ routeData, favouriteStopIds }: LiveTrafficGraphProps) {
-  if (!routeData) {
-    return <p className="text-sm text-gray-600">Hämtar trafikdata...</p>;
-  }
-  if (!routeData.liveTrip) {
-    return <p className="text-sm text-gray-600">Ingen linjedata: {routeData.status}</p>;
-  }
+/**
+ * How far a countdown sits from the axis on the downward side. Matches the 12px the upward side gets from
+ * `pr-3`, so the two read as one lane mirrored rather than two different placements.
+ */
+const COUNTDOWN_LANE_OFFSET_REM = 0.75;
 
-  const liveTrip = routeData.liveTrip;
-  const stops = liveTrip.stops;
-  if (stops.length < 2) {
-    return <p className="text-sm text-gray-600">Linjen har för få hållplatser för att ritas.</p>;
-  }
+const COUNTDOWN_CLASS = 'shrink-0 text-xs tabular-nums text-[#184fc2]';
 
-  const focus = routeData.focus;
-  const span = axisSpan(focus);
+type StopRowProps = {
+  stop: LiveStop;
+  y: number;
+  favourite: boolean;
+  /** The selected vehicle's countdown to this stop, or null when it never reaches it. */
+  countdown: string | null;
+  /** Which side of the axis the countdown goes on — the side the selected vehicle is travelling towards. */
+  countdownDown: boolean;
+}
+
+/**
+ * One stop: its name against the left edge, a leader dash filling whatever is left, and a dot on the axis.
+ * Names of any length line up without measuring anything.
+ * <p>
+ * The countdown takes the lane of the selected vehicle's direction, the same convention the destination
+ * labels follow. The two sides are built differently because the row itself only spans the left region: an
+ * upward countdown is an ordinary flex child and shortens the dash to make room, while a downward one has
+ * to be positioned against the axis from outside the row.
+ */
+function StopRow({ stop, y, favourite, countdown, countdownDown }: StopRowProps) {
+  return (
+    <>
+      <div
+        className="absolute left-0 flex -translate-y-1/2 items-center gap-2"
+        style={{ top: `${y * 100}%`, right: `${100 - AXIS_X_PERCENT}%` }}
+      >
+        <span className={`min-w-0 truncate text-xs ${favourite ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+          {stop.stopName}
+        </span>
+        <span className="h-px min-w-3 flex-1 bg-gray-300" />
+        {/* The dot below is absolutely positioned, so it reserves no space in the row and the countdown
+            would otherwise run right up to the axis and under it. `pr-3` clears the dot's 4px radius and
+            leaves the same 8px gap the row uses between its other parts. */}
+        {countdown && !countdownDown && (
+          <span className={`${COUNTDOWN_CLASS} pr-3`}>{countdown}</span>
+        )}
+        <span className="absolute right-0 top-1/2 size-2 -translate-y-1/2 translate-x-1/2 rounded-full bg-gray-500" />
+      </div>
+      {countdown && countdownDown && (
+        <span
+          className={`${COUNTDOWN_CLASS} absolute -translate-y-1/2`}
+          style={{ top: `${y * 100}%`, left: `calc(${AXIS_X_PERCENT}% + ${COUNTDOWN_LANE_OFFSET_REM}rem)` }}
+        >
+          {countdown}
+        </span>
+      )}
+    </>
+  );
+}
+
+type VehicleMarkerProps = {
+  vehicle: LiveVehicle;
+  liveTrip: LiveTrip;
+  y: number;
+  selected: boolean;
+  /** True when some other vehicle is selected — this one steps back rather than disappearing. */
+  dimmed: boolean;
+  onSelect: () => void;
+}
+
+/**
+ * A vehicle: a triangle riding alongside the axis, and a destination label in its direction's lane.
+ * <p>
+ * Both are click targets. The triangle carries generous padding, because a 10px glyph is far too small to
+ * hit on a phone — and the padding must stay symmetric: the button is centred on the vehicle's position by
+ * `-translate-y-1/2`, which halves the *padded* box, so anything that shifts the box off the glyph's centre
+ * takes the triangle off the position it is meant to mark.
+ * <p>
+ * A dimmed vehicle keeps its triangle but loses its label. That is not only decluttering: the upward lane
+ * sits exactly where the leader dashes are, so leaving the labels up would put them on top of the very
+ * countdowns the selection exists to show.
+ */
+function VehicleMarker({ vehicle, liveTrip, y, selected, dimmed, onSelect }: VehicleMarkerProps) {
+  const down = isDownwards(vehicle, liveTrip);
+  const destination = destinationName(vehicle, liveTrip);
+
+  function handleClick(event: React.MouseEvent) {
+    event.stopPropagation();
+    onSelect();
+  }
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div
+      className={`absolute left-0 right-0 transition-[top] duration-1000 ease-linear ${dimmed ? 'opacity-30' : ''}`}
+      style={{ top: `${y * 100}%` }}
+    >
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-label={`Visa tider för avgången mot ${destination}`}
+        aria-pressed={selected}
+        className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer p-2 leading-none text-[#184fc2] ${
+          down ? 'ml-2' : '-ml-2'
+        } ${selected ? 'text-sm' : 'text-[10px]'}`}
+        style={{ left: `${AXIS_X_PERCENT}%` }}
+      >
+        {down ? '▼' : '▲'}
+      </button>
+      {!dimmed && (
+        <button
+          type="button"
+          onClick={handleClick}
+          aria-label={`Visa tider för avgången mot ${destination}`}
+          aria-pressed={selected}
+          className={`${PILL_CLASS} ${PILL_VEHICLE_CLASS} cursor-pointer ${down ? 'max-w-[30%]' : 'max-w-[38%]'} ${
+            selected ? 'ring-2 ring-[#184fc2]/40' : ''
+          }`}
+          style={laneStyle(down, VEHICLE_LANE_OFFSET_REM)}
+        >
+          {destination}
+        </button>
+      )}
+    </div>
+  );
+}
+
+type SchematicProps = {
+  liveTrip: LiveTrip;
+  vehicles: LiveVehicle[];
+  focus: RouteFocus | null;
+  favouriteStopIds?: ReadonlySet<string>;
+  selectedTripId: string | null;
+  onSelectVehicle: (tripId: string | null) => void;
+}
+
+/**
+ * The drawing itself, split from {@link LiveTrafficGraph} so the guards there can return before any hook
+ * runs. Everything below this point can assume a chain of at least two stops.
+ */
+function Schematic({ liveTrip, vehicles, focus, favouriteStopIds, selectedTripId, onSelectVehicle }: SchematicProps) {
+  const stops = liveTrip.stops;
+  const span = axisSpan(focus);
+
+  /**
+   * Derived rather than kept in state, so a vehicle missing from one poll simply shows no times and comes
+   * back on the next. Clearing the selection here instead would fight the poll loop.
+   */
+  const selectedVehicle = vehicles.find(vehicle => vehicle.tripId === selectedTripId) ?? null;
+  const countdownDown = selectedVehicle !== null && isDownwards(selectedVehicle, liveTrip);
+
+  const countdownsByStopId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const prediction of selectedVehicle?.stopPredictions ?? []) {
+      map.set(prediction.stopId, prediction.departure);
+    }
+    return map;
+  }, [selectedVehicle]);
+
+  /**
+   * The clock the countdowns are measured against. Ticks unconditionally rather than only while something
+   * is selected: gating it would mean seeding a fresh value the moment a selection starts, which is a
+   * setState inside an effect, and the saving is nothing next to the poll that re-renders this every eight
+   * seconds anyway.
+   */
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = setInterval(() => setNow(Date.now()), COUNTDOWN_TICK_MS);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  return (
+    <div className="relative h-full w-full overflow-hidden" onClick={() => onSelectVehicle(null)}>
       {/* Inset so the first and last markers are not clipped — they are centred on 0% and 100%. */}
       <div className="absolute inset-x-0 top-5 bottom-5">
         <div
@@ -156,26 +325,19 @@ export function LiveTrafficGraph({ routeData, favouriteStopIds }: LiveTrafficGra
           style={{ left: `${AXIS_X_PERCENT}%` }}
         />
 
-        {/* Stop names hug the left edge; a leader dash takes whatever space is left over and ends on the
-            axis, so names of any length line up without measuring anything. */}
-        {stops.map((stop, index) => (
-          <div
-            key={stop.stopId}
-            className="absolute left-0 flex -translate-y-1/2 items-center gap-2"
-            style={{
-              top: `${stopY(index, stops.length, span) * 100}%`,
-              right: `${100 - AXIS_X_PERCENT}%`,
-            }}
-          >
-            <span className={`min-w-0 truncate text-xs ${
-              favouriteStopIds?.has(stop.stopId) ? 'font-bold text-gray-900' : 'text-gray-600'
-            }`}>
-              {stop.stopName}
-            </span>
-            <span className="h-px min-w-3 flex-1 bg-gray-300" />
-            <span className="absolute right-0 top-1/2 size-2 -translate-y-1/2 translate-x-1/2 rounded-full bg-gray-500" />
-          </div>
-        ))}
+        {stops.map((stop, index) => {
+          const departure = countdownsByStopId.get(stop.stopId);
+          return (
+            <StopRow
+              key={stop.stopId}
+              stop={stop}
+              y={stopY(index, stops.length, span)}
+              favourite={favouriteStopIds?.has(stop.stopId) ?? false}
+              countdown={departure === undefined ? null : countdownLabel(departure, now)}
+              countdownDown={countdownDown}
+            />
+          );
+        })}
 
         {/* Centred on the very ends of the axis, so the marker reads as the line running off the view. The
             inset that pushes the first and last stop in is what keeps them clear of it. */}
@@ -186,35 +348,41 @@ export function LiveTrafficGraph({ routeData, favouriteStopIds }: LiveTrafficGra
           <TruncationMarker y={1} approaching={focus.approachingAtEnd} fromBelow={true} />
         )}
 
-        {routeData.vehicles.map((vehicle) => {
-          const down = isDownwards(vehicle, liveTrip);
-          return (
-            <div
-              key={vehicle.tripId}
-              className="absolute left-0 right-0 transition-[top] duration-1000 ease-linear"
-              style={{ top: `${vehicleY(vehicle, stops.length, span) * 100}%` }}
-            >
-              {/* The triangle rides alongside the axis, offset far enough that it reads as a deliberate
-                  lane rather than a misalignment — and so an up and a down vehicle at the same point sit
-                  clearly side by side. */}
-              <span
-                className={`absolute -translate-x-1/2 -translate-y-1/2 text-[10px] leading-none text-[#184fc2] ${
-                  down ? 'ml-2' : '-ml-2'
-                }`}
-                style={{ left: `${AXIS_X_PERCENT}%` }}
-              >
-                {down ? '▼' : '▲'}
-              </span>
-              <span
-                className={`${PILL_CLASS} ${PILL_VEHICLE_CLASS} ${down ? 'max-w-[30%]' : 'max-w-[38%]'}`}
-                style={laneStyle(down, VEHICLE_LANE_OFFSET_REM)}
-              >
-                {destinationName(vehicle, liveTrip)}
-              </span>
-            </div>
-          );
-        })}
+        {vehicles.map((vehicle) => (
+          <VehicleMarker
+            key={vehicle.tripId}
+            vehicle={vehicle}
+            liveTrip={liveTrip}
+            y={vehicleY(vehicle, stops.length, span)}
+            selected={vehicle.tripId === selectedTripId}
+            dimmed={selectedTripId !== null && vehicle.tripId !== selectedTripId}
+            onSelect={() => onSelectVehicle(vehicle.tripId === selectedTripId ? null : vehicle.tripId)}
+          />
+        ))}
       </div>
     </div>
+  );
+}
+
+export function LiveTrafficGraph({ routeData, favouriteStopIds, selectedTripId, onSelectVehicle }: LiveTrafficGraphProps) {
+  if (!routeData) {
+    return <p className="text-sm text-gray-600">Hämtar trafikdata...</p>;
+  }
+  if (!routeData.liveTrip) {
+    return <p className="text-sm text-gray-600">Ingen linjedata: {routeData.status}</p>;
+  }
+  if (routeData.liveTrip.stops.length < 2) {
+    return <p className="text-sm text-gray-600">Linjen har för få hållplatser för att ritas.</p>;
+  }
+
+  return (
+    <Schematic
+      liveTrip={routeData.liveTrip}
+      vehicles={routeData.vehicles}
+      focus={routeData.focus}
+      favouriteStopIds={favouriteStopIds}
+      selectedTripId={selectedTripId}
+      onSelectVehicle={onSelectVehicle}
+    />
   );
 }
