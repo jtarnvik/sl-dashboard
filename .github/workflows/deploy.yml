@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  # Manual trigger. A push to main has been seen to land without GitHub firing the event, leaving the
+  # deployed site a commit behind with nothing wrong in the repository — this is the way to redeploy the
+  # current main without inventing a commit to do it.
+  workflow_dispatch:
 
 jobs:
   build:
