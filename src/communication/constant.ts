@@ -39,6 +39,7 @@ export const URL_BACKEND_GTFS_ROUTE_GROUP_STOPS = "/api/protected/gtfs/route-gro
 
 export const URL_BACKEND_SETTINGS = "/api/protected/settings";
 export const URL_BACKEND_RECENT_STOPS = "/api/protected/settings/recent-stops";
+export const URL_BACKEND_LIVE_TRAFFIC_VIEW = "/api/protected/settings/live-traffic-view";
 export const URL_BACKEND_DELETE_ACCOUNT = "/api/protected/account";
 export const URL_BACKEND_INTERPRET_DEVIATIONS = "/api/protected/deviations/interpret";
 export const URL_BACKEND_HIDE_DEVIATION = (id: number) => `/api/protected/deviations/${id}/hide`;

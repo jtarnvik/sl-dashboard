@@ -1,9 +1,9 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Switch } from '@headlessui/react';
 import { MdExpandMore } from 'react-icons/md';
 
-import { fetchGtfsDataStatus, fetchRouteData, fetchRouteGroups } from '../communication/backend';
+import { fetchGtfsDataStatus, fetchRouteData, fetchRouteGroups, saveLiveTrafficView } from '../communication/backend';
 import { ErrorHandler } from '../components/error-handler';
 import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
@@ -14,10 +14,13 @@ import PageTitleContext from '../contexts/page-title-context';
 import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user';
 import { useVisibility } from '../hook/use-visibility';
 import { toTransportationMode } from '../util/transport-mode';
-import { GtfsDataStatus, MonitoredRouteGroup, RouteData } from '../types/backend';
+// The type shares its name with the component exported below, hence the alias — same convention the
+// `Deviation` collision uses elsewhere.
+import { GtfsDataStatus, LiveTrafficView as LiveTrafficViewSetting, MonitoredRouteGroup, RouteData } from '../types/backend';
 
-// The line to preselect. Without this the first group alphabetically wins, which is bus 112 — a line kept
-// only to exercise the route presentation logic.
+// The line to fall back on when nothing was remembered — or when what was remembered no longer exists.
+// Without this the first group alphabetically wins, which is bus 112, a line kept only to exercise the
+// route presentation logic.
 const DEFAULT_GROUP_DISPLAY_NAME = '117';
 
 // Vehicles move, so a snapshot goes stale fast. The backend refreshes its own cache every 5s, so polling
@@ -66,11 +69,36 @@ function defaultFocused(group: MonitoredRouteGroup): boolean {
   return hasFocusWindow(group);
 }
 
+/**
+ * The focus flag to show for a group. A locked group always gets its forced value — the remembered flag is
+ * about what the user chose, and for a group whose switch does nothing there was no choice to make. Null
+ * remembered means the switch has never been operated, so the group's own default stands.
+ */
+function resolveFocused(group: MonitoredRouteGroup, rememberedFocus: boolean | null): boolean {
+  if (isFocusLocked(group)) {
+    return defaultFocused(group);
+  }
+  return rememberedFocus ?? defaultFocused(group);
+}
+
 function pickDefaultGroup(groups: MonitoredRouteGroup[]): MonitoredRouteGroup | null {
   if (groups.length === 0) {
     return null;
   }
   return groups.find((group) => group.displayName === DEFAULT_GROUP_DISPLAY_NAME) ?? groups[0];
+}
+
+/**
+ * The remembered group, if it is still one the backend serves. A line dropped from `gtfs_monitored_route`,
+ * or a whole dataset that failed to parse, leaves a stored value matching nothing — in which case the
+ * caller falls back to the default rather than showing an empty schematic.
+ */
+function findStoredGroup(groups: MonitoredRouteGroup[], stored: LiveTrafficViewSetting | null): MonitoredRouteGroup | null {
+  if (!stored) {
+    return null;
+  }
+  return groups.find(
+    (group) => group.transportMode === stored.transportMode && group.routeGroup === stored.routeGroup) ?? null;
 }
 
 type RouteGroupListboxProps = {
@@ -118,16 +146,29 @@ function RouteGroupListbox({ groups, selectedGroup, onChange }: RouteGroupListbo
 
 export function LiveTrafficView() {
   const loginState = useUserLoginState();
-  const { user } = useUser();
+  const { user, updateSettings } = useUser();
   const navigate = useNavigate();
   const { setError } = useContext(ErrorContext);
   const { setHeading } = useContext(PageTitleContext);
   const [groups, setGroups] = useState<MonitoredRouteGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<MonitoredRouteGroup | null>(null);
   const [focused, setFocused] = useState(false);
+  const [rememberedFocus, setRememberedFocus] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [gtfsStatus, setGtfsStatus] = useState<GtfsDataStatus | null>(null);
   const [fetchedRouteData, setFetchedRouteData] = useState<FetchedRouteData | null>(null);
+
+  /**
+   * The remembered view, held in a ref rather than read from `user` in the effect below. Saving patches
+   * the user context, so a dependency on it would re-run that effect, refetch the route groups and reset
+   * the selection — which would then save again. The ref is read only after login has resolved, by which
+   * point the settings have arrived.
+   */
+  const storedViewRef = useRef<LiveTrafficViewSetting | null>(null);
+
+  useEffect(() => {
+    storedViewRef.current = user?.settings?.liveTrafficView ?? null;
+  }, [user]);
 
   const favouriteStopIds = useMemo(
     () => new Set((user?.settings?.favouriteStops ?? []).map(favourite => favourite.stopId)),
@@ -156,10 +197,12 @@ export function LiveTrafficView() {
       setGtfsStatus(status);
       if (status?.staticDataAvailable !== false) {
         setGroups(groups);
-        const defaultGroup = pickDefaultGroup(groups);
-        if (defaultGroup) {
-          setSelectedGroup(defaultGroup);
-          setFocused(defaultFocused(defaultGroup));
+        const stored = storedViewRef.current;
+        const initialGroup = findStoredGroup(groups, stored) ?? pickDefaultGroup(groups);
+        if (initialGroup) {
+          setSelectedGroup(initialGroup);
+          setRememberedFocus(stored?.focused ?? null);
+          setFocused(resolveFocused(initialGroup, stored?.focused ?? null));
         }
       }
       setLoading(false);
@@ -189,9 +232,44 @@ export function LiveTrafficView() {
     return () => clearInterval(intervalId);
   }, [updateRouteData]);
 
+  /**
+   * Persists the selection, and mirrors it into the user context so that leaving the view and coming back
+   * restores it without waiting for the next `/api/auth/me`.
+   *
+   * The two differ in one place on purpose. A locked group sends `focused: null` so the backend leaves the
+   * remembered flag alone, while the context keeps the flag it already had — the same rule on both sides,
+   * so selecting the metro cannot quietly turn the train's focus back on.
+   */
+  function persistView(group: MonitoredRouteGroup, focusedValue: boolean) {
+    const locked = isFocusLocked(group);
+    saveLiveTrafficView({
+      transportMode: group.transportMode,
+      routeGroup: group.routeGroup,
+      focused: locked ? null : focusedValue,
+    });
+    updateSettings({
+      liveTrafficView: {
+        transportMode: group.transportMode,
+        routeGroup: group.routeGroup,
+        focused: locked ? rememberedFocus : focusedValue,
+      },
+    });
+  }
+
   function handleListboxChange(group: MonitoredRouteGroup) {
+    const nextFocused = resolveFocused(group, rememberedFocus);
     setSelectedGroup(group);
-    setFocused(defaultFocused(group));
+    setFocused(nextFocused);
+    persistView(group, nextFocused);
+  }
+
+  /** Only reachable when the switch is operable, so this is always a real choice worth remembering. */
+  function handleFocusChange(nextFocused: boolean) {
+    setFocused(nextFocused);
+    setRememberedFocus(nextFocused);
+    if (selectedGroup) {
+      persistView(selectedGroup, nextFocused);
+    }
   }
 
   return (
@@ -212,7 +290,7 @@ export function LiveTrafficView() {
               <RouteGroupListbox groups={groups} selectedGroup={selectedGroup} onChange={handleListboxChange} />
               <Switch
                 checked={focused}
-                onChange={setFocused}
+                onChange={handleFocusChange}
                 disabled={focusDisabled}
                 className="ml-4 group relative inline-flex h-5 w-9 cursor-pointer rounded-full bg-gray-300 p-0.5 transition-colors data-checked:bg-[#184fc2] data-disabled:cursor-not-allowed data-disabled:opacity-50"
               >

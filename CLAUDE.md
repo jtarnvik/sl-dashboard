@@ -73,7 +73,7 @@ The hamburger icon shows a red badge when there are pending access requests. The
 | `Statistics` | `/admin/statistics` | Admin | Usage statistics (shared routes, AI queries, user count) |
 | `SharedRouteView` | `/route/:id` | Any | View a shared journey; shows login teaser to non-logged-in users |
 | `Gdpr` | `/gdpr` | Any | GDPR info page |
-| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle; schematic vehicle view (`live-traffic-graph`), polled every 8s |
+| `LiveTrafficView` | `/live-traffic` | Logged in | Aktuell trafik — route group selector and focus toggle, both remembered per user; schematic vehicle view (`live-traffic-graph`), polled every 8s |
 | `Denied` | `/denied` | — | Shown when access is denied during OAuth2 |
 
 All routes except `/denied` are rendered inside `Layout`, which wraps them with `Navbar` and an `ErrorBoundary`.
@@ -119,6 +119,25 @@ Documentation for the SL APIs is available at https://www.trafiklab.se/api/our-a
 Settings (selected stop point) are only available to logged-in users:
 - **Logged-in users**: stored in the backend database. `GET /api/auth/me` always returns a non-null `settings` object (backend defaults to Skogslöparvägen if none saved). Saved via `PUT /api/protected/settings`. After a successful save, `updateSettings(data)` patches the local `UserContext` state without a round trip, and also writes a localStorage hint via `saveStopHint()`.
 - **Loading / not logged in**: `Main.tsx` uses the priority chain `loadStopHint() ?? DEFAULT_SETTINGS` so the app shows the last-known stop immediately rather than flashing the hardcoded default. The Settings modal is not rendered for non-logged-in users.
+
+**The live traffic view remembers itself** — route group and focus switch, stored per user in three
+`user_settings` columns (changeset 041) and delivered inside `SettingsResponse.liveTrafficView`, so the view
+restores without a fetch of its own. Saved on every change via `PUT /api/protected/settings/live-traffic-view`,
+deliberately a separate endpoint from `PUT /settings`: that one is the settings dialog's and requires a stop
+point the live view does not own, and disjoint columns mean neither can clobber the other.
+
+- **`focused` null is not false.** Null means the switch has never been operated, so the group's own default
+  (focused-on wherever a window exists) still applies. A locked group — the metro, forced on; the buses, no
+  window — sends null so that merely *selecting* it cannot overwrite the flag a group with an operable switch
+  is relying on. Both `persistView()` in the view and `saveLiveTrafficView()` in the service apply that rule.
+- **One global focus flag, not one per group.** Only the train group is adjustable today, so the two are
+  indistinguishable; revisit if a second adjustable group is ever configured.
+- The stored group is matched against the groups the backend currently serves. A line dropped from
+  `gtfs_monitored_route`, or a failed parse, leaves it matching nothing and `DEFAULT_GROUP_DISPLAY_NAME`
+  ('117') takes over — which is why that constant is still there.
+- The view reads the stored value through a **ref**, not from `user` in the fetch effect. Saving patches the
+  user context, so a dependency on it would re-run the effect, refetch the route groups, reset the selection
+  and save again.
 
 `DEFAULT_SETTINGS`, `URL_BACKEND_SETTINGS`, and `STOP_HINT_KEY` are defined in `src/communication/constant.ts`. `saveSettings()` is in `src/communication/backend.ts`. `loadStopHint()` / `saveStopHint()` are in `src/util/stop-hint.ts`.
 

@@ -15,12 +15,24 @@ export interface FavouriteStop {
   stopName: string;
 }
 
+/**
+ * What the live traffic view was showing last, so it can restore itself instead of always falling back to
+ * bus 117. `focused` is null when the user has never operated the focus switch — that is not the same as
+ * false, which would mean they deliberately turned it off.
+ */
+export interface LiveTrafficView {
+  transportMode: string;
+  routeGroup: number;
+  focused: boolean | null;
+}
+
 export interface UserSettings {
   stopPointId: string;
   stopPointName: string;
   useAiInterpretation: boolean;
   recentStops?: RecentStop[];
   favouriteStops?: FavouriteStop[];
+  liveTrafficView?: LiveTrafficView | null;
 }
 
 /** One pickable stop in the favourites catalogue. Structurally like FavouriteStop but a separate contract. */

@@ -17,6 +17,7 @@ import {
   URL_BACKEND_LOGOUT,
   URL_BACKEND_SETTINGS,
   URL_BACKEND_RECENT_STOPS,
+  URL_BACKEND_LIVE_TRAFFIC_VIEW,
   URL_BACKEND_ADMIN_STATISTICS,
   URL_BACKEND_GTFS_STATUS,
   URL_BACKEND_GTFS_RESET,
@@ -28,7 +29,7 @@ import {
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, MonitoredRouteGroup, RecentStop, RouteData, RouteGroupStops, StatisticsData, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, LiveTrafficView, MonitoredRouteGroup, RecentStop, RouteData, RouteGroupStops, StatisticsData, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -340,6 +341,18 @@ export async function saveSettings(settings: UserSettings, setError: SetError): 
   } catch {
     setError("Kunde inte spara inställningar.");
     return false;
+  }
+}
+
+/**
+ * Remembers the live traffic view's selection. Fire-and-forget on purpose: this is a convenience, and a
+ * failed save must not put an error banner over a view that is working perfectly well.
+ */
+export async function saveLiveTrafficView(view: LiveTrafficView): Promise<void> {
+  try {
+    await backend.put(URL_BACKEND_LIVE_TRAFFIC_VIEW, view);
+  } catch {
+    // Nothing to tell the user — the view they are looking at is unaffected.
   }
 }
 
