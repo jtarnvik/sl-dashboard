@@ -38,7 +38,7 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 
 **`Main.tsx`** renders the main page (`/`). It derives `settingsData` with the priority chain: backend settings (logged-in) → `loadStopHint()` → `DEFAULT_SETTINGS`. It manages integer generation counters (`departuresGen`, `routesGen`, `deviationsGen`) used as `key` props on the panes — incrementing a counter forces a full remount and re-fetch of that pane.
 
-**`Layout.tsx`** wraps all routes with `Navbar`, an `ErrorBoundary`, and the `Settings` modal. It owns `settingsOpen` state and listens for the `openSettings` window event so the modal can be opened from any route.
+**`Layout.tsx`** wraps all routes with `Navbar`, an `ErrorBoundary`, and the `Settings` and `About` modals. It owns their open state and listens for the `openSettings` / `openAbout` window events so either modal can be opened from any route. `Settings` is rendered only for logged-in users; `About` is not gated, since it says nothing user-specific.
 
 ### Login states and visible content
 
@@ -58,6 +58,7 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 - Admin-only items at top: "Väntande användare" (with badge for pending count), "Användare", "Statistik"
 - "Mitt konto" — navigates to `/my-account`
 - "Inställningar" — dispatches `openSettings` window event (handled by `Layout`)
+- "Om appen" — dispatches `openAbout` window event (handled by `Layout`)
 - "Logga ut"
 
 The hamburger icon shows a red badge when there are pending access requests. The count is fetched on mount and on every menu open.
@@ -202,6 +203,7 @@ Custom events dispatched on `window` are used for cross-tree communication betwe
 | `"unauthorized"` | `backend.ts` (Axios response interceptor) | `App.tsx` | Forces logout when any API call returns 401 |
 | `"pendingCountChanged"` | `pending-users.tsx` (after approve/reject) | `NavMenu` | Refreshes the pending access request count badge |
 | `"openSettings"` | `NavMenu` (Inställningar menu item) | `Layout` | Opens the settings modal |
+| `"openAbout"` | `NavMenu` (Om appen menu item) | `Layout` | Opens the about modal |
 | `"deviationHidden"` | `deviation-modal/index.tsx` (after successful hide) | `Departures`, `Deviations`, `Routes` panes | Removes the hidden deviation (by `detail.id`) from each pane's local state |
 | `"hiddenDeviationsReset"` | `MyAccount` (after successful clear-all) | `Main` | Increments `departuresGen` and `deviationsGen` to force remount and re-fetch of both panes |
 | `"backendOffline"` | `backend.ts` (Axios response interceptor) | `App.tsx` | Sets `backendOffline = true` and clears `user` when any API call gets no response (network failure). Triggers the yellow offline banner and reverts UI to the not-logged-in view. A 30s retry loop restores state when the backend comes back. |
@@ -584,9 +586,6 @@ carried out: what is left should be what helps future work, not a record of how 
 **1 - FE/BE - Searching A - > B**
 Should include possibilty to share route, so same repose component?
 
-**2 - FE/BE - About dialog**
-Include version
-
 **3 - FE/BE, Bus tracking with push notification.** The most personally useful of these.
 A schematic of bus 117 — which now exists — where the user marks a specific bus as the one they intend to catch,
 and the backend sends a push notification when it passes a designated trigger stop. The use case is knowing when
@@ -628,6 +627,12 @@ The design notes worth keeping from these live in the GTFS chapter above. The re
   parent station id** — the goal was written assuming no id bridge existed, and that turned out to be true
   only of the *site* id — and that **rows that are not moving are not clickable**, because a planned
   departure has no vehicle in the realtime feed to point at.
+
+- **H — FE/BE, About dialog.** "Om appen" in the nav menu opens a modal with the application name, the
+  running backend version from `GET /api/public/version`, and the same contact address the GDPR page
+  publishes. The version endpoint is public and reads `BuildProperties`, reporting `"unknown"` when the app
+  runs from a build without `build-info` — the same optional-bean handling the terminal dashboard's
+  `VersionItem` uses.
 
 - **E — BE/infra, Backend moved from Render to the home Mac Mini (August 2026).** `sl.tarnvik.com` now talks to
   `api2.tarnvik.com`; the application code was unchanged, only where it runs. Render and Supabase are gone and

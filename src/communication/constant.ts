@@ -17,6 +17,7 @@ export const URL_BACKEND_GET_CHECK_AUTH = "/api/auth/me";
 export const URL_BACKEND_LOGIN = "/oauth2/authorization/google";
 export const URL_BACKEND_LOGOUT = "/api/auth/logout";
 export const URL_BACKEND_ACCESS_REQUEST = "/api/public/access-request";
+export const URL_BACKEND_VERSION = "/api/public/version";
 
 export const URL_BACKEND_ADMIN_ACCESS_REQUESTS = "/api/admin/access-requests";
 export const URL_BACKEND_ADMIN_ACCESS_REQUEST_COUNT = "/api/admin/access-requests/count";
@@ -52,6 +53,9 @@ export const STOP_HINT_KEY = "sl-dashboard-stop-hint";
 // Shared by the settings dialog and the live traffic schematic, which both offer to add a favourite: a cap
 // that disagreed between them would let one of them add an eleventh that the backend then silently drops.
 export const MAX_FAVOURITE_STOPS = 10;
+
+// The application's public name, as shown in the browser tab title and the about dialog.
+export const APP_NAME = "Nästa avgång";
 
 // Contact address for data protection questions, published on the GDPR page — GDPR artikel 13 requires the
 // controller to be reachable, so this has to be a real address rather than an invitation to "contact us".

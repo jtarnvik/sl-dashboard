@@ -27,6 +27,7 @@ import {
   URL_BACKEND_GTFS_RESOLVE_TRIP,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
+  URL_BACKEND_VERSION,
 } from "./constant.ts";
 import {AccessRequestItem, AllowedUserItem, FavouriteStop, GtfsDataStatus, LiveTrafficView, MonitoredRouteGroup, RecentStop, ResolvedTrip, RouteData, RouteGroupStops, StatisticsData, TripQuery, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
@@ -85,6 +86,17 @@ export async function requestAccess(email: string, message: string, setError: Se
   } catch {
     setError("Kunde inte skicka ansökan. Försök igen senare.");
     return false;
+  }
+}
+
+// No setError: the about dialog is informational, so a failed lookup degrades to "okänd" rather than
+// raising an error the user cannot act on.
+export async function fetchBackendVersion(): Promise<string | null> {
+  try {
+    const response = await backend.get<{ version: string }>(URL_BACKEND_VERSION);
+    return response.data.version;
+  } catch {
+    return null;
   }
 }
 

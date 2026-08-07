@@ -118,12 +118,18 @@ export function NavMenu({ logout, isAdmin }: Props) {
           >
             Mitt konto
           </button>
-          <hr className="border-gray-200" />
           <button
             className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
             onClick={() => { window.dispatchEvent(new Event('openSettings')); setMenuOpen(false); }}
           >
             Inställningar
+          </button>
+          <hr className="border-gray-200" />
+          <button
+            className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm cursor-pointer"
+            onClick={() => { window.dispatchEvent(new Event('openAbout')); setMenuOpen(false); }}
+          >
+            Om appen
           </button>
           <hr className="border-gray-200" />
           <button

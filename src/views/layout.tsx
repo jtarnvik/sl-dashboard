@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 
+import { About } from '../components/about';
 import { ErrorBoundryFallback } from '../components/error-boundry-fallback';
 import { Navbar } from '../components/navbar';
 import { OfflineBanner } from '../components/offline-banner';
@@ -18,6 +19,7 @@ export function Layout() {
   const { user, updateSettings } = useUser();
   const loginState = useUserLoginState();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
   const isOffline = loginState === UserLoginState.BackendOffline;
@@ -36,6 +38,12 @@ export function Layout() {
     const openSettings = () => setSettingsOpen(true);
     window.addEventListener('openSettings', openSettings);
     return () => window.removeEventListener('openSettings', openSettings);
+  }, []);
+
+  useEffect(() => {
+    const openAbout = () => setAboutOpen(true);
+    window.addEventListener('openAbout', openAbout);
+    return () => window.removeEventListener('openAbout', openAbout);
   }, []);
 
   async function handleSaveSettings(data: SettingsData, favourites: FavouriteStop[]) {
@@ -67,6 +75,7 @@ export function Layout() {
           onSave={handleSaveSettings}
         />
       )}
+      <About aboutOpen={aboutOpen} setAboutOpen={setAboutOpen} />
     </>
   );
 }
