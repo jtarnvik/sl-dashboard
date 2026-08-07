@@ -18,6 +18,7 @@ import {
   URL_BACKEND_SETTINGS,
   URL_BACKEND_RECENT_STOPS,
   URL_BACKEND_LIVE_TRAFFIC_VIEW,
+  URL_BACKEND_FAVOURITE_STOPS,
   URL_BACKEND_ADMIN_STATISTICS,
   URL_BACKEND_GTFS_STATUS,
   URL_BACKEND_GTFS_RESET,
@@ -30,7 +31,7 @@ import {
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, LiveTrafficView, MonitoredRouteGroup, RecentStop, ResolvedTrip, RouteData, RouteGroupStops, StatisticsData, TripQuery, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, FavouriteStop, GtfsDataStatus, LiveTrafficView, MonitoredRouteGroup, RecentStop, ResolvedTrip, RouteData, RouteGroupStops, StatisticsData, TripQuery, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -362,6 +363,24 @@ export async function saveSettings(settings: UserSettings, setError: SetError): 
     return true;
   } catch {
     setError("Kunde inte spara inställningar.");
+    return false;
+  }
+}
+
+/**
+ * Saves the favourite stops on their own, for the live traffic schematic where a stop is tapped directly.
+ * Its own endpoint because the view does not own the stop point and must not send it back.
+ *
+ * Deliberately not fire-and-forget like `saveLiveTrafficView` below: this is a change the user asked for and
+ * will come looking for again, so a silent failure would leave a stop bold that was never stored. The live
+ * traffic view renders an `ErrorHandler`, so `setError` is actually visible there.
+ */
+export async function saveFavouriteStops(favouriteStops: FavouriteStop[], setError: SetError): Promise<boolean> {
+  try {
+    await backend.put(URL_BACKEND_FAVOURITE_STOPS, { favouriteStops });
+    return true;
+  } catch {
+    setError("Kunde inte spara favorithållplatser.");
     return false;
   }
 }

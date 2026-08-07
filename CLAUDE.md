@@ -476,6 +476,26 @@ falls back to the plain timetable, and the delay is clamped to ±30 min.
 Stored per user as JSON in `user_settings.favourite_stops` (changeset 040) and delivered on `GET /api/auth/me`
 inside `SettingsResponse`, so the live traffic view needs no fetch of its own.
 
+**There are two ways in, and they are not interchangeable.** The settings dialog owns the whole list; the
+schematic toggles one stop at a time by a tap on its name, through
+`PUT /api/protected/settings/favourite-stops`.
+
+- **Bold is the only marker, and the name is the whole hit target.** A star on every row does not fit a
+  chain of 20 stops in a phone-height box. `StopRow`'s padding widens the touch target and must stay
+  symmetric — the row is centred by `-translate-y-1/2`, which halves the padded box, the same constraint
+  the vehicle triangle carries.
+- **The toggle must `stopPropagation`.** `Schematic`'s root clears the vehicle selection on any click, so
+  without it every favourite toggle would also wipe the countdowns drawn on those same rows.
+- **Its own endpoint, for the reason `live-traffic-view` has one:** the live view does not own
+  `stopPointId` / `useAiInterpretation`, and echoing them back on every tap would overwrite a stop changed
+  in the dialog meanwhile. Unlike `/settings`, a null list is a 400 — no cached-bundle callers to indulge.
+- **The cap is refused client-side**, in the amber notice bar at top priority. The backend truncates
+  silently, so leaving it to decide would leave the eleventh stop bold until the next reload.
+- The save is optimistic and reverts on failure, and unlike `saveLiveTrafficView` it does surface an error:
+  the user asked for this change and will look for it again later.
+- **The dialog is still the only way to remove an orphaned favourite** — a stop outside every focus window,
+  or one that has left the timetable, is on no schematic to be tapped.
+
 - **The stored `stopName` is load-bearing, not cosmetic.** The stop catalogue is empty whenever a parse has
   failed or a stop has left the timetable, and the stored name is then the only way the dialog can render an
   existing selection. Hence the "Valda (ej i aktuell trafikdata)" section, which is what lets such a favourite

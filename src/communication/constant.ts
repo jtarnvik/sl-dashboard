@@ -41,6 +41,7 @@ export const URL_BACKEND_GTFS_RESOLVE_TRIP = "/api/protected/gtfs/resolve-trip";
 export const URL_BACKEND_SETTINGS = "/api/protected/settings";
 export const URL_BACKEND_RECENT_STOPS = "/api/protected/settings/recent-stops";
 export const URL_BACKEND_LIVE_TRAFFIC_VIEW = "/api/protected/settings/live-traffic-view";
+export const URL_BACKEND_FAVOURITE_STOPS = "/api/protected/settings/favourite-stops";
 export const URL_BACKEND_DELETE_ACCOUNT = "/api/protected/account";
 export const URL_BACKEND_INTERPRET_DEVIATIONS = "/api/protected/deviations/interpret";
 export const URL_BACKEND_HIDE_DEVIATION = (id: number) => `/api/protected/deviations/${id}/hide`;
@@ -49,6 +50,11 @@ export const URL_BACKEND_HAS_HIDDEN_DEVIATIONS = "/api/protected/deviations/hidd
 
 export const DEFAULT_SETTINGS: SettingsData = { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen", useAiInterpretation: true };
 export const STOP_HINT_KEY = "sl-dashboard-stop-hint";
+
+// Mirrors MAX_FAVOURITE_STOPS in UserSettingsService — the backend is the enforcer, this is the affordance.
+// Shared by the settings dialog and the live traffic schematic, which both offer to add a favourite: a cap
+// that disagreed between them would let one of them add an eleventh that the backend then silently drops.
+export const MAX_FAVOURITE_STOPS = 10;
 
 // Contact address for data protection questions, published on the GDPR page — GDPR artikel 13 requires the
 // controller to be reachable, so this has to be a real address rather than an invitation to "contact us".

@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Switch } from '@headlessui/react';
 import { MdClose, MdExpandMore, MdWarningAmber } from 'react-icons/md';
 
-import { fetchGtfsDataStatus, fetchRouteData, fetchRouteGroups, saveLiveTrafficView } from '../communication/backend';
+import { fetchGtfsDataStatus, fetchRouteData, fetchRouteGroups, saveFavouriteStops, saveLiveTrafficView } from '../communication/backend';
+import { MAX_FAVOURITE_STOPS } from '../communication/constant';
 import { ErrorHandler } from '../components/error-handler';
 import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
@@ -16,7 +17,7 @@ import { useVisibility } from '../hook/use-visibility';
 import { toTransportationMode } from '../util/transport-mode';
 // The type shares its name with the component exported below, hence the alias — same convention the
 // `Deviation` collision uses elsewhere.
-import { GtfsDataStatus, LiveTrafficView as LiveTrafficViewSetting, MonitoredRouteGroup, RouteData, UserSettings } from '../types/backend';
+import { GtfsDataStatus, LiveStop, LiveTrafficView as LiveTrafficViewSetting, MonitoredRouteGroup, RouteData, UserSettings } from '../types/backend';
 
 // The line to fall back on when nothing was remembered — or when what was remembered no longer exists.
 // Without this the first group alphabetically wins, which is bus 112, a line kept only to exercise the
@@ -237,6 +238,12 @@ export function LiveTrafficView() {
   const [noticeDismissed, setNoticeDismissed] = useState(false);
 
   /**
+   * Why the last tap on a stop name did not mark it — only ever the cap today. Refused here rather than left
+   * to the backend, which truncates silently and would leave the eleventh stop bold until the next reload.
+   */
+  const [favouriteNotice, setFavouriteNotice] = useState<string | null>(null);
+
+  /**
    * The query string as it was on arrival. A ref for the same reason `storedViewRef` is one: the params are
    * cleared once they have been applied, and reading them from state would re-run the effect below.
    */
@@ -290,12 +297,18 @@ export function LiveTrafficView() {
   const vehicleOutsideWindow = selectedTripId !== null && routeData !== null && !selectedVehicleDrawn
     && (routeData.focus?.truncatedStart === true || routeData.focus?.truncatedEnd === true);
 
+  // The favourite note comes first: it describes what the user did a moment ago, while the other two
+  // describe the departure row that led here.
   const notice = noticeDismissed
     ? null
-    : vehicleOutsideWindow
-      ? 'Fordonet är ännu utanför det visade avsnittet.'
-      : (resolveOutcome ? RESOLVE_MESSAGES[resolveOutcome] ?? null : null);
-  const canWiden = vehicleOutsideWindow && selectedGroup !== null && !isFocusLocked(selectedGroup);
+    : favouriteNotice
+      ?? (vehicleOutsideWindow
+        ? 'Fordonet är ännu utanför det visade avsnittet.'
+        : (resolveOutcome ? RESOLVE_MESSAGES[resolveOutcome] ?? null : null));
+  // Only offered when the note actually is the outside-the-window one — the favourite note takes the bar
+  // over, and a "show the whole line" link under it would answer a question nobody asked.
+  const canWiden = favouriteNotice === null && vehicleOutsideWindow && selectedGroup !== null
+    && !isFocusLocked(selectedGroup);
 
   useEffect(() => {
     setHeading('Aktuell trafik');
@@ -410,8 +423,36 @@ export function LiveTrafficView() {
     }
   }
 
+  /**
+   * Marks or unmarks the tapped stop. The context is patched first so the name goes bold under the finger;
+   * waiting on the round trip would feel broken next to a view that otherwise only moves every eight
+   * seconds. A rejected save puts it back and says so — unlike the remembered group and focus, this is a
+   * change the user will come looking for later, so it must not fail quietly.
+   */
+  function handleToggleFavourite(stop: LiveStop) {
+    const current = user?.settings?.favouriteStops ?? [];
+    const isFavourite = current.some(favourite => favourite.stopId === stop.stopId);
+    if (!isFavourite && current.length >= MAX_FAVOURITE_STOPS) {
+      setFavouriteNotice(`Du kan ha högst ${MAX_FAVOURITE_STOPS} favorithållplatser — ta bort någon först.`);
+      setNoticeDismissed(false);
+      return;
+    }
+
+    const next = isFavourite
+      ? current.filter(favourite => favourite.stopId !== stop.stopId)
+      : [...current, { stopId: stop.stopId, stopName: stop.stopName }];
+    setFavouriteNotice(null);
+    updateSettings({ favouriteStops: next });
+    saveFavouriteStops(next, setError).then(saved => {
+      if (!saved) {
+        updateSettings({ favouriteStops: current });
+      }
+    });
+  }
+
   function clearNotice() {
     setResolveOutcome(null);
+    setFavouriteNotice(null);
     setNoticeDismissed(false);
   }
 
@@ -467,6 +508,7 @@ export function LiveTrafficView() {
               <LiveTrafficGraph
                 routeData={routeData}
                 favouriteStopIds={favouriteStopIds}
+                onToggleFavourite={handleToggleFavourite}
                 selectedTripId={selectedTripId}
                 onSelectVehicle={setSelectedTripId}
               />

@@ -6,6 +6,8 @@ type LiveTrafficGraphProps = {
   routeData: RouteData | null;
   /** Stops the user has marked as favourites, by parent station id. Rendered emphasised. */
   favouriteStopIds?: ReadonlySet<string>;
+  /** Marks or unmarks a stop as a favourite, from a tap on its name. Omit to render the names as plain text. */
+  onToggleFavourite?: (stop: LiveStop) => void;
   /** The vehicle whose times are shown, by trip id. Null when nothing is selected. */
   selectedTripId: string | null;
   onSelectVehicle: (tripId: string | null) => void;
@@ -163,6 +165,15 @@ type StopRowProps = {
   countdown: string | null;
   /** Which side of the axis the countdown goes on — the side the selected vehicle is travelling towards. */
   countdownDown: boolean;
+  /** Marks or unmarks this stop as a favourite. Absent when the schematic is shown without that ability. */
+  onToggleFavourite?: (stop: LiveStop) => void;
+}
+
+/** The name's own classes, shared by the button and the plain-span form so the two are indistinguishable. */
+const STOP_NAME_CLASS = 'min-w-0 truncate text-xs';
+
+function stopNameEmphasis(favourite: boolean): string {
+  return favourite ? 'font-bold text-gray-900' : 'text-gray-600';
 }
 
 /**
@@ -173,17 +184,39 @@ type StopRowProps = {
  * labels follow. The two sides are built differently because the row itself only spans the left region: an
  * upward countdown is an ordinary flex child and shortens the dash to make room, while a downward one has
  * to be positioned against the axis from outside the row.
+ * <p>
+ * The name is the favourite toggle, and bold is the only thing that marks the result — a schematic this
+ * dense has no room for a star on every row. The padding that widens the touch target must stay symmetric:
+ * the row is centred on its position by `-translate-y-1/2`, which halves the padded box, so anything
+ * one-sided would drag the name off the stop it belongs to. Same constraint as the vehicle triangle below.
  */
-function StopRow({ stop, y, favourite, countdown, countdownDown }: StopRowProps) {
+function StopRow({ stop, y, favourite, countdown, countdownDown, onToggleFavourite }: StopRowProps) {
+  function handleToggle(event: React.MouseEvent) {
+    // Without this the click reaches the container's deselect handler and every favourite toggle would also
+    // drop the selected vehicle — and with it the countdowns on these very rows.
+    event.stopPropagation();
+    onToggleFavourite?.(stop);
+  }
+
   return (
     <>
       <div
         className="absolute left-0 flex -translate-y-1/2 items-center gap-2"
         style={{ top: `${y * 100}%`, right: `${100 - AXIS_X_PERCENT}%` }}
       >
-        <span className={`min-w-0 truncate text-xs ${favourite ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
-          {stop.stopName}
-        </span>
+        {onToggleFavourite ? (
+          <button
+            type="button"
+            onClick={handleToggle}
+            aria-pressed={favourite}
+            aria-label={`${favourite ? 'Ta bort' : 'Lägg till'} ${stop.stopName} som favorithållplats`}
+            className={`${STOP_NAME_CLASS} ${stopNameEmphasis(favourite)} -my-1 cursor-pointer py-1 text-left`}
+          >
+            {stop.stopName}
+          </button>
+        ) : (
+          <span className={`${STOP_NAME_CLASS} ${stopNameEmphasis(favourite)}`}>{stop.stopName}</span>
+        )}
         <span className="h-px min-w-3 flex-1 bg-gray-300" />
         {/* The dot below is absolutely positioned, so it reserves no space in the row and the countdown
             would otherwise run right up to the axis and under it. `pr-3` clears the dot's 4px radius and
@@ -276,6 +309,7 @@ type SchematicProps = {
   vehicles: LiveVehicle[];
   focus: RouteFocus | null;
   favouriteStopIds?: ReadonlySet<string>;
+  onToggleFavourite?: (stop: LiveStop) => void;
   selectedTripId: string | null;
   onSelectVehicle: (tripId: string | null) => void;
 }
@@ -284,7 +318,8 @@ type SchematicProps = {
  * The drawing itself, split from {@link LiveTrafficGraph} so the guards there can return before any hook
  * runs. Everything below this point can assume a chain of at least two stops.
  */
-function Schematic({ liveTrip, vehicles, focus, favouriteStopIds, selectedTripId, onSelectVehicle }: SchematicProps) {
+function Schematic({ liveTrip, vehicles, focus, favouriteStopIds, onToggleFavourite, selectedTripId,
+                     onSelectVehicle }: SchematicProps) {
   const stops = liveTrip.stops;
   const span = axisSpan(focus);
 
@@ -335,6 +370,7 @@ function Schematic({ liveTrip, vehicles, focus, favouriteStopIds, selectedTripId
               favourite={favouriteStopIds?.has(stop.stopId) ?? false}
               countdown={departure === undefined ? null : countdownLabel(departure, now)}
               countdownDown={countdownDown}
+              onToggleFavourite={onToggleFavourite}
             />
           );
         })}
@@ -364,7 +400,8 @@ function Schematic({ liveTrip, vehicles, focus, favouriteStopIds, selectedTripId
   );
 }
 
-export function LiveTrafficGraph({ routeData, favouriteStopIds, selectedTripId, onSelectVehicle }: LiveTrafficGraphProps) {
+export function LiveTrafficGraph({ routeData, favouriteStopIds, onToggleFavourite, selectedTripId,
+                                   onSelectVehicle }: LiveTrafficGraphProps) {
   if (!routeData) {
     return <p className="text-sm text-gray-600">Hämtar trafikdata...</p>;
   }
@@ -381,6 +418,7 @@ export function LiveTrafficGraph({ routeData, favouriteStopIds, selectedTripId, 
       vehicles={routeData.vehicles}
       focus={routeData.focus}
       favouriteStopIds={favouriteStopIds}
+      onToggleFavourite={onToggleFavourite}
       selectedTripId={selectedTripId}
       onSelectVehicle={onSelectVehicle}
     />

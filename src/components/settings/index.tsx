@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 
 import { fetchRouteGroupStops } from "../../communication/backend.ts";
-import { DEFAULT_SETTINGS } from "../../communication/constant.ts";
+import { DEFAULT_SETTINGS, MAX_FAVOURITE_STOPS } from "../../communication/constant.ts";
 import { TransportationIconCommon } from "../common/line";
 import { ModalDialog } from "../common/modal-dialog";
 import { SLButton } from "../common/sl-button";
@@ -11,9 +11,6 @@ import { FavouriteStop, RouteGroupStops } from "../../types/backend.ts";
 import { StopFinderLocation } from "../../types/sl-journeyplaner-responses.ts";
 import { toTransportationMode } from "../../util/transport-mode.ts";
 import "./input.css";
-
-/** Mirrors MAX_FAVOURITE_STOPS in UserSettingsService — the backend is the enforcer, this is the affordance. */
-const MAX_FAVOURITE_STOPS = 10;
 
 type Props = {
   settingsOpen: boolean,
