@@ -49,6 +49,12 @@ export const URL_BACKEND_HAS_HIDDEN_DEVIATIONS = "/api/protected/deviations/hidd
 export const DEFAULT_SETTINGS: SettingsData = { stopPointId: SITE_SKOGSLOPARVAGEN_16_CHAR, stopPointName: "Skogslöparvägen", useAiInterpretation: true };
 export const STOP_HINT_KEY = "sl-dashboard-stop-hint";
 
+// Contact address for data protection questions, published on the GDPR page — GDPR artikel 13 requires the
+// controller to be reachable, so this has to be a real address rather than an invitation to "contact us".
+// Deliberately a dedicated address and a single constant: it is on a public page and will be harvested, so
+// replacing it must cost one line rather than a search through the views.
+export const CONTACT_EMAIL = "sl@tarnvik.com";
+
 // Focus stops for deviation filtering (StopArea.id from the deviations API).
 // When non-empty, stop-specific deviations are only shown if their stop matches one of these IDs.
 // Deviations with no stop scope (line-wide) are always shown.

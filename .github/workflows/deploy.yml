@@ -1,3 +1,9 @@
+# Builds the site and publishes it to GitHub Pages.
+#
+# How the site actually gets served: this workflow pushes the contents of `dist/` to the `gh-pages`
+# branch, and GitHub's own "pages build and deployment" workflow then picks that branch up and serves it.
+# That second workflow has no file in this repository and cannot be edited — so a green run here is only
+# half the story, and `gh-pages` having moved is the real confirmation that a deploy landed.
 name: Deploy
 
 on:
@@ -9,47 +15,50 @@ on:
   # current main without inventing a commit to do it.
   workflow_dispatch:
 
+# Only what the publish step needs: it pushes a commit to gh-pages. Naming any permission drops every
+# other scope to none, so this is narrower than the repository default rather than wider.
+permissions:
+  contents: write
+
+# Two deploys of one site must not race. A newer run supersedes an older one rather than both pushing to
+# gh-pages and leaving whichever finished last in place.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
 jobs:
-  build:
-    name: Build
+  deploy:
+    name: Build and deploy
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Check out the repository
+        uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      # `cache: npm` is stated explicitly rather than relying on the automatic caching setup-node v5+
+      # applies, because that only triggers on a `packageManager` field in package.json, which this
+      # project does not have.
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
+          cache: npm
 
+      # `npm ci` installs exactly what package-lock.json pins and fails if the two have drifted, which is
+      # what a deploy wants. It reads .npmrc, so legacy-peer-deps applies here as it does locally.
       - name: Install dependencies
-        uses: bahmutov/npm-install@v1
+        run: npm ci
 
-      - name: Build project
+      # `npm run build` is `tsc -b && vite build`, so a type error fails the deploy before anything is
+      # published. There are no tests in this project to run.
+      - name: Build
         run: npm run build
 
-      - name: Upload production-ready build files
-        uses: actions/upload-artifact@v4
-        with:
-          name: production-files
-          path: ./dist
-
-  deploy:
-    name: Deploy
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: production-files
-          path: ./dist
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      # Guarded rather than the whole job, so a manual run against another branch still builds — a free
+      # check — but can never publish it.
+      - name: Publish to the gh-pages branch
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
