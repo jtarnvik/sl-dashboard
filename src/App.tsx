@@ -16,7 +16,6 @@ import { MyAccount } from './views/my-account.tsx';
 import { PendingUsers } from './views/admin/pending-users.tsx';
 import { ExistingUsers } from './views/admin/existing-users.tsx';
 import { Statistics } from './views/admin/statistics.tsx';
-import { GtfsStatusView } from './views/admin/gtfs-status.tsx';
 import { LiveTrafficView } from './views/live-traffic.tsx';
 import { SharedRouteView } from './views/shared-route.tsx';
 import './App.css';
@@ -31,7 +30,6 @@ const router = createHashRouter([
       { path: '/admin/pending', element: <PendingUsers /> },
       { path: '/admin/users', element: <ExistingUsers /> },
       { path: '/admin/statistics', element: <Statistics /> },
-      { path: '/admin/gtfs-status', element: <GtfsStatusView /> },
       { path: '/gdpr', element: <Gdpr /> },
       { path: '/route/:id', element: <SharedRouteView /> },
     ],

@@ -12,7 +12,6 @@ import {SLButton} from "../../common/sl-button";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
 import {ScanningUnderline} from "../../common/scanning-underline";
 import {BackendInterpretationResult, EnrichedDeviation, isShown, isValidDeviationText} from "../../../types/deviations-common.ts";
-import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
 import {MonitoredRouteGroup, ResolvedTrip, TripQuery} from "../../../types/backend.ts";
@@ -73,7 +72,6 @@ type Props = {
 }
 
 export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
-  const {inDebugMode} = useContext(InDebugModeContext);
   const {setError} = useContext(ErrorContext);
   const navigate = useNavigate();
 
@@ -90,7 +88,6 @@ export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
   const [lastUpdated, setLastUpdated] = useState<DateTime | undefined>(undefined);
   const [diffSinceLastUpdated, setDiffSinceLastUpdated] = useState<Duration | undefined>(undefined);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
-  const [jsonOpen, setJsonOpen] = useState<boolean>(false);
   const [selectedTransportMode, setSelectedTransportMode] = useState<TransportMode | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -268,10 +265,6 @@ export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
     setLegendOpen(true);
   }
 
-  function handleJSON() {
-    setJsonOpen(true);
-  }
-
   const departurePres: Departure[] = sortDeparturesByDestination(departures?.departures);
   const isGrouped = departurePres.length > MAX_DEPARTURES_BEFORE_GROUPING;
   const transportModes: TransportMode[] = [...new Set(departurePres.map(d => d.line.transport_mode))];
@@ -413,7 +406,6 @@ export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
           ))}
         </div>
         <div className="flex items-center space-x-1">
-          {inDebugMode && <SLButton onClick={handleJSON} thin>JSON</SLButton>}
           <SLButton onClick={updateDepartures} thin><MdRefresh className="h-5 w-4" /></SLButton>
           <SLButton onClick={handleLegend} thin><MdInfoOutline className="h-5 w-4" /></SLButton>
         </div>
@@ -426,16 +418,6 @@ export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
         <Legend legendData={symbols} title="Linjesymbol" />
         <Legend legendData={destinations} title="Destination" />
         <Legend legendData={scanLegend} title="Avvikelser" />
-      </ModalDialog>
-      <ModalDialog
-        isOpen={jsonOpen}
-        onClose={() => setJsonOpen(false)}
-        title={"Response Data"}
-        scrollable={true}
-      >
-        <pre>
-          {JSON.stringify(departures, null, 2)}
-        </pre>
       </ModalDialog>
     </Card>
   )

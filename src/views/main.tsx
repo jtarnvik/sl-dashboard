@@ -7,21 +7,16 @@ import { ErrorHandler } from '../components/error-handler';
 import { Departures } from '../components/pane/departures';
 import { Deviations } from '../components/pane/deviations';
 import { Routes } from '../components/pane/routes';
-import { SLButton } from '../components/common/sl-button';
 import { View } from '../components/common/view';
-import ErrorContext from '../contexts/error-context.ts';
-import InDebugModeContext from '../contexts/debug-context.ts';
 import PageTitleContext from '../contexts/page-title-context.ts';
 import { LoginTeaser } from '../components/pane/login-teaser';
 import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user.ts';
 import { MonitoredRouteGroup } from '../types/backend.ts';
 
 export function Main() {
-  const { setError } = useContext(ErrorContext);
   const { setHeading } = useContext(PageTitleContext);
   const { user } = useUser();
   const loginState = useUserLoginState();
-  const { inDebugMode } = useContext(InDebugModeContext);
 
   // Generation counters — increment to force a full remount and re-fetch of the pane.
   // Each counter is updated by the events that should trigger a refresh of that pane:
@@ -98,13 +93,6 @@ export function Main() {
         </div>
       ) : (
         loginState === UserLoginState.NotLoggedIn && <LoginTeaser />
-      )}
-      {inDebugMode && (
-        <div className="flex gap-2">
-          <SLButton thin onClick={() => setError("Testfel: något gick snett.", () => { /* no-op retry */ })}>
-            Utlös testfel
-          </SLButton>
-        </div>
       )}
     </View>
   );

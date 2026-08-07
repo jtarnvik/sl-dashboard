@@ -5,15 +5,12 @@ import {useNavigate} from "react-router-dom";
 import {convertInfoMessages} from "../../common/deviation-modal";
 import {DeviationWrapper} from "../../common/deviation-wrapper";
 import {ScanningUnderline} from "../../common/scanning-underline";
-import {ModalDialog} from "../../common/modal-dialog";
-import {SLButton} from "../../common/sl-button";
 import {SldBreadCrumbs} from "./sld-bread-crumbs.tsx";
 import {SldDuration} from "./sld-duration.tsx";
 import {SldJourneyDetails} from "./sld-journey-details.tsx";
 import {SldJourneyTitle} from "./sld-journey-title.tsx";
 import {SldSchedule} from "./sld-schedule.tsx";
 import ErrorContext from "../../../contexts/error-context.ts";
-import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {findJourneyLegs, isFootPathForLeg} from "../../../util/journey-utils.ts";
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
 import {BackendInterpretationResult, EnrichedDeviation, isShown} from "../../../types/deviations-common.ts";
@@ -37,8 +34,6 @@ function journeyHasDeviationsToInterpret(journey: Journey): boolean {
 export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false, interpretationPending = false}: Props) {
   const [showLegs, setShowLegs] = useState<boolean>(false);
   const expanded = alwaysExpanded || showLegs;
-  const [jsonOpen, setJsonOpen] = useState<boolean>(false);
-  const {inDebugMode} = useContext(InDebugModeContext);
   const {setError} = useContext(ErrorContext);
   const loginState = useUserLoginState();
   const navigate = useNavigate();
@@ -90,17 +85,6 @@ export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false
 
   return (
     <div className="relative">
-      <ModalDialog
-        isOpen={jsonOpen}
-        onClose={() => setJsonOpen(false)}
-        title={"Response Data"}
-        scrollable={true}
-      >
-        <pre>
-          {JSON.stringify(headerLegs.origin.leg.origin, null, 2)}
-        </pre>
-      </ModalDialog>
-
       <div
         className={journeyClasses}
         onClick={alwaysExpanded ? undefined : () => setShowLegs(!showLegs)}
@@ -120,9 +104,6 @@ export function SldJourney({journey, deviationEnrichment, alwaysExpanded = false
             <SldJourneyTitle headerLegs={headerLegs} />
             <div className="flex justify-between gap-2">
               <SldBreadCrumbs legs={adjustedLegs} deviationEnrichment={deviationEnrichment} />
-              {inDebugMode &&
-                <SLButton onClick={() => setJsonOpen(true)} thin>JSON</SLButton>
-              }
             </div>
           </div>
           <div className="flex items-center gap-2">

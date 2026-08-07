@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { fetchRouteGroupStops } from "../../communication/backend.ts";
 import { DEFAULT_SETTINGS, MAX_FAVOURITE_STOPS } from "../../communication/constant.ts";
@@ -6,7 +6,6 @@ import { TransportationIconCommon } from "../common/line";
 import { ModalDialog } from "../common/modal-dialog";
 import { SLButton } from "../common/sl-button";
 import { StopAutocomplete } from "../common/stop-autocomplete";
-import InDebugModeContext from "../../contexts/debug-context.ts";
 import { FavouriteStop, RouteGroupStops } from "../../types/backend.ts";
 import { StopFinderLocation } from "../../types/sl-journeyplaner-responses.ts";
 import { toTransportationMode } from "../../util/transport-mode.ts";
@@ -21,8 +20,6 @@ type Props = {
 }
 
 export function Settings({settingsOpen, setSettingsOpen, currentSettings, currentFavourites, onSave}: Props) {
-  const {inDebugMode, setInDebugMode} = useContext(InDebugModeContext);
-  const [pendingDebugMode, setPendingDebugMode] = useState<boolean>(inDebugMode);
   const [pendingUseAiInterpretation, setPendingUseAiInterpretation] = useState<boolean>(currentSettings.useAiInterpretation);
   const [selectedStop, setSelectedStop] = useState<SettingsData | null>(currentSettings);
   const [autocompleteKey, setAutocompleteKey] = useState(0);
@@ -66,7 +63,6 @@ export function Settings({settingsOpen, setSettingsOpen, currentSettings, curren
   }
 
   function handleClose() {
-    setPendingDebugMode(inDebugMode);
     setPendingUseAiInterpretation(currentSettings.useAiInterpretation);
     setSelectedStop(currentSettings);
     setAutocompleteInitialQuery(currentSettings.stopPointName);
@@ -79,7 +75,6 @@ export function Settings({settingsOpen, setSettingsOpen, currentSettings, curren
     if (!selectedStop) {
       return;
     }
-    setInDebugMode(pendingDebugMode);
     onSave({ ...selectedStop, useAiInterpretation: pendingUseAiInterpretation }, pendingFavourites);
     setSettingsOpen(false);
   }
@@ -101,18 +96,6 @@ export function Settings({settingsOpen, setSettingsOpen, currentSettings, curren
           <p className="text-sm text-gray-500">
             När aktiv filtreras tillgänglighetsavvikelser bort och du kan dölja enskilda avvikelser.
           </p>
-        </div>
-
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={pendingDebugMode}
-              onChange={(e) => setPendingDebugMode(e.target.checked)}
-              className="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
-            />
-            <span className="font-medium text-gray-700">Debug-läge</span>
-          </label>
         </div>
 
         <div className="space-y-2">

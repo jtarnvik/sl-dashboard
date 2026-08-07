@@ -8,7 +8,6 @@ import { OfflineBanner } from '../components/offline-banner';
 import { Settings } from '../components/settings';
 import { saveSettings } from '../communication/backend.ts';
 import ErrorContext from '../contexts/error-context.ts';
-import InDebugModeContext from '../contexts/debug-context.ts';
 import { useUser, useUserLoginState, UserLoginState } from '../hook/use-user.ts';
 import { FavouriteStop, UserSettings } from '../types/backend.ts';
 import { loadStopHint } from '../util/stop-hint.ts';
@@ -19,7 +18,6 @@ export function Layout() {
   const { user, updateSettings } = useUser();
   const loginState = useUserLoginState();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [inDebugMode, setInDebugMode] = useState(false);
 
   const isLoggedIn = loginState === UserLoginState.LoggedIn;
   const isOffline = loginState === UserLoginState.BackendOffline;
@@ -49,7 +47,7 @@ export function Layout() {
   }
 
   return (
-    <InDebugModeContext.Provider value={{ inDebugMode, setInDebugMode }}>
+    <>
       <Navbar />
       <div className="h-14" />
       {isOffline && (
@@ -69,6 +67,6 @@ export function Layout() {
           onSave={handleSaveSettings}
         />
       )}
-    </InDebugModeContext.Provider>
+    </>
   );
 }

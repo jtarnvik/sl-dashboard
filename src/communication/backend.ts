@@ -20,9 +20,6 @@ import {
   URL_BACKEND_LIVE_TRAFFIC_VIEW,
   URL_BACKEND_FAVOURITE_STOPS,
   URL_BACKEND_ADMIN_STATISTICS,
-  URL_BACKEND_GTFS_STATUS,
-  URL_BACKEND_GTFS_RESET,
-  URL_BACKEND_GTFS_RUN_PIPELINE,
   URL_BACKEND_GTFS_ROUTE_GROUPS,
   URL_BACKEND_GTFS_DATA_STATUS,
   URL_BACKEND_GTFS_ROUTE_DATA,
@@ -236,55 +233,6 @@ export async function fetchSharedRoute(id: string): Promise<Journey | null> {
     return JSON.parse(response.data.routeData) as Journey;
   } catch {
     return null;
-  }
-}
-
-export type GtfsStatusData = {
-  date: string;
-  status: string;
-  errorMessage: string | null;
-  downloadStartTime: string | null;
-  downloadEndTime: string | null;
-  unzipStartTime: string | null;
-  unzipEndTime: string | null;
-  parseStartTime: string | null;
-  parseEndTime: string | null;
-};
-
-export async function fetchGtfsStatus(setError: SetError): Promise<GtfsStatusData | null> {
-  try {
-    const response = await backend.get<GtfsStatusData>(URL_BACKEND_GTFS_STATUS);
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
-      return null;
-    }
-    setError("Could not fetch GTFS status.");
-    return null;
-  }
-}
-
-export async function resetGtfsPipeline(setError: SetError): Promise<boolean> {
-  try {
-    await backend.post(URL_BACKEND_GTFS_RESET);
-    return true;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 409) {
-      setError("Reset not allowed for current status.");
-    } else {
-      setError("Could not reset GTFS pipeline.");
-    }
-    return false;
-  }
-}
-
-export async function runGtfsPipeline(setError: SetError): Promise<boolean> {
-  try {
-    await backend.post(URL_BACKEND_GTFS_RUN_PIPELINE);
-    return true;
-  } catch {
-    setError("Could not run GTFS pipeline.");
-    return false;
   }
 }
 

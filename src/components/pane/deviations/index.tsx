@@ -17,7 +17,6 @@ import { ScanningUnderline } from '../../common/scanning-underline';
 import { MdInfoOutline } from 'react-icons/md';
 import { ModalDialog } from '../../common/modal-dialog';
 import { SLButton } from '../../common/sl-button';
-import InDebugModeContext from '../../../contexts/debug-context.ts';
 import { Legend } from '../departures/legend.tsx';
 import { AbortControllerState } from '../../../types/communication.ts';
 import { Deviation } from '../../../types/deviations.ts';
@@ -34,7 +33,6 @@ import ErrorContext from '../../../contexts/error-context.ts';
  * https://deviations.integration.sl.se/v1/messages?future=false&line=17&line=18&line=19&transport_mode=METRO
  */
 export function Deviations() {
-  const { inDebugMode } = useContext(InDebugModeContext);
   const { setError } = useContext(ErrorContext);
 
   const latestBusRequest = useRef<AbortControllerState | undefined>(undefined);
@@ -151,9 +149,6 @@ export function Deviations() {
             />
           </ScanningUnderline>
         </div>
-        {inDebugMode &&
-          <SLButton onClick={() => {}} thin>JSON</SLButton>
-        }
         <SLButton onClick={() => setLegendOpen(true)} thin><MdInfoOutline className="h-5 w-4" /></SLButton>
       </div>
       <ModalDialog isOpen={legendOpen} onClose={() => setLegendOpen(false)} title="Symboler" scrollable={false}>

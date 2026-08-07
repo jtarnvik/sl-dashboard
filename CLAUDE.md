@@ -38,7 +38,7 @@ This is a React 19 + TypeScript + Vite + Tailwind CSS dashboard for Stockholm pu
 
 **`Main.tsx`** renders the main page (`/`). It derives `settingsData` with the priority chain: backend settings (logged-in) → `loadStopHint()` → `DEFAULT_SETTINGS`. It manages integer generation counters (`departuresGen`, `routesGen`, `deviationsGen`) used as `key` props on the panes — incrementing a counter forces a full remount and re-fetch of that pane.
 
-**`Layout.tsx`** wraps all routes with `Navbar`, an `ErrorBoundary`, and the `Settings` modal. It owns `settingsOpen` state and listens for the `openSettings` window event so the modal can be opened from any route. It also owns `InDebugModeContext` — the provider lives here (not in `Main`) so that `Settings` and all pane components share the same context instance.
+**`Layout.tsx`** wraps all routes with `Navbar`, an `ErrorBoundary`, and the `Settings` modal. It owns `settingsOpen` state and listens for the `openSettings` window event so the modal can be opened from any route.
 
 ### Login states and visible content
 
@@ -82,7 +82,7 @@ All routes except `/denied` are rendered inside `Layout`, which wraps them with 
 
 | Component | What it does |
 |-----------|-------------|
-| `src/components/pane/departures/` | Polls SL departures API every 60s for the selected stop. Animates departing rows before removing them. Sends deviation texts to the backend for AI interpretation; rows with pending interpretations show a `ScanningUnderline` indicator. Shows a legend modal and (in debug mode) raw JSON. |
+| `src/components/pane/departures/` | Polls SL departures API every 60s for the selected stop. Animates departing rows before removing them. Sends deviation texts to the backend for AI interpretation; rows with pending interpretations show a `ScanningUnderline` indicator. Shows a legend modal. |
 | `src/components/pane/deviations/` | Fetches deviation messages for hardcoded lines: trains 43/44, bus 117, metro 17/18/19. Sends texts to the backend for AI interpretation. Shows colored transport icons (orange = has deviations); a `ScanningUnderline` indicator appears under each icon while its interpretation is in flight. |
 | `src/components/pane/routes/` | On-demand route planner. Gets browser geolocation, then calls the SL journey planner API to find trips to the selected stop. User picks max walk time (15 or 60 min). Journey cards show AI-interpreted deviation info: the duration text turns orange and opens a deviation modal via `DeviationWrapper`; per-leg warning icons in `SldBreadCrumbs` indicate which segment is affected. |
 
@@ -543,9 +543,9 @@ Committed follow-ups, to be done in sequence.
    step 1 specifically so that step 2 can be done safely.
 
 2. **Learn, then fix `react-hooks/set-state-in-effect`.** The `eslint-plugin-react-hooks` 7.1 bump added this
-   rule; it is currently downgraded to `warn` in `eslint.config.js`. Four sites trigger it: `views/shared-route.tsx`,
-   `pane/departures`, `common/deviation-modal`, `admin/gtfs-status`. First understand *why* synchronous setState
-   in an effect causes cascading renders, and which of the four are true positives versus conservative warnings
+   rule; it is currently downgraded to `warn` in `eslint.config.js`. Three sites trigger it: `views/shared-route.tsx`,
+   `pane/departures`, `common/deviation-modal`. First understand *why* synchronous setState
+   in an effect causes cascading renders, and which of the three are true positives versus conservative warnings
    (several set state after an `await`, which React considers acceptable). Then fix them deliberately, one at a
    time — ideally after (1) so the changes are covered by tests. Restore the rule to `error` once the sites are
    clean.
@@ -581,7 +581,13 @@ carried out: what is left should be what helps future work, not a record of how 
 
 ## Goals, in order
 
-**1 - FE/BE, Bus tracking with push notification.** The most personally useful of these.
+**1 - FE/BE - Searching A - > B**
+Should include possibilty to share route, so same repose component?
+
+**2 - FE/BE - About dialog**
+Include version
+
+**3 - FE/BE, Bus tracking with push notification.** The most personally useful of these.
 A schematic of bus 117 — which now exists — where the user marks a specific bus as the one they intend to catch,
 and the backend sends a push notification when it passes a designated trigger stop. The use case is knowing when
 to leave for the stop, six minutes' walk away.
@@ -590,7 +596,7 @@ to leave for the stop, six minutes' walk away.
 - The one design question: a tracked bus has to survive the backend forgetting it. The poll loop shuts down five
   minutes after the last request, so a "notify me" registration must outlive it and drive its own polling.
 
-**2 - FE, Journey planner route map.**
+**4 - FE, Journey planner route map.**
 Show the routes suggested by the route planner pane on a map — the whole journey and each individual leg. The
 coordinates are already in the journey planner API response, so no GTFS realtime data is involved. Choosing and
 integrating a map library (Leaflet or MapLibre) is part of this goal; the frontend has none today.
