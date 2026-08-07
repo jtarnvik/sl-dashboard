@@ -26,10 +26,11 @@ import {
   URL_BACKEND_GTFS_DATA_STATUS,
   URL_BACKEND_GTFS_ROUTE_DATA,
   URL_BACKEND_GTFS_ROUTE_GROUP_STOPS,
+  URL_BACKEND_GTFS_RESOLVE_TRIP,
   URL_BACKEND_SHARED_ROUTE_CREATE,
   URL_BACKEND_SHARED_ROUTE_GET,
 } from "./constant.ts";
-import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, LiveTrafficView, MonitoredRouteGroup, RecentStop, RouteData, RouteGroupStops, StatisticsData, User, UserSettings} from "../types/backend.ts";
+import {AccessRequestItem, AllowedUserItem, GtfsDataStatus, LiveTrafficView, MonitoredRouteGroup, RecentStop, ResolvedTrip, RouteData, RouteGroupStops, StatisticsData, TripQuery, User, UserSettings} from "../types/backend.ts";
 import {BackendInterpretationResult} from "../types/deviations-common.ts";
 import {Journey} from "../types/sl-journeyplaner-responses.ts";
 
@@ -309,6 +310,22 @@ export async function fetchRouteData(
     return response.data;
   } catch {
     setError("Kunde inte hämta ruttdata.");
+    return null;
+  }
+}
+
+/**
+ * Finds the live vehicle behind one departure row.
+ *
+ * No `setError`: this is a convenience on the way into a view that works without it, so a failure returns
+ * null and the caller opens the line anyway. An error banner over a working schematic would be out of
+ * proportion — the same reasoning as `saveLiveTrafficView`.
+ */
+export async function resolveTrip(query: TripQuery): Promise<ResolvedTrip | null> {
+  try {
+    const response = await backend.get<ResolvedTrip>(URL_BACKEND_GTFS_RESOLVE_TRIP, { params: query });
+    return response.data;
+  } catch {
     return null;
   }
 }

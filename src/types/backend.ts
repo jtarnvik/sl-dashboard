@@ -182,3 +182,29 @@ export interface RouteData {
   vehicles: LiveVehicle[];
   focus: RouteFocus | null;
 }
+
+/**
+ * How an attempt to find the live vehicle behind a departure row ended. Only `MATCHED` carries a trip id;
+ * the rest are notes to show beside a view that still works, since the line is shown either way.
+ *
+ * `NO_MATCH` is ordinary rather than exceptional — SL shows a journey as running slightly before the vehicle
+ * appears in the realtime feed.
+ */
+export type ResolveOutcome = "MATCHED" | "NO_MATCH" | "AMBIGUOUS" | "NO_LIVE_DATA";
+
+export interface ResolvedTrip {
+  outcome: ResolveOutcome;
+  tripId: string | null;
+  vehicleId: string | null;
+}
+
+/** A departure row expressed as the content key that identifies it in GTFS. See the backend `TripQuery`. */
+export interface TripQuery {
+  transportMode: string;
+  routeGroup: number;
+  line: string;
+  stopAreaId: number;
+  stopAreaName: string;
+  scheduled: string;
+  destination: string;
+}

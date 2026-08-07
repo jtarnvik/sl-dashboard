@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Switch } from '@headlessui/react';
-import { MdExpandMore } from 'react-icons/md';
+import { MdClose, MdExpandMore, MdWarningAmber } from 'react-icons/md';
 
 import { fetchGtfsDataStatus, fetchRouteData, fetchRouteGroups, saveLiveTrafficView } from '../communication/backend';
 import { ErrorHandler } from '../components/error-handler';
@@ -31,6 +31,23 @@ const ROUTE_DATA_POLL_MS = 8 * 1000;
 // cleared, so they cannot override a selection the user makes afterwards.
 const PARAM_TRANSPORT_MODE = 'mode';
 const PARAM_ROUTE_GROUP = 'group';
+// The vehicle the departure row resolved to, and — when it resolved to none — why not. Never both.
+const PARAM_TRIP = 'trip';
+const PARAM_RESOLVE = 'resolve';
+
+/**
+ * What to say when a departure row could not be tied to a vehicle. Never an error banner: the line is shown
+ * regardless, so this is a note about a missing bonus rather than a failure.
+ *
+ * `NO_MATCH` is the everyday one. SL puts a journey on its board as soon as it is running, but the realtime
+ * feed only carries vehicles that are actually reporting positions, and the two do not switch over at the
+ * same instant.
+ */
+const RESOLVE_MESSAGES: Record<string, string> = {
+  NO_MATCH: 'Kunde inte hitta fordonet i livetrafiken — visar hela linjen.',
+  AMBIGUOUS: 'Flera fordon matchade avgången — visar hela linjen.',
+  NO_LIVE_DATA: 'Livetrafiken är inte tillgänglig just nu — visar hela linjen.',
+};
 
 function groupKey(group: MonitoredRouteGroup): string {
   return `${group.transportMode}:${group.routeGroup}`;
@@ -212,6 +229,14 @@ export function LiveTrafficView() {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   /**
+   * Why the departure row that led here could not be tied to a vehicle, when it could not. Comes from the
+   * url, so it survives until the user dismisses it or changes the selection — unlike the "outside the
+   * window" note below, which is derived from the poll and comes and goes with the data.
+   */
+  const [resolveOutcome, setResolveOutcome] = useState<string | null>(null);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
+
+  /**
    * The query string as it was on arrival. A ref for the same reason `storedViewRef` is one: the params are
    * cleared once they have been applied, and reading them from state would re-run the effect below.
    */
@@ -252,6 +277,26 @@ export function LiveTrafficView() {
   const currentKey = selectedGroup ? requestKey(selectedGroup, focused) : null;
   const routeData = fetchedRouteData?.key === currentKey ? fetchedRouteData.data : null;
 
+  /**
+   * The selected vehicle was matched against the group's full chain but is not among the ones drawn, which
+   * on a focused view means it is still out beyond the window — a train 20 minutes away at Bålsta while the
+   * window starts at Kungsängen is the everyday case.
+   *
+   * Requiring an actually truncated chain is what keeps this from firing on the ordinary gap where a vehicle
+   * misses one poll and returns on the next. Derived rather than stored, so it clears itself the moment the
+   * vehicle appears.
+   */
+  const selectedVehicleDrawn = routeData?.vehicles.some(vehicle => vehicle.tripId === selectedTripId) ?? false;
+  const vehicleOutsideWindow = selectedTripId !== null && routeData !== null && !selectedVehicleDrawn
+    && (routeData.focus?.truncatedStart === true || routeData.focus?.truncatedEnd === true);
+
+  const notice = noticeDismissed
+    ? null
+    : vehicleOutsideWindow
+      ? 'Fordonet är ännu utanför det visade avsnittet.'
+      : (resolveOutcome ? RESOLVE_MESSAGES[resolveOutcome] ?? null : null);
+  const canWiden = vehicleOutsideWindow && selectedGroup !== null && !isFocusLocked(selectedGroup);
+
   useEffect(() => {
     setHeading('Aktuell trafik');
   }, [setHeading]);
@@ -264,12 +309,21 @@ export function LiveTrafficView() {
       navigate('/');
       return;
     }
+    // This effect re-runs more often than "on mount": `setError` is a plain function in `App`, so it is a
+    // new value on every render there. Without this guard a reply belonging to a run that is already over
+    // still acts on it — and the `navigate` below would then fire from a view the user has already left,
+    // dragging them back to /live-traffic from wherever they went.
+    let cancelled = false;
     Promise.all([fetchRouteGroups(setError), fetchGtfsDataStatus(setError)]).then(([groups, status]) => {
+      if (cancelled) {
+        return;
+      }
       setGtfsStatus(status);
       if (status?.staticDataAvailable !== false) {
         setGroups(groups);
         const stored = storedViewRef.current;
-        const fromUrl = findGroupFromParams(groups, initialParamsRef.current);
+        const params = initialParamsRef.current;
+        const fromUrl = findGroupFromParams(groups, params);
         const initialGroup = fromUrl ?? findStoredGroup(groups, stored) ?? pickDefaultGroup(groups);
         if (initialGroup) {
           setSelectedGroup(initialGroup);
@@ -281,11 +335,20 @@ export function LiveTrafficView() {
           // way — and the params go, so a later selection is not undone by a reload.
           persistView(fromUrl, resolveFocused(fromUrl, stored?.focused ?? null), stored?.focused ?? null,
             updateSettingsRef.current);
+          setSelectedTripId(params.get(PARAM_TRIP));
+          setResolveOutcome(params.get(PARAM_RESOLVE));
+          // Emptied as well as cleared from the url, because the ref outlives the run that consumed it. A
+          // later re-run would otherwise re-apply the arrival — reselecting that vehicle over whatever the
+          // user had picked since, and navigating on top of it.
+          initialParamsRef.current = new URLSearchParams();
           navigate('/live-traffic', { replace: true });
         }
       }
       setLoading(false);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [loginState, navigate, setError]);
 
   const updateRouteData = useCallback(() => {
@@ -312,12 +375,14 @@ export function LiveTrafficView() {
   }, [updateRouteData]);
 
   // A selected vehicle belongs to the chain it was picked on, so both of these drop it. Done here in the
-  // handlers rather than in an effect watching the data, which would fight the poll loop.
+  // handlers rather than in an effect watching the data, which would fight the poll loop. The notice goes
+  // with it: it described a departure row that is no longer what is being looked at.
   function handleListboxChange(group: MonitoredRouteGroup) {
     const nextFocused = resolveFocused(group, rememberedFocus);
     setSelectedGroup(group);
     setFocused(nextFocused);
     setSelectedTripId(null);
+    clearNotice();
     persistView(group, nextFocused, rememberedFocus, updateSettings);
   }
 
@@ -326,9 +391,28 @@ export function LiveTrafficView() {
     setFocused(nextFocused);
     setRememberedFocus(nextFocused);
     setSelectedTripId(null);
+    clearNotice();
     if (selectedGroup) {
       persistView(selectedGroup, nextFocused, nextFocused, updateSettings);
     }
+  }
+
+  /**
+   * Widens the view to the whole line, keeping the selected vehicle. Deliberately not `handleFocusChange`,
+   * which drops the selection — here the selection is the entire reason for widening, since the vehicle is
+   * out beyond the window and this is what brings it into view.
+   */
+  function handleShowWholeLine() {
+    setFocused(false);
+    setRememberedFocus(false);
+    if (selectedGroup) {
+      persistView(selectedGroup, false, false, updateSettings);
+    }
+  }
+
+  function clearNotice() {
+    setResolveOutcome(null);
+    setNoticeDismissed(false);
   }
 
   return (
@@ -357,6 +441,28 @@ export function LiveTrafficView() {
               </Switch>
               <span className={focusLabelClass}>Fokus</span>
             </div>
+            {notice && (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded p-2 text-sm text-gray-700">
+                <MdWarningAmber className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                <span className="flex-1">
+                  {notice}
+                  {canWiden && (
+                    <>
+                      {' '}
+                      <button
+                        onClick={handleShowWholeLine}
+                        className="text-[#184fc2] hover:text-[#578ff3] underline cursor-pointer"
+                      >
+                        Visa hela linjen
+                      </button>
+                    </>
+                  )}
+                </span>
+                <button onClick={() => setNoticeDismissed(true)} aria-label="Stäng" className="cursor-pointer">
+                  <MdClose className="size-4 text-gray-500 hover:text-gray-700" />
+                </button>
+              </div>
+            )}
             <div className="flex-1 min-h-0">
               <LiveTrafficGraph
                 routeData={routeData}

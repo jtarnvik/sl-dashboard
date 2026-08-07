@@ -138,6 +138,14 @@ point the live view does not own, and disjoint columns mean neither can clobber 
 - The view reads the stored value through a **ref**, not from `user` in the fetch effect. Saving patches the
   user context, so a dependency on it would re-run the effect, refetch the route groups, reset the selection
   and save again.
+- **That effect is not a mount effect, whatever it looks like.** `setError` is a plain function declared in
+  `App`'s body, so it is a new value on every `App` render and the effect re-runs with it. Two consequences,
+  both fixed and both easy to reintroduce: the promise needs a `cancelled` guard, or a reply arriving after
+  the user has left will run `navigate('/live-traffic', { replace: true })` and replace the page they went to
+  — which is what made the navbar logo need two clicks; and `initialParamsRef` has to be emptied once
+  consumed, since the ref outlives the run that read it and a re-run would re-apply the arrival over a
+  selection made since. Memoizing `setError` in `App` would remove the cause rather than the symptoms, but it
+  touches every effect in the app that lists it.
 
 `DEFAULT_SETTINGS`, `URL_BACKEND_SETTINGS`, and `STOP_HINT_KEY` are defined in `src/communication/constant.ts`. `saveSettings()` is in `src/communication/backend.ts`. `loadStopHint()` / `saveStopHint()` are in `src/util/stop-hint.ts`.
 
@@ -394,6 +402,52 @@ before any hook, so they cannot sit in one component.
   would mean seeding a fresh `now` when a selection starts, which is a `setState` inside an effect — the rule
   the improvements list wants driven back to zero — and the saving is nothing beside the 8s poll.
 
+### Resolving a departure row to a vehicle (`GtfsTripMatchUtil`)
+
+Clicking an en-route departure opens the live view with that vehicle already selected. SL's `journey.id` and
+GTFS `trip_id` share no namespace, so the two are joined on **content**: line, stop, timetabled second and
+destination. All four verified against a live SL feed and the same day's static extract.
+
+- **`stop_area.id` is the national stop area number**, so the stop leg is an exact id join, not a name match:
+  `9021001` + the six-digit area number + `000`. Skogslöparvägen 12273 → `9021001012273000`, Kungsängen 6081,
+  Älvsjö 5141, Åkeshov 1241. Every one of the 7231 parent stations in the feed follows the format. It is the
+  *site* id (`9091001000003715`) that is foreign and unconvertible — the one the departures URL is built
+  from. Because the encoding is inferred rather than documented, `stopAreaName` rides along as a fallback.
+- **The scheduled times agree to the second** — 09:52:52, 10:08:18, 10:11:30 all identical on both sides.
+  Both come out of the same SL planning system. So does `destination` against `stop_headsign`, including
+  metro short turns (Alvik, Åkeshov). The 30s tolerance in the util is slack against a future rounding
+  change, not something any observed data needs.
+- **Destination is required, not a tiebreaker.** At Älvsjö two line 43 departures leave at exactly 10:00:00,
+  for Västerhaninge and for Kungsängen. Line, stop and time alone match both. That collision is what
+  `GtfsTripMatchUtilTest` is built around.
+- **The search runs over live vehicles, not the timetable** — a few dozen against thousands of trips per
+  group per service day, and a trip with no vehicle behind it cannot be pointed at on a schematic anyway.
+- Resolving goes through `getContinously()` on purpose, renewing the poll window: the caller is on their way
+  into the live view, so warming the loop makes their first route-data request a cache hit.
+- **SL sends `scheduled` with no offset** (`2026-08-07T10:21:01`). The endpoint therefore takes a
+  `LocalDateTime` and `GtfsTimeUtil.toInstant` applies Europe/Stockholm. An `Instant` parameter would have
+  400'd every real request while passing every hand-written test — `ResolveTripEndpointTest` uses the raw SL
+  string for exactly that reason.
+- **`@Validated` must not go on the controller class.** It routes parameter constraints through an AOP proxy,
+  which throws `ConstraintViolationException` → 500; Spring 6.1+ built-in method validation gives 400 for the
+  same `@NotBlank` when the class is left unannotated.
+
+**Only en-route rows are clickable.** `isTrackableJourney` in `util/journey-state.ts` requires one of the four
+`*PROGRESS` states and rejects `prediction_state` of `LOSTCONTACT`/`UNRELIABLE` — SL saying it still shows the
+journey as moving while admitting it cannot see the vehicle, which is exactly when a search comes back empty.
+A "Planerad" row has no vehicle in the realtime feed, so there would be nothing on the schematic to point at.
+That module also owns the styling classification `Destination` uses, so the click rule and the grey-text rule
+cannot drift apart. Observed hit rates: 1 of 6 rows en route at Skogslöparvägen, 24 of 42 at Älvsjö, 19 of 26
+at Medborgarplatsen — at a bus stop on a 15-minute headway only the imminent departure qualifies, which is
+the one worth clicking.
+
+**Failure is a note, never an error.** The view opens on the line regardless; `resolve=<outcome>` in the url
+becomes one dismissible amber line. The "matched but not drawn" case is *not* answered by the backend — the
+pane cannot know what focus the view will use — so the view derives it after its first poll: selected trip
+absent from `vehicles` while `focus` reports truncation. Requiring actual truncation is what stops it firing
+on the ordinary gap where a vehicle misses one poll. `handleShowWholeLine` deliberately keeps the selection
+that `handleFocusChange` drops, since here the selection is the whole reason for widening.
+
 ### Predicted times (`GtfsPredictionUtil`, `GtfsTimeUtil`)
 
 **Only VehiclePositions is fetched — there is no TripUpdates feed, so no delay or predicted time ever arrives
@@ -507,19 +561,7 @@ carried out: what is left should be what helps future work, not a record of how 
 
 ## Goals, in order
 
-**1 - FE/BE, Resolve a departure row to a specific vehicle.**
-Clicking a departure now opens the live view on the right *line*; it cannot open it on the right *vehicle*,
-because the two sides share no identifier. SL's `journey.id` is a number in SL's own namespace, GTFS `trip_id`
-is a string like `14010000656749468`, and the site id encodings differ too (`9091001000003715` for an SL site,
-`9021001006081000` for a GTFS parent station).
-- The workable bridge is a content match rather than an id match: `(transport mode, line, destination text,
-  scheduled HH:MM, stop name)`. SL supplies `departure.scheduled`, `destination` and `stop_area.name`; GTFS
-  supplies `stop_headsign`, `departure_time` and the stop's parent station name. Matching on **names and
-  times** sidesteps the id namespaces entirely.
-- Would be a new `GET /api/protected/gtfs/resolve-trip`. The url already leaves room for a `&trip=` param
-  alongside `mode` and `group`.
-
-**2 - FE/BE, Bus tracking with push notification.** The most personally useful of these.
+**1 - FE/BE, Bus tracking with push notification.** The most personally useful of these.
 A schematic of bus 117 — which now exists — where the user marks a specific bus as the one they intend to catch,
 and the backend sends a push notification when it passes a designated trigger stop. The use case is knowing when
 to leave for the stop, six minutes' walk away.
@@ -528,7 +570,7 @@ to leave for the stop, six minutes' walk away.
 - The one design question: a tracked bus has to survive the backend forgetting it. The poll loop shuts down five
   minutes after the last request, so a "notify me" registration must outlive it and drive its own polling.
 
-**3 - FE, Journey planner route map.**
+**2 - FE, Journey planner route map.**
 Show the routes suggested by the route planner pane on a map — the whole journey and each individual leg. The
 coordinates are already in the journey planner API response, so no GTFS realtime data is involved. Choosing and
 integrating a map library (Leaflet or MapLibre) is part of this goal; the frontend has none today.
@@ -553,6 +595,14 @@ The design notes worth keeping from these live in the GTFS chapter above. The re
   view on that line. Design notes are in "Vehicle selection and stop times" and "Predicted times" above; the
   one thing to remember without reading them is that **the times are the timetable corrected by an observed
   delay, because there is no TripUpdates feed to ask.**
+- **G — BE/FE, Resolve a departure row to a specific vehicle.** Clicking an en-route departure opens the live
+  view with that vehicle selected, matched on content rather than id via
+  `GET /api/protected/gtfs/resolve-trip`. Design notes are in "Resolving a departure row to a vehicle" above;
+  the two things to remember without reading them are that **`stop_area.id` converts straight to a GTFS
+  parent station id** — the goal was written assuming no id bridge existed, and that turned out to be true
+  only of the *site* id — and that **rows that are not moving are not clickable**, because a planned
+  departure has no vehicle in the realtime feed to point at.
+
 - **E — BE/infra, Backend moved from Render to the home Mac Mini (August 2026).** `sl.tarnvik.com` now talks to
   `api2.tarnvik.com`; the application code was unchanged, only where it runs. Render and Supabase are gone and
   there is no rollback target. Live traffic works in production for the first time — Render's 512 MB cap was

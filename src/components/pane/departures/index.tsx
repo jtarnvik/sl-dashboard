@@ -4,7 +4,7 @@ import {MdInfoOutline, MdRefresh, MdWarningAmber} from "react-icons/md";
 import {DateTime, Duration} from "luxon";
 import {URL_GET_DEPARTURES_FROM_SITE} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
-import {interpretDeviations} from "../../../communication/backend.ts";
+import {interpretDeviations, resolveTrip} from "../../../communication/backend.ts";
 import {Card} from "../../common/card";
 import {LineJourney, TransportationIconCommon, TransportationMode} from "../../common/line";
 import {ModalDialog} from "../../common/modal-dialog";
@@ -15,9 +15,10 @@ import {BackendInterpretationResult, EnrichedDeviation, isShown, isValidDeviatio
 import InDebugModeContext from "../../../contexts/debug-context.ts";
 import {useVisibility} from "../../../hook/use-visibility.ts";
 import {AbortControllerState} from "../../../types/communication.ts";
-import {MonitoredRouteGroup} from "../../../types/backend.ts";
+import {MonitoredRouteGroup, ResolvedTrip, TripQuery} from "../../../types/backend.ts";
 import {Departure, SlDeparturesResponse, TransportMode} from "../../../types/sl-responses.ts";
 import {shortSwedishHumanizer} from "../../../util/humanizer.ts";
+import {isTrackableJourney} from "../../../util/journey-state.ts";
 import {findRouteGroupForLine} from "../../../util/route-group.ts";
 import {sortDeparturesByDestination} from "../../../util/sorters.ts";
 import {Destination} from "./destination.tsx";
@@ -27,6 +28,30 @@ import "./index.css";
 import ErrorContext from "../../../contexts/error-context.ts";
 
 const MAX_DEPARTURES_BEFORE_GROUPING = 16;
+
+/**
+ * How long to wait for the vehicle match before opening the view without one. The call is to our own
+ * backend, which the departures pane has already been talking to, so this is a guard against a stall rather
+ * than an expected wait — a tap that appears to do nothing is worse than one that lands without a selection.
+ */
+const RESOLVE_TIMEOUT_MS = 1500;
+
+/**
+ * The live traffic view's query string. The outcome travels with it so the view can say what happened; only
+ * a match carries a trip, and only a failure carries a reason, so the two are never both present.
+ */
+function buildLiveTrafficParams(group: MonitoredRouteGroup, resolved: ResolvedTrip | null): string {
+  const params = new URLSearchParams({
+    mode: group.transportMode,
+    group: String(group.routeGroup),
+  });
+  if (resolved?.outcome === 'MATCHED' && resolved.tripId) {
+    params.set('trip', resolved.tripId);
+  } else if (resolved) {
+    params.set('resolve', resolved.outcome);
+  }
+  return params.toString();
+}
 
 function transportModeToIconMode(mode: TransportMode): TransportationMode {
   switch (mode) {
@@ -68,6 +93,15 @@ export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
   const [selectedTransportMode, setSelectedTransportMode] = useState<TransportMode | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+
+  /**
+   * The row waiting for its vehicle match, so the tap has something to show for itself.
+   *
+   * Worth the state because the first click of a session is the slow one: the backend's realtime poll loop
+   * only runs while somebody is watching the live view, so arriving from here finds it cold and the resolve
+   * waits on a fetch from Samtrafiken.
+   */
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   function getUniqueId(dept: Departure): string {
     return `${dept.line.id}-${dept.journey.id}`;
@@ -257,11 +291,32 @@ export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
   }
 
   /**
-   * Opens the live traffic view on this departure's line. The group is all that is passed — a departure and
-   * a live vehicle share no identifier, so which vehicle on that line is still up to the user to pick.
+   * Opens the live traffic view on this departure's line, with the vehicle itself selected when it can be
+   * found.
+   *
+   * The two systems share no identifier, so the backend is asked to match the departure on content instead —
+   * line, stop, timetabled second and destination. That is a round trip, and it is taken before navigating
+   * so the view opens in its final state rather than selecting a vehicle a moment after it appears. If it is
+   * slow the navigation goes ahead without a selection: the line on its own is what this click did before
+   * and is still worth showing.
    */
-  function showLiveTraffic(group: MonitoredRouteGroup) {
-    navigate(`/live-traffic?mode=${group.transportMode}&group=${group.routeGroup}`);
+  async function showLiveTraffic(group: MonitoredRouteGroup, departure: Departure) {
+    setResolvingId(getUniqueId(departure));
+    const query: TripQuery = {
+      transportMode: group.transportMode,
+      routeGroup: group.routeGroup,
+      line: departure.line.designation,
+      stopAreaId: departure.stop_area.id,
+      stopAreaName: departure.stop_area.name,
+      scheduled: departure.scheduled,
+      destination: departure.destination,
+    };
+    const resolved = await Promise.race([
+      resolveTrip(query),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), RESOLVE_TIMEOUT_MS)),
+    ]);
+    setResolvingId(null);
+    navigate(`/live-traffic?${buildLiveTrafficParams(group, resolved)}`);
   }
 
   return (
@@ -285,14 +340,19 @@ export function Departures({stopPoint16Chars, routeGroups = []}: Props) {
         displayedDepartures.map((departure) => {
             const uniqueId = getUniqueId(departure);
             const showAsDeparting = departing.has(getUniqueId(departure));
-            const liveGroup = findRouteGroupForLine(routeGroups, departure.line.transport_mode, departure.line.designation);
+            // Two conditions, and both are about whether there is anything to open: the line must be one the
+            // backend tracks, and the vehicle must actually be out on the road. A "Planerad" departure has no
+            // vehicle in the realtime feed yet, so the schematic would have nothing to point at.
+            const trackedGroup = findRouteGroupForLine(routeGroups, departure.line.transport_mode, departure.line.designation);
+            const liveGroup = isTrackableJourney(departure.journey) ? trackedGroup : null;
 
             return (
               <div
                 key={uniqueId}
                 className={"departures-grid " + ((showAsDeparting) ? "departure-row-removing " : "")
-                  + ((liveGroup) ? "cursor-pointer hover:bg-gray-200/60 rounded-sm" : "")}
-                onClick={liveGroup ? () => showLiveTraffic(liveGroup) : undefined}
+                  + ((liveGroup) ? "cursor-pointer hover:bg-gray-200/60 rounded-sm " : "")
+                  + ((resolvingId === uniqueId) ? "animate-pulse" : "")}
+                onClick={liveGroup ? () => showLiveTraffic(liveGroup, departure) : undefined}
               >
                 <div className="grid-line justify-self-start">
                   <LineJourney
