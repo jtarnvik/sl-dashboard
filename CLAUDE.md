@@ -95,8 +95,8 @@ The pane is one form with one action. Two radio pairs name the ends of the journ
 ```
 (•) Härifrån  ( ) [Från hållplats…]
 (•) Hem       ( ) [Till hållplats…]
-(•) Nu                       [Sök]
-( ) Avfärd ( ) Ankomst [--:--]
+(•) Nu        ( ) Avfärd ( ) Ankomst [--:--]
+                        [↺ Återställ] [🔍 Sök]
 ```
 
 - **Nothing searches automatically.** Earlier the pane fired on picking a stop, on switching time mode and on
@@ -107,9 +107,15 @@ The pane is one form with one action. Two radio pairs name the ends of the journ
 - **Results are not cleared when the query is edited**, only when `Sök` replaces them. Editing therefore leaves
   a result on screen that the controls above no longer describe — accepted, because it is what every route
   planner does and because clearing on edit collapses the card under the user's finger while they compose.
-- **The two rows are one grid, not two flex rows.** `Härifrån` is far wider than `Hem`, and only a shared
-  column keeps the two stop fields aligned. Tailwind utilities do not guarantee cross-row alignment; a single
-  `grid-cols-[auto_auto_1fr]` container does.
+- **`Återställ` must bump `autocompleteKey`, not just reset state.** `StopAutocomplete` owns its query text and
+  seeds it from `initialQuery` once, so clearing the pane's own state leaves the typed stop names sitting in
+  both boxes. The key bump remounts them empty — the same trick the settings dialog uses for `Standard`. It
+  also aborts any in-flight request, which would otherwise land afterwards and refill the panel just cleared.
+- **`Återställ` is never disabled.** A user can type into a box without selecting anything, and that text lives
+  inside `StopAutocomplete`, so "already at defaults" is not knowable from here — a disabled button would
+  strand the stray text.
+- `SLButton` gained a `secondary` variant (outlined, blue on white) so `Återställ` does not read as equal in
+  weight to `Sök`. The default is the original filled style, so no other call site changed.
 - **The placeholders are the labels.** The `"Ta mig till"` caption is gone, and nothing else distinguishes two
   identical `StopAutocomplete` boxes. The stop radios carry no text of their own, only an `aria-label`.
 - **The stop fields are dimmed, not `disabled`.** Focusing one is a second way to select its mode, and a
@@ -126,6 +132,39 @@ The pane is one form with one action. Two radio pairs name the ends of the journ
 - `URL_GET_TRAVEL_v2` takes a `TripOrigin` union (`coord` or `stop`) rather than positional lat/long. It
   replaced two builders that each inverted the pair — the coordinate triple is written long-first, and the two
   mistakes cancelled out.
+
+### Aligning the routes and deviations panes (subgrid)
+
+Both panes sit in the `1fr auto` grid in `main.tsx`, and both happen to have four rows. Making row N of the
+form line up with row N of the icon column is **not** a matter of matching gaps or paddings: the rows have
+genuinely different heights, and a native `input[type=time]` is taller than a radio label by an amount that
+differs between desktop and iOS. Equal gaps cannot produce equal rows.
+
+The outer grid therefore declares `grid-template-rows: repeat(4, auto)` and **both panes span all four with
+`grid-rows-subgrid`**. Each row sizes to the taller of the two panes' content for that row, so alignment holds
+whatever height the platform gives any control. No pixel values are involved, which is the point — fixed row
+heights were the alternative and they clip rather than reflow.
+
+Consequences, each of which looks arbitrary in isolation:
+
+- **The deviations pane no longer uses `<Card>`.** Subgrid carries through exactly one level, and `Card` nests
+  two divs between the grid item and its content. The pane renders `Card`'s classes directly instead. (`Card`
+  is otherwise unchanged and still used elsewhere.)
+- **The routes card is one grid doing two jobs**: `grid-rows-subgrid` for cross-pane alignment, plus its own
+  `grid-cols-[auto_auto_1fr]` that keeps the two stop fields aligned despite `Härifrån` being far wider than
+  `Hem`. Rows 1-2 are three cells each; rows 3-4 carry `col-span-3`.
+- **The results panel is `row-start-5`**, since the panes now occupy rows 1-4.
+- **`ModalDialog` renders no wrapper element.** It used to wrap `Dialog` in a bare `<div>`, which is always in
+  the DOM even when closed — as a grid child that is a phantom row. Headless UI renders nothing when closed and
+  portals when open, so the wrapper was pure cost everywhere: in any flex or grid parent with gaps it also
+  added a spurious gap. Removing it touches all ten components that render a modal.
+- **The time input and the compact `StopAutocomplete` are pinned to the same `h-6`.** iOS sizes time inputs
+  natively and ignores the padding and line-height that size the stop fields, so identical classes produced
+  different heights. `appearance-none` strips the native control; `h-6` then matches. **Change either height
+  and the other must follow** — a comment in each file points at the other.
+- **`appearance-none` also removes the control's intrinsic width**, so an empty time field collapses to a few
+  pixels. Hence `min-w-[4.5rem]` — a minimum rather than a fixed width, so empty and filled occupy the same
+  space and a device on 12-hour time can still grow for its AM/PM segment.
 
 ### SL API endpoints (`src/communication/constant.ts`)
 
