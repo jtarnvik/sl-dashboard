@@ -267,8 +267,11 @@ export function Routes({settingsData}: Props) {
             />
           </div>
         </div>
-        <div className="flex items-center pb-1">
-          <label className="flex items-center gap-1">
+        {/* All three time modes on one row. It fits an iPhone only just, so the gaps are tighter than the
+            rows above and nothing here may wrap — a wrapped label would look like a layout bug rather than
+            showing that the row has run out of room. */}
+        <div className="flex items-center gap-2 pb-1">
+          <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
             <input
               type="radio"
               name="departure-time"
@@ -278,14 +281,7 @@ export function Routes({settingsData}: Props) {
             />
             Nu
           </label>
-          <div className="ml-auto">
-            <SLButton onClick={searchJourneys} thin disabled={!canSearch}>
-              <span className="flex items-center gap-1"><MdSearch className="h-4 w-4" />Sök</span>
-            </SLButton>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 pb-1">
-          <label className="flex items-center gap-1">
+          <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
             <input
               type="radio"
               name="departure-time"
@@ -295,7 +291,7 @@ export function Routes({settingsData}: Props) {
             />
             Avfärd
           </label>
-          <label className="flex items-center gap-1">
+          <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
             <input
               type="radio"
               name="departure-time"
@@ -311,10 +307,15 @@ export function Routes({settingsData}: Props) {
             onChange={(e) => setDepartureTime(e.target.value)}
             disabled={timeMode === 'now'}
             className={classNames(
-              'rounded-sm border border-gray-300 bg-white px-1 py-px text-sm',
+              'shrink-0 rounded-sm border border-gray-300 bg-white px-1 py-px text-sm',
               timeMode === 'now' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800'
             )}
           />
+        </div>
+        <div className="flex justify-end pb-1">
+          <SLButton onClick={searchJourneys} thin disabled={!canSearch}>
+            <span className="flex items-center gap-1"><MdSearch className="h-4 w-4" />Sök</span>
+          </SLButton>
         </div>
         {hasResultsPanel && (
           <div className="absolute -bottom-2 left-[-1px] right-[-1px] h-2 bg-[#F1F2F3] border-x border-gray-200" />
