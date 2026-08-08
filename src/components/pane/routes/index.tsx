@@ -267,10 +267,11 @@ export function Routes({settingsData}: Props) {
             />
           </div>
         </div>
-        {/* All three time modes on one row. It fits an iPhone only just, so the gaps are tighter than the
-            rows above and nothing here may wrap — a wrapped label would look like a layout bug rather than
-            showing that the row has run out of room. */}
-        <div className="flex items-center gap-2 pb-1">
+        {/* Two groups pushed apart: "Nu" alone, and the timed modes with their input. justify-between spends
+            the slack in the middle, so the time control's right edge lands on the same line as the stop fields
+            above and the row reads as the same width as the rest of the card. Nothing here may wrap — a
+            wrapped label would look like a layout bug rather than showing the row has run out of room. */}
+        <div className="flex items-center justify-between pb-1">
           <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
             <input
               type="radio"
@@ -281,36 +282,38 @@ export function Routes({settingsData}: Props) {
             />
             Nu
           </label>
-          <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
+          <div className="flex shrink-0 items-center gap-2">
+            <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
+              <input
+                type="radio"
+                name="departure-time"
+                checked={timeMode === 'dep'}
+                onChange={() => setTimeMode('dep')}
+                className="accent-[#184fc2]"
+              />
+              Avfärd
+            </label>
+            <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
+              <input
+                type="radio"
+                name="departure-time"
+                checked={timeMode === 'arr'}
+                onChange={() => setTimeMode('arr')}
+                className="accent-[#184fc2]"
+              />
+              Ankomst
+            </label>
             <input
-              type="radio"
-              name="departure-time"
-              checked={timeMode === 'dep'}
-              onChange={() => setTimeMode('dep')}
-              className="accent-[#184fc2]"
+              type="time"
+              value={departureTime}
+              onChange={(e) => setDepartureTime(e.target.value)}
+              disabled={timeMode === 'now'}
+              className={classNames(
+                'shrink-0 rounded-sm border border-gray-300 bg-white px-1 py-px text-sm',
+                timeMode === 'now' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800'
+              )}
             />
-            Avfärd
-          </label>
-          <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
-            <input
-              type="radio"
-              name="departure-time"
-              checked={timeMode === 'arr'}
-              onChange={() => setTimeMode('arr')}
-              className="accent-[#184fc2]"
-            />
-            Ankomst
-          </label>
-          <input
-            type="time"
-            value={departureTime}
-            onChange={(e) => setDepartureTime(e.target.value)}
-            disabled={timeMode === 'now'}
-            className={classNames(
-              'shrink-0 rounded-sm border border-gray-300 bg-white px-1 py-px text-sm',
-              timeMode === 'now' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800'
-            )}
-          />
+          </div>
         </div>
         <div className="flex justify-end pb-1">
           <SLButton onClick={searchJourneys} thin disabled={!canSearch}>
