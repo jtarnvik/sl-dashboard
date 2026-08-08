@@ -84,12 +84,13 @@ export function Main() {
         stopPoint16Chars={settingsData.stopPointId}
         routeGroups={routeGroups}
       />
+      {/* Four explicit rows so both panes can span them with grid-template-rows: subgrid — that is what makes
+          row N of the routes form line up with row N of the deviations column, whatever height the native time
+          input turns out to have. Each pane places itself; the results panel lands on row 5. */}
       {isLoggedIn ? (
-        <div className="grid gap-2" style={{ gridTemplateColumns: '1fr auto' }}>
+        <div className="grid gap-2" style={{ gridTemplateColumns: '1fr auto', gridTemplateRows: 'repeat(4, auto)' }}>
           <Routes key={`routes-${routesGen}`} settingsData={settingsData} />
-          <div className="col-start-2 row-start-1">
-            <Deviations key={`dev-${deviationsGen}`} />
-          </div>
+          <Deviations key={`dev-${deviationsGen}`} />
         </div>
       ) : (
         loginState === UserLoginState.NotLoggedIn && <LoginTeaser />

@@ -1,6 +1,6 @@
 import {ReactNode, useContext, useEffect, useRef, useState} from "react";
 import classNames from "classnames";
-import {MdSearch} from "react-icons/md";
+import {MdRestartAlt, MdSearch} from "react-icons/md";
 import {TripOrigin, URL_GET_TRAVEL_v2} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {interpretDeviations} from "../../../communication/backend.ts";
@@ -15,7 +15,8 @@ import ErrorContext from "../../../contexts/error-context.ts";
 
 function ResultsPanel({ children }: { children: ReactNode }) {
   return (
-    <div className="col-span-full row-start-2 px-4 pt-2 pb-1 bg-[#F1F2F3] border border-t-0 border-gray-200 rounded-b-lg rounded-tr-lg text-gray-800">
+    // row-start-5: the two panes now span the outer grid's four explicit rows, so the results sit below both.
+    <div className="col-span-full row-start-5 px-4 pt-2 pb-1 bg-[#F1F2F3] border border-t-0 border-gray-200 rounded-b-lg rounded-tr-lg text-gray-800">
       {children}
     </div>
   );
@@ -48,6 +49,7 @@ export function Routes({settingsData}: Props) {
   const [originMode, setOriginMode] = useState<OriginMode>('here');
   const [originStopId, setOriginStopId] = useState<string | null>(null);
   const [destinationMode, setDestinationMode] = useState<DestinationMode>('home');
+  const [autocompleteKey, setAutocompleteKey] = useState(0);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reads ref.current at unmount time, not at setup time
@@ -180,6 +182,24 @@ export function Routes({settingsData}: Props) {
     setDestinationStopId(location.id);
   }
 
+  function handleReset() {
+    // StopAutocomplete owns its query text and only seeds it from initialQuery once, so clearing our own state
+    // would leave the typed stop names sitting in both boxes. Bumping the key remounts them empty — the same
+    // trick the settings dialog uses for its "Standard" button.
+    setAutocompleteKey(key => key + 1);
+    setOriginMode('here');
+    setOriginStopId(null);
+    setDestinationMode('home');
+    setDestinationStopId(null);
+    setTimeMode('now');
+    setDepartureTime('');
+    // An in-flight search would otherwise land after the reset and repopulate the panel. Abort errors are
+    // swallowed by isAbortError, so this is silent.
+    latestRequest.current?.abort("Search reset");
+    setJourneys(undefined);
+    setDeviationEnrichment(new Map());
+  }
+
   const hasJourneys = !!journeys && journeys.length > 0;
   const hasResultsPanel = journeys !== undefined;
 
@@ -202,76 +222,78 @@ export function Routes({settingsData}: Props) {
 
   return (
     <>
+      {/* One grid doing two jobs. Its rows are subgrid, so they align with the deviations pane beside it; its
+          own three columns are what keep the two stop fields lined up with each other despite "Härifrån"
+          being far wider than "Hem". Rows 1-2 are three cells each, rows 3-4 span all three columns. */}
       <div ref={route1Ref} className={classNames(
-        'col-start-1 row-start-1 px-4 py-1 bg-[#F1F2F3] border border-gray-200 shadow-sm text-gray-800',
+        'col-start-1 row-start-1 row-span-4 grid grid-rows-subgrid grid-cols-[auto_auto_1fr] items-center gap-2',
+        'px-4 py-2 bg-[#F1F2F3] border border-gray-200 shadow-sm text-gray-800',
         hasResultsPanel ? 'rounded-t-lg border-b-0 relative z-10' : 'rounded-lg'
       )}>
-        {/* One grid across both rows, not two flex rows: "Härifrån" is far wider than "Hem", so only a shared
-            column can line the two stop fields up with each other. */}
-        <div className="grid grid-cols-[auto_auto_1fr] items-center gap-x-2 gap-y-1 pt-1 pb-1">
-          <label className="flex items-center gap-1">
-            <input
-              type="radio"
-              name="route-origin"
-              checked={originMode === 'here'}
-              onChange={() => setOriginMode('here')}
-              className="accent-[#184fc2]"
-            />
-            Härifrån
-          </label>
-          {/* Focusing a stop field is a second way to choose that mode, which is why the field is dimmed
-              rather than disabled. Captured on the wrapper so StopAutocomplete needs no onFocus prop. */}
+        <label className="flex items-center gap-1">
           <input
             type="radio"
             name="route-origin"
-            aria-label="Från vald hållplats"
-            checked={originMode === 'stop'}
-            onChange={() => setOriginMode('stop')}
+            checked={originMode === 'here'}
+            onChange={() => setOriginMode('here')}
             className="accent-[#184fc2]"
           />
-          <div className="flex" onFocusCapture={() => setOriginMode('stop')}>
-            <StopAutocomplete
-              placeholder="Från hållplats…"
-              dimmed={originMode === 'here'}
-              onSelect={handleOriginSelect}
-              onClear={() => setOriginStopId(null)}
-              compact
-            />
-          </div>
+          Härifrån
+        </label>
+        {/* Focusing a stop field is a second way to choose that mode, which is why the field is dimmed
+            rather than disabled. Captured on the wrapper so StopAutocomplete needs no onFocus prop. */}
+        <input
+          type="radio"
+          name="route-origin"
+          aria-label="Från vald hållplats"
+          checked={originMode === 'stop'}
+          onChange={() => setOriginMode('stop')}
+          className="accent-[#184fc2]"
+        />
+        <div className="flex" onFocusCapture={() => setOriginMode('stop')}>
+          <StopAutocomplete
+            key={`origin-${autocompleteKey}`}
+            placeholder="Från hållplats…"
+            dimmed={originMode === 'here'}
+            onSelect={handleOriginSelect}
+            onClear={() => setOriginStopId(null)}
+            compact
+          />
+        </div>
 
-          <label className="flex items-center gap-1" title={settingsData.stopPointName}>
-            <input
-              type="radio"
-              name="route-destination"
-              checked={destinationMode === 'home'}
-              onChange={() => setDestinationMode('home')}
-              className="accent-[#184fc2]"
-            />
-            Hem
-          </label>
+        <label className="flex items-center gap-1" title={settingsData.stopPointName}>
           <input
             type="radio"
             name="route-destination"
-            aria-label="Till vald hållplats"
-            checked={destinationMode === 'stop'}
-            onChange={() => setDestinationMode('stop')}
+            checked={destinationMode === 'home'}
+            onChange={() => setDestinationMode('home')}
             className="accent-[#184fc2]"
           />
-          <div className="flex" onFocusCapture={() => setDestinationMode('stop')}>
-            <StopAutocomplete
-              placeholder="Till hållplats…"
-              dimmed={destinationMode === 'home'}
-              onSelect={handleDestinationSelect}
-              onClear={() => setDestinationStopId(null)}
-              compact
-            />
-          </div>
+          Hem
+        </label>
+        <input
+          type="radio"
+          name="route-destination"
+          aria-label="Till vald hållplats"
+          checked={destinationMode === 'stop'}
+          onChange={() => setDestinationMode('stop')}
+          className="accent-[#184fc2]"
+        />
+        <div className="flex" onFocusCapture={() => setDestinationMode('stop')}>
+          <StopAutocomplete
+            key={`destination-${autocompleteKey}`}
+            placeholder="Till hållplats…"
+            dimmed={destinationMode === 'home'}
+            onSelect={handleDestinationSelect}
+            onClear={() => setDestinationStopId(null)}
+            compact
+          />
         </div>
         {/* Two groups pushed apart: "Nu" alone, and the timed modes with their input. justify-between spends
             the slack in the middle, so the time control's right edge lands on the same line as the stop fields
             above and the row reads as the same width as the rest of the card. Nothing here may wrap — a
             wrapped label would look like a layout bug rather than showing the row has run out of room. */}
-        <div className="flex items-center justify-between pb-1">
+        <div className="col-span-3 flex items-center justify-between">
           <label className="flex shrink-0 items-center gap-1 whitespace-nowrap">
             <input
               type="radio"
@@ -315,7 +337,12 @@ export function Routes({settingsData}: Props) {
             />
           </div>
         </div>
-        <div className="flex justify-end pb-1">
+        {/* Primary action rightmost. Återställ is never disabled: it also clears text typed but never
+            selected, which is state this component cannot see, so "already at defaults" is not knowable. */}
+        <div className="col-span-3 flex justify-end gap-2">
+          <SLButton onClick={handleReset} thin secondary>
+            <span className="flex items-center gap-1"><MdRestartAlt className="h-4 w-4" />Återställ</span>
+          </SLButton>
           <SLButton onClick={searchJourneys} thin disabled={!canSearch}>
             <span className="flex items-center gap-1"><MdSearch className="h-4 w-4" />Sök</span>
           </SLButton>

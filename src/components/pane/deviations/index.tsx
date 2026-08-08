@@ -11,7 +11,6 @@ import {
 import { fetchAbortable } from '../../../communication/fetch-abortable.ts';
 import { interpretDeviations } from '../../../communication/backend.ts';
 import { convertDeviationSearch, DeviationModal, filterDeviationsByStops } from '../../common/deviation-modal';
-import { Card } from '../../common/card';
 import { getColorRef, TransportationIconCommon, TransportationMode } from '../../common/line';
 import { ScanningUnderline } from '../../common/scanning-underline';
 import { MdInfoOutline } from 'react-icons/md';
@@ -119,38 +118,39 @@ export function Deviations() {
     return { backgroundColor: getColorRef(mode, designation) };
   }
 
+  // Not <Card>: this box is itself the subgrid, so its four items must be its direct children. Card nests two
+  // divs between the grid item and its content, and subgrid only carries through one level. Order places the
+  // items on rows 1-4 — the modals below render nothing until opened and then portal, so they take no row.
   return (
-    <Card>
-      <div className="flex flex-col items-center gap-2 py-2">
-        <div onClick={() => { if (trainEnriched.length > 0) { setOpenModal('train'); } }}>
-          <ScanningUnderline active={trainInProgress} lineOffset={4}>
-            <TransportationIconCommon
-              mode={TransportationMode.TRAIN}
-              className={trainAdjustments}
-              inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainEnriched.length > 0)}
-            />
-          </ScanningUnderline>
-        </div>
-        <div onClick={() => { if (subwayEnriched.length > 0) { setOpenModal('subway'); } }}>
-          <ScanningUnderline active={subwayInProgress} lineOffset={3}>
-            <TransportationIconCommon
-              mode={TransportationMode.SUBWAY}
-              className={subwayAdjustments}
-              inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayEnriched.length > 0)}
-            />
-          </ScanningUnderline>
-        </div>
-        <div onClick={() => { if (busEnriched.length > 0) { setOpenModal('bus'); } }}>
-          <ScanningUnderline active={busInProgress} lineOffset={3}>
-            <TransportationIconCommon
-              mode={TransportationMode.BUS}
-              className={busAdjustments}
-              inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busEnriched.length > 0)}
-            />
-          </ScanningUnderline>
-        </div>
-        <SLButton onClick={() => setLegendOpen(true)} thin><MdInfoOutline className="h-5 w-4" /></SLButton>
+    <div className="col-start-2 row-start-1 row-span-4 grid grid-rows-subgrid justify-items-center items-center px-4 py-2 bg-[#F1F2F3] border border-gray-200 rounded-lg shadow-sm text-gray-800">
+      <div onClick={() => { if (trainEnriched.length > 0) { setOpenModal('train'); } }}>
+        <ScanningUnderline active={trainInProgress} lineOffset={4}>
+          <TransportationIconCommon
+            mode={TransportationMode.TRAIN}
+            className={trainAdjustments}
+            inlineStyle={getModeBackgroundColor(TransportationMode.TRAIN, "42", trainEnriched.length > 0)}
+          />
+        </ScanningUnderline>
       </div>
+      <div onClick={() => { if (subwayEnriched.length > 0) { setOpenModal('subway'); } }}>
+        <ScanningUnderline active={subwayInProgress} lineOffset={3}>
+          <TransportationIconCommon
+            mode={TransportationMode.SUBWAY}
+            className={subwayAdjustments}
+            inlineStyle={getModeBackgroundColor(TransportationMode.SUBWAY, "17", subwayEnriched.length > 0)}
+          />
+        </ScanningUnderline>
+      </div>
+      <div onClick={() => { if (busEnriched.length > 0) { setOpenModal('bus'); } }}>
+        <ScanningUnderline active={busInProgress} lineOffset={3}>
+          <TransportationIconCommon
+            mode={TransportationMode.BUS}
+            className={busAdjustments}
+            inlineStyle={getModeBackgroundColor(TransportationMode.BUS, "117", busEnriched.length > 0)}
+          />
+        </ScanningUnderline>
+      </div>
+      <SLButton onClick={() => setLegendOpen(true)} thin><MdInfoOutline className="h-5 w-4" /></SLButton>
       <ModalDialog isOpen={legendOpen} onClose={() => setLegendOpen(false)} title="Symboler" scrollable={false}>
         <Legend legendData={normalIcons} title="Normalt läge" />
         <Legend legendData={scanLegend} title="AI-tolkning" />
@@ -171,6 +171,6 @@ export function Deviations() {
         onClose={() => setOpenModal(null)}
         deviations={busEnriched}
       />
-    </Card>
+    </div>
   );
 }
