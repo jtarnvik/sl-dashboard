@@ -85,7 +85,47 @@ All routes except `/denied` are rendered inside `Layout`, which wraps them with 
 |-----------|-------------|
 | `src/components/pane/departures/` | Polls SL departures API every 60s for the selected stop. Animates departing rows before removing them. Sends deviation texts to the backend for AI interpretation; rows with pending interpretations show a `ScanningUnderline` indicator. Shows a legend modal. |
 | `src/components/pane/deviations/` | Fetches deviation messages for hardcoded lines: trains 43/44, bus 117, metro 17/18/19. Sends texts to the backend for AI interpretation. Shows colored transport icons (orange = has deviations); a `ScanningUnderline` indicator appears under each icon while its interpretation is in flight. |
-| `src/components/pane/routes/` | On-demand route planner. Gets browser geolocation, then calls the SL journey planner API to find trips to the selected stop. User picks max walk time (15 or 60 min). Journey cards show AI-interpreted deviation info: the duration text turns orange and opens a deviation modal via `DeviationWrapper`; per-leg warning icons in `SldBreadCrumbs` indicate which segment is affected. |
+| `src/components/pane/routes/` | On-demand route planner. Origin and destination are each a radio pair — the browser's geolocation or a named stop, the home stop or a named stop — and nothing is searched until `Sök` is pressed. Journey cards show AI-interpreted deviation info: the duration text turns orange and opens a deviation modal via `DeviationWrapper`; per-leg warning icons in `SldBreadCrumbs` indicate which segment is affected. |
+
+### The routes pane query form
+
+The pane is one form with one action. Two radio pairs name the ends of the journey — `Härifrån` / a stop, and
+`Hem` / a stop — a third names the time, and `Sök` is the only thing that searches.
+
+```
+(•) Härifrån  ( ) [Från hållplats…]
+(•) Hem       ( ) [Till hållplats…]
+(•) Nu                       [Sök]
+( ) Avfärd ( ) Ankomst [--:--]
+```
+
+- **Nothing searches automatically.** Earlier the pane fired on picking a stop, on switching time mode and on
+  the `Hem` button, so four handlers each had to decide whether to fire, and a handler that both set state and
+  searched could not read the state it had just set — which is why the search function carried an overrides
+  object. With an explicit `Sök` every handler is a plain setter and the search reads current state. Do not
+  reintroduce an auto-fire without reckoning with that.
+- **Results are not cleared when the query is edited**, only when `Sök` replaces them. Editing therefore leaves
+  a result on screen that the controls above no longer describe — accepted, because it is what every route
+  planner does and because clearing on edit collapses the card under the user's finger while they compose.
+- **The two rows are one grid, not two flex rows.** `Härifrån` is far wider than `Hem`, and only a shared
+  column keeps the two stop fields aligned. Tailwind utilities do not guarantee cross-row alignment; a single
+  `grid-cols-[auto_auto_1fr]` container does.
+- **The placeholders are the labels.** The `"Ta mig till"` caption is gone, and nothing else distinguishes two
+  identical `StopAutocomplete` boxes. The stop radios carry no text of their own, only an `aria-label`.
+- **The stop fields are dimmed, not `disabled`.** Focusing one is a second way to select its mode, and a
+  disabled input cannot take focus. Caught with `onFocusCapture` on the wrapper div, so `StopAutocomplete`
+  needs no `onFocus` prop.
+- **`Sök` requires a time in `Avfärd`/`Ankomst` mode.** An empty time field makes the URL omit the time
+  parameters altogether, so without that condition those two modes would silently search from now. `Nu` needs
+  no time and is always ready.
+- **A named origin skips geolocation entirely.** A denied permission or the 5s `getCurrentPosition` timeout
+  must not be able to block a search that never depended on where the user is.
+- Each `StopAutocomplete` seeds its own recent-stops copy at mount, so a stop picked as an origin does not
+  appear in the destination list until the pane remounts. Accepted: the backend list is shared, and a picked
+  origin is a stop worth remembering.
+- `URL_GET_TRAVEL_v2` takes a `TripOrigin` union (`coord` or `stop`) rather than positional lat/long. It
+  replaced two builders that each inverted the pair — the coordinate triple is written long-first, and the two
+  mistakes cancelled out.
 
 ### SL API endpoints (`src/communication/constant.ts`)
 
@@ -584,7 +624,12 @@ carried out: what is left should be what helps future work, not a record of how 
 ## Goals, in order
 
 **1 - FE/BE - Searching A - > B**
-Should include possibilty to share route, so same repose component?
+The A → B form is done — the routes pane names both ends and searches on an explicit `Sök`; see "The routes
+pane query form" above. What remains is sharing such a route: a shared journey is the
+whole `Journey` object serialised, and `SharedRouteView` renders it through the same `SldJourney` component, so
+a stop-to-stop trip should already round-trip. Verify that before assuming it needs work.
+- Incidental benefit already banked: a journey planned from a named stop no longer embeds the sharer's GPS
+  position in the publicly readable `shared_route` payload.
 
 **3 - FE/BE, Bus tracking with push notification.** The most personally useful of these.
 A schematic of bus 117 — which now exists — where the user marks a specific bus as the one they intend to catch,

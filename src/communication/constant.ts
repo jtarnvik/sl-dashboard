@@ -73,17 +73,6 @@ export const DEVIATION_FOCUS_STOPS_SUBWAY: number[] = [1231, 12217, 15339, 1221,
 //                                                     Brommaplan,         Abrahamsberg,Stora Mossen,       Alvik,                   Kristineb,   Thorildsplan,       Fridhemspla, St Erikspl,  Odenplan,          Rådmansgat,  Hötorget            T-Centralen                                              Gamla stan
 export const DEVIATION_FOCUS_STOPS_BUS: number[] = [];
 
-export const URL_GET_TRAVEL_FROM_TO_v2 = (origin: string, dest: string) =>
-  "https://journeyplanner.integration.sl.se/v2/trips" +
-  "?type_origin=any" +
-  "&type_destination=any" +
-  "&name_origin=" + origin +
-  "&name_destination=" + dest +
-  "&calc_number_of_trips=3" +
-  // "&itd_time=1922" +
-  // "&itd_trip_date_time_dep_arr=dep" +
-  "&calc_one_direction=true"         // if false, report one trip before departure.
-
 function createWGS84(lat: number, long: number) {
 //  18.013809:59.335104:WGS84[dd.ddddd]
 //  long     :lat      :WGS84[dd.ddddd]
@@ -91,11 +80,19 @@ function createWGS84(lat: number, long: number) {
   return `${fmt(long)}:${fmt(lat)}:WGS84[dd.ddddd]`;
 }
 
-export const URL_GET_TRAVEL_COORD_TO_v2 = (long: number, lat: number, dest: string, maxWalk: number, departureTime?: string, timeType?: 'dep' | 'arr', date?: string) =>
+// The journey planner takes its origin either as a coordinate or as a stop id, and the two differ only in
+// type_origin and the format of name_origin. Named members rather than positional lat/long arguments: the
+// coordinate triple is written long-first, which the two previous builders got right only because each of
+// them inverted the pair, cancelling the other out.
+export type TripOrigin =
+  | { kind: 'coord', lat: number, long: number }
+  | { kind: 'stop', id: string };
+
+export const URL_GET_TRAVEL_v2 = (origin: TripOrigin, dest: string, maxWalk: number, departureTime?: string, timeType?: 'dep' | 'arr', date?: string) =>
   "https://journeyplanner.integration.sl.se/v2/trips" +
-  "?type_origin=coord" +
+  "?type_origin=" + (origin.kind === 'coord' ? "coord" : "any") +
   "&type_destination=any" +
-  "&name_origin=" + createWGS84(lat, long) +
+  "&name_origin=" + (origin.kind === 'coord' ? createWGS84(origin.lat, origin.long) : origin.id) +
   "&name_destination=" + dest +
   "&calc_number_of_trips=3" +
   "&tr_it_mot_value100=" + maxWalk +

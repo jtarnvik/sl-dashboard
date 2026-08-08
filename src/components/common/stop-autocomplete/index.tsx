@@ -15,9 +15,14 @@ type Props = {
   onSelect: (location: StopFinderLocation) => void;
   onClear?: () => void;
   compact?: boolean;
+  placeholder?: string;
+  // Muted styling for a field that is not the active choice. Deliberately not the `disabled` attribute: the
+  // routes pane switches origin mode when this input takes focus, and a disabled input cannot be focused.
+  dimmed?: boolean;
 }
 
-export function StopAutocomplete({ initialQuery = '', onSelect, onClear, compact = false }: Props) {
+export function StopAutocomplete({ initialQuery = '', onSelect, onClear, compact = false,
+                                   placeholder = 'Sök hållplats…', dimmed = false }: Props) {
   const { setError } = useContext(ErrorContext);
   const { user } = useUser();
   const loginState = useUserLoginState();
@@ -113,9 +118,12 @@ export function StopAutocomplete({ initialQuery = '', onSelect, onClear, compact
     inputRef.current?.focus();
   }
 
-  const inputClassName = compact
+  const sizeClassName = compact
     ? "w-full rounded-sm border border-gray-300 bg-white px-2 py-px pr-6 text-sm text-gray-800"
     : "w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200";
+  const inputClassName = dimmed
+    ? `${sizeClassName} bg-gray-50 text-gray-400 placeholder-gray-400`
+    : sizeClassName;
 
   const showRecentStops = isLoggedIn && inputFocused && query.trim().length < 3 && recentStops.length > 0;
 
@@ -128,7 +136,7 @@ export function StopAutocomplete({ initialQuery = '', onSelect, onClear, compact
           onChange={(e) => handleQueryChange(e.target.value)}
           onFocus={() => setInputFocused(true)}
           onBlur={() => setInputFocused(false)}
-          placeholder="Sök hållplats…"
+          placeholder={placeholder}
           className={inputClassName}
         />
         {stopResults.length > 0 && (

@@ -1,7 +1,7 @@
 import {ReactNode, useContext, useEffect, useRef, useState} from "react";
 import classNames from "classnames";
 import {MdSearch} from "react-icons/md";
-import {URL_GET_TRAVEL_COORD_TO_v2} from "../../../communication/constant.ts";
+import {TripOrigin, URL_GET_TRAVEL_v2} from "../../../communication/constant.ts";
 import {fetchAbortable} from "../../../communication/fetch-abortable.ts";
 import {interpretDeviations} from "../../../communication/backend.ts";
 import {SLButton} from "../../common/sl-button";
@@ -21,6 +21,14 @@ function ResultsPanel({ children }: { children: ReactNode }) {
   );
 }
 
+// Max initial walk time in minutes, the tr_it_mot_value100 parameter. There used to be a 15/60 selector for
+// this; it was dropped and every search has used 15 since.
+const MAX_INITIAL_WALK_TIME = 15;
+
+type OriginMode = 'here' | 'stop';
+type DestinationMode = 'home' | 'stop';
+type TimeMode = 'now' | 'dep' | 'arr';
+
 type Props = {
   settingsData: SettingsData
 }
@@ -34,9 +42,12 @@ export function Routes({settingsData}: Props) {
   const [deviationEnrichment, setDeviationEnrichment] = useState<Map<string, BackendInterpretationResult>>(new Map());
   const [interpretationPending, setInterpretationPending] = useState(false);
 
-  const [timeMode, setTimeMode] = useState<'now' | 'dep' | 'arr'>('now');
+  const [timeMode, setTimeMode] = useState<TimeMode>('now');
   const [departureTime, setDepartureTime] = useState('');
-  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const [destinationStopId, setDestinationStopId] = useState<string | null>(null);
+  const [originMode, setOriginMode] = useState<OriginMode>('here');
+  const [originStopId, setOriginStopId] = useState<string | null>(null);
+  const [destinationMode, setDestinationMode] = useState<DestinationMode>('home');
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reads ref.current at unmount time, not at setup time
@@ -86,17 +97,24 @@ export function Routes({settingsData}: Props) {
     }
   }
 
-  function updateDepartures(maxWalk: number, destinationId?: string, timeModeOverride?: 'now' | 'dep' | 'arr', departureTimeOverride?: string) {
-    const destination = destinationId ?? settingsData.stopPointId;
-    const effectiveMode = timeModeOverride ?? timeMode;
-    const effectiveTime = departureTimeOverride ?? departureTime;
-    const timeParam = effectiveMode !== 'now' && effectiveTime ? effectiveTime.replace(':', '') : undefined;
-    const timeType = effectiveMode !== 'now' ? effectiveMode : undefined;
+  function searchJourneys() {
+    const destination = destinationMode === 'home' ? settingsData.stopPointId : destinationStopId;
+    const stopOrigin = originMode === 'stop' ? originStopId : null;
+    // Guards, not assertions: the Sök button is disabled in both of these states, so reaching here is a bug.
+    // They run before anything is cleared, so an incomplete query leaves the last result on screen.
+    if (!destination || (originMode === 'stop' && !stopOrigin)) {
+      return;
+    }
+    // Rebound after the guard: the narrowing does not reach into the nested request builder below.
+    const destinationId: string = destination;
+
+    const timeParam = timeMode !== 'now' && departureTime ? departureTime.replace(':', '') : undefined;
+    const timeType = timeMode !== 'now' ? timeMode : undefined;
 
     let dateParam: string | undefined;
-    if (timeParam && effectiveTime) {
+    if (timeParam) {
       const now = new Date();
-      const [h, m] = effectiveTime.split(':').map(Number);
+      const [h, m] = departureTime.split(':').map(Number);
       if (h * 60 + m < now.getHours() * 60 + now.getMinutes()) {
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -107,8 +125,8 @@ export function Routes({settingsData}: Props) {
       }
     }
 
-    function generateRoute(lat: number, long: number, maxInitialWalkTime: number) {
-      const url = URL_GET_TRAVEL_COORD_TO_v2(long, lat, destination, maxInitialWalkTime, timeParam, timeType, dateParam);
+    function generateRoute(origin: TripOrigin) {
+      const url = URL_GET_TRAVEL_v2(origin, destinationId, MAX_INITIAL_WALK_TIME, timeParam, timeType, dateParam);
       fetchAbortable<{journeys: Journey[], systemMessages: SystemMessage[]}>(url, latestRequest, (data) => {
         const journeys = data.journeys ?? [];
         setJourneys(journeys);
@@ -121,6 +139,13 @@ export function Routes({settingsData}: Props) {
     setJourneys(undefined);
     setDeviationEnrichment(new Map());
 
+    // A named origin needs no geolocation at all: a denied permission or the 5s timeout below must not be able
+    // to block a search that never depended on where the user is.
+    if (stopOrigin) {
+      generateRoute({kind: 'stop', id: stopOrigin});
+      return;
+    }
+
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
       return;
@@ -130,7 +155,7 @@ export function Routes({settingsData}: Props) {
     // and position.timestamp — available for future use (e.g. map display, E - map support)
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        generateRoute(position.coords.latitude, position.coords.longitude, maxWalk);
+        generateRoute({kind: 'coord', lat: position.coords.latitude, long: position.coords.longitude});
       },
       (err) => {
         setError(err.message);
@@ -143,29 +168,27 @@ export function Routes({settingsData}: Props) {
     );
   }
 
-  function handleTimeModeChange(newMode: 'now' | 'dep' | 'arr') {
-    setTimeMode(newMode);
-    setDepartureTime('');
-    setJourneys(undefined);
-    setDeviationEnrichment(new Map());
-    if (newMode === 'now') {
-      updateDepartures(15, selectedStopId ?? undefined, 'now', '');
-    }
+  // Picking a stop is also a statement about which mode is wanted, so it selects the radio. Nothing here
+  // clears the results: they are whatever the last Sök returned, and only the next Sök replaces them.
+  function handleOriginSelect(location: StopFinderLocation) {
+    setOriginMode('stop');
+    setOriginStopId(location.id);
   }
 
-  function handleStopSelect(location: StopFinderLocation) {
-    setSelectedStopId(location.id);
-    updateDepartures(15, location.id);
-  }
-
-  function handleClear() {
-    setSelectedStopId(null);
-    setJourneys(undefined);
-    setDeviationEnrichment(new Map());
+  function handleDestinationSelect(location: StopFinderLocation) {
+    setDestinationMode('stop');
+    setDestinationStopId(location.id);
   }
 
   const hasJourneys = !!journeys && journeys.length > 0;
   const hasResultsPanel = journeys !== undefined;
+
+  // Both ends must be named, and a timed search must say when. Without the last condition an empty time field
+  // makes the URL omit the time parameters altogether, so Avfärd/Ankomst would silently search from now.
+  const originReady = originMode === 'here' || !!originStopId;
+  const destinationReady = destinationMode === 'home' || !!destinationStopId;
+  const timeReady = timeMode === 'now' || departureTime !== '';
+  const canSearch = originReady && destinationReady && timeReady;
 
   useEffect(() => {
     if (hasJourneys && route1Ref.current) {
@@ -183,10 +206,66 @@ export function Routes({settingsData}: Props) {
         'col-start-1 row-start-1 px-4 py-1 bg-[#F1F2F3] border border-gray-200 shadow-sm text-gray-800',
         hasResultsPanel ? 'rounded-t-lg border-b-0 relative z-10' : 'rounded-lg'
       )}>
-        <div className="text-gray-800 pt-1">Ta mig till</div>
-        <div className="flex items-center gap-2 pb-1">
-          <SLButton onClick={() => updateDepartures(15)} thin>Hem</SLButton>
-          <StopAutocomplete onSelect={handleStopSelect} onClear={handleClear} compact />
+        {/* One grid across both rows, not two flex rows: "Härifrån" is far wider than "Hem", so only a shared
+            column can line the two stop fields up with each other. */}
+        <div className="grid grid-cols-[auto_auto_1fr] items-center gap-x-2 gap-y-1 pt-1 pb-1">
+          <label className="flex items-center gap-1">
+            <input
+              type="radio"
+              name="route-origin"
+              checked={originMode === 'here'}
+              onChange={() => setOriginMode('here')}
+              className="accent-[#184fc2]"
+            />
+            Härifrån
+          </label>
+          {/* Focusing a stop field is a second way to choose that mode, which is why the field is dimmed
+              rather than disabled. Captured on the wrapper so StopAutocomplete needs no onFocus prop. */}
+          <input
+            type="radio"
+            name="route-origin"
+            aria-label="Från vald hållplats"
+            checked={originMode === 'stop'}
+            onChange={() => setOriginMode('stop')}
+            className="accent-[#184fc2]"
+          />
+          <div className="flex" onFocusCapture={() => setOriginMode('stop')}>
+            <StopAutocomplete
+              placeholder="Från hållplats…"
+              dimmed={originMode === 'here'}
+              onSelect={handleOriginSelect}
+              onClear={() => setOriginStopId(null)}
+              compact
+            />
+          </div>
+
+          <label className="flex items-center gap-1" title={settingsData.stopPointName}>
+            <input
+              type="radio"
+              name="route-destination"
+              checked={destinationMode === 'home'}
+              onChange={() => setDestinationMode('home')}
+              className="accent-[#184fc2]"
+            />
+            Hem
+          </label>
+          <input
+            type="radio"
+            name="route-destination"
+            aria-label="Till vald hållplats"
+            checked={destinationMode === 'stop'}
+            onChange={() => setDestinationMode('stop')}
+            className="accent-[#184fc2]"
+          />
+          <div className="flex" onFocusCapture={() => setDestinationMode('stop')}>
+            <StopAutocomplete
+              placeholder="Till hållplats…"
+              dimmed={destinationMode === 'home'}
+              onSelect={handleDestinationSelect}
+              onClear={() => setDestinationStopId(null)}
+              compact
+            />
+          </div>
         </div>
         <div className="flex items-center pb-1">
           <label className="flex items-center gap-1">
@@ -194,11 +273,16 @@ export function Routes({settingsData}: Props) {
               type="radio"
               name="departure-time"
               checked={timeMode === 'now'}
-              onChange={() => handleTimeModeChange('now')}
+              onChange={() => setTimeMode('now')}
               className="accent-[#184fc2]"
             />
             Nu
           </label>
+          <div className="ml-auto">
+            <SLButton onClick={searchJourneys} thin disabled={!canSearch}>
+              <span className="flex items-center gap-1"><MdSearch className="h-4 w-4" />Sök</span>
+            </SLButton>
+          </div>
         </div>
         <div className="flex items-center gap-3 pb-1">
           <label className="flex items-center gap-1">
@@ -206,7 +290,7 @@ export function Routes({settingsData}: Props) {
               type="radio"
               name="departure-time"
               checked={timeMode === 'dep'}
-              onChange={() => handleTimeModeChange('dep')}
+              onChange={() => setTimeMode('dep')}
               className="accent-[#184fc2]"
             />
             Avfärd
@@ -216,7 +300,7 @@ export function Routes({settingsData}: Props) {
               type="radio"
               name="departure-time"
               checked={timeMode === 'arr'}
-              onChange={() => handleTimeModeChange('arr')}
+              onChange={() => setTimeMode('arr')}
               className="accent-[#184fc2]"
             />
             Ankomst
@@ -231,13 +315,6 @@ export function Routes({settingsData}: Props) {
               timeMode === 'now' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800'
             )}
           />
-          <SLButton
-            onClick={() => updateDepartures(15, selectedStopId ?? undefined)}
-            thin
-            disabled={timeMode === 'now'}
-          >
-            <MdSearch className="h-5 w-4" />
-          </SLButton>
         </div>
         {hasResultsPanel && (
           <div className="absolute -bottom-2 left-[-1px] right-[-1px] h-2 bg-[#F1F2F3] border-x border-gray-200" />
