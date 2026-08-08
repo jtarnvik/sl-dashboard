@@ -118,8 +118,12 @@ export function StopAutocomplete({ initialQuery = '', onSelect, onClear, compact
     inputRef.current?.focus();
   }
 
+  // h-6 on the compact variant is load-bearing, not cosmetic: the routes pane puts this field and a
+  // type="time" input on adjacent rows, and iOS sizes time inputs natively rather than from padding and
+  // line-height. Both are pinned to the same height so the platform cannot make them differ. Keep in step
+  // with the time input in components/pane/routes/index.tsx.
   const sizeClassName = compact
-    ? "w-full rounded-sm border border-gray-300 bg-white px-2 py-px pr-6 text-sm text-gray-800"
+    ? "h-6 w-full rounded-sm border border-gray-300 bg-white px-2 py-px pr-6 text-sm text-gray-800"
     : "w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200";
   const inputClassName = dimmed
     ? `${sizeClassName} bg-gray-50 text-gray-400 placeholder-gray-400`

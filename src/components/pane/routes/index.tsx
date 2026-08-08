@@ -325,13 +325,16 @@ export function Routes({settingsData}: Props) {
               />
               Ankomst
             </label>
+            {/* appearance-none strips the native iOS control, which otherwise sizes itself and ignores the
+                padding and line-height that size the stop fields; h-6 then matches StopAutocomplete's compact
+                variant exactly. Keep the two heights in step. */}
             <input
               type="time"
               value={departureTime}
               onChange={(e) => setDepartureTime(e.target.value)}
               disabled={timeMode === 'now'}
               className={classNames(
-                'shrink-0 rounded-sm border border-gray-300 bg-white px-1 py-px text-sm',
+                'h-6 shrink-0 appearance-none rounded-sm border border-gray-300 bg-white px-1 py-px text-sm leading-5',
                 timeMode === 'now' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800'
               )}
             />
